@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Layers-DLC",
+  "version": "1.0.0",
+  "description": "Layers-DLC для стрелочек...",
+  "action": {
+    "default_icon": "images/icon128.png",
+    "default_title": "Layers-DLC"
+  },
+  "icons": {
+    "128": "images/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://logic-arrows.io/*"
+      ],
+      "js": [
+        "index.js"
+      ],
+      "css": [
+        "style.css"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "index.js.map"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "host_permissions": [
+    "https://logic-arrows.io/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'",
+    "web_accessible_resources": "script-src 'self'; object-src 'self'"
+  }
+}
