@@ -2,6 +2,8 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
+    "lib": ["DOM", "ES2022"],
+    "strictNullChecks": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -9,7 +11,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "noEmit": false,
-    "moduleResolution": "node"
   },
   "include": [
     "src/**/*",
