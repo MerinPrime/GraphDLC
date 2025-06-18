@@ -1,0 +1,172 @@
+import {GraphNode} from "./graph_node";
+import {ADDITIONAL_UPDATE_ARROWS, ENTRY_POINTS, getRelativeArrow, HANDLERS, NOT_ALLOWED_TO_CHANGE} from "./handlers";
+import {Arrow} from "../api/arrow";
+import {Chunk} from "../api/chunk";
+import {GameMap} from "../api/game_map";
+import {ArrowType} from "../api/arrow_type";
+
+const CHUNK_SIZE = 16;
+let temp_set: Set<GraphNode> = new Set();
+
+export class CompiledMapGraph {
+    entry_points: Set<GraphNode>;
+    changed_nodes: Set<GraphNode>;
+    restarted: boolean;
+    
+    constructor() {
+        this.entry_points = new Set();
+        this.changed_nodes = new Set();
+        this.restarted = false;
+    }
+
+    compile_from(game_map: GameMap) {
+        game_map.chunks.forEach((chunk: Chunk) => {
+            chunk.arrows.forEach((arrow: Arrow) => {
+                arrow.lastSignal = 0;
+                arrow.signal = 0;
+                arrow.signalsCount = 0;
+                arrow.graph_node = undefined;
+                arrow.blocked = 0;
+                arrow.pending = false;
+            });
+        });
+
+        this.changed_nodes = new Set();
+        this.entry_points = new Set();
+        this.restarted = true;
+
+        const to_compile_queue: { arrow: Arrow; x: number; y: number; chunk: Chunk }[] = [];
+        const processed_arrows: Set<Arrow> = new Set();
+        
+        game_map.chunks.forEach((chunk: any, position: string) => {
+            const arrows: Array<any> = chunk.arrows;
+            for (let i_y = 0; i_y < CHUNK_SIZE; i_y++) {
+                for (let i_x = 0; i_x < CHUNK_SIZE; i_x++) {
+                    const arrow = arrows[i_x + i_y * CHUNK_SIZE];
+                    if (ENTRY_POINTS.has(arrow.type)) {
+                        to_compile_queue.push({ arrow, x: i_x, y: i_y, chunk });
+                        processed_arrows.add(arrow);
+                    }
+                }
+            }
+        });
+        
+        while (to_compile_queue.length > 0) {
+            const { arrow, x, y, chunk } = to_compile_queue.pop()!;
+
+            if (!HANDLERS.has(arrow.type)) {
+                console.warn(`Founded arrow with uncommon type: ${arrow.type}`)
+                continue;
+            }
+            
+            let node = arrow.graph_node;
+            if (!node) {
+                node = new GraphNode(arrow, HANDLERS.get(arrow.type)!);
+            }
+
+            if (ENTRY_POINTS.has(arrow.type)) {
+                this.entry_points.add(node);
+            }
+            this.changed_nodes.add(node);
+            
+            node.handler!.get_edges(arrow, x, y, chunk).forEach((data) => {
+                if (!data) return;
+                const [edgeArrow, ex, ey, eChunk] = data;
+                if (NOT_ALLOWED_TO_CHANGE.has(edgeArrow.type) && arrow.type !== ArrowType.BLOCKER) {
+                    return;
+                }
+
+                if (!HANDLERS.has(edgeArrow.type)) {
+                    console.warn(`Founded arrow with uncommon type: ${edgeArrow.type}`)
+                    return;
+                }
+                let edgeNode = edgeArrow.graph_node;
+                if (!edgeNode) {
+                    edgeNode = new GraphNode(edgeArrow, HANDLERS.get(edgeArrow.type)!);
+                }
+                node.edges.push(edgeNode);
+                if (!processed_arrows.has(edgeArrow)) {
+                    to_compile_queue.push({ arrow: edgeArrow, x: ex, y: ey, chunk: eChunk });
+                    processed_arrows.add(edgeArrow);
+                }
+            });
+            
+            const neighbours = [
+                getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, -1, 0),
+                getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, 0, 1),
+                getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, 1, 0),
+                getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, 0, -1),
+            ];
+            neighbours.forEach((data: any[] | undefined) => {
+                if (!data) return;
+                const [detectorArrow, ex, ey, eChunk] = data;
+                const targetData = getRelativeArrow(eChunk, ex, ey, detectorArrow.rotation, detectorArrow.flipped, 1, 0);
+
+                if (detectorArrow.type === ArrowType.DETECTOR && targetData &&
+                    targetData[1] === x && targetData[2] === y && targetData[3] === chunk) {
+                    let detectorNode = detectorArrow.graph_node;
+                    if (!detectorNode) {
+                        detectorNode = new GraphNode(detectorArrow, HANDLERS.get(detectorArrow.type)!);
+                    }
+                    
+                    node.detectors.push(detectorNode);
+                    if (!processed_arrows.has(detectorArrow)) {
+                        to_compile_queue.push({ arrow: detectorArrow, x: ex, y: ey, chunk: eChunk });
+                        processed_arrows.add(detectorArrow);
+                    }
+                }
+            });
+        }
+    }
+    
+    update() {
+        let changed_nodes: Set<GraphNode> = temp_set;
+        temp_set.clear();
+        this.changed_nodes.forEach(node => {
+            const isChanged = node.arrow.signal !== node.arrow.lastSignal;
+            if (isChanged && !node.arrow.pending) {
+                const isActive = node.arrow.signal === node.handler!.active_signal;
+                const delta = +(isActive) * 2 - 1;
+                const isBlocker = node.arrow.type === ArrowType.BLOCKER;
+                node.edges.forEach(edge => {
+                    if (isBlocker) {
+                        edge.arrow.blocked += delta;
+                    } else {
+                        edge.arrow.signalsCount += delta;
+                    }
+                    changed_nodes.add(edge);
+                });
+            }
+            if (isChanged) {
+                node.detectors.forEach(edge => {
+                    edge.arrow.detectorSignal = node.arrow.signal;
+                    changed_nodes.add(edge);
+                });
+            }
+            if (isChanged && ADDITIONAL_UPDATE_ARROWS.has(node.arrow.type) || this.restarted && ENTRY_POINTS.has(node.arrow.type)) {
+                changed_nodes.add(node);
+            }
+            if (node.arrow.signal !== 0 && node.arrow.signalsCount === 0 && (node.arrow.type === ArrowType.BUTTON || node.arrow.type === ArrowType.BRUH_BUTTON)) {
+                changed_nodes.add(node);
+            }
+            if (node.arrow.type === ArrowType.RANDOM && node.arrow.signalsCount > 0) {
+                changed_nodes.add(node);
+            }
+            node.arrow.lastType = node.arrow.type;
+            node.arrow.lastSignal = node.arrow.signal;
+            node.arrow.lastRotation = node.arrow.rotation;
+            node.arrow.lastFlipped = node.arrow.flipped;
+        });
+        changed_nodes.forEach(node => {
+            if (node.arrow.blocked > 0) {
+                node.arrow.signal = 0;
+            }
+            else {
+                node.handler!.update(node.arrow);
+            }
+        });
+        this.restarted = false;
+        temp_set = this.changed_nodes;
+        this.changed_nodes = changed_nodes;
+    }
+}
