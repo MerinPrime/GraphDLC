@@ -41,6 +41,11 @@
     border-radius: 1vmin;
 }
 
+.tps-info {
+    top: 1vmin;
+    left: 1vmin;
+}
+
 .rs-main {
     left: 0;
     right: 0;

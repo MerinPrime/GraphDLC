@@ -7,6 +7,7 @@ import {Arrow} from "../api/arrow";
 
 let doRecompile: boolean = false;
 let totalOffset = 0;
+let tpsInfo;
 
 window.addEventListener('keydown', function(event) {
     if (event.key === 'p') {
@@ -20,7 +21,6 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
         const oldUpdate = module.update;
         module.update = function update(game_map: GameMap) {
             if (doRecompile) {
-                alert('Recompiled') // TODO: game.screenUpdated = true
                 doRecompile = false;
                 totalOffset = 0;
                 game_map.compiled_graph = new CompiledMapGraph();
@@ -120,23 +120,25 @@ export function PatchGame(patchLoader: PatchLoader) {
         let PlayerSettings;
         patchLoader.setDefinition("Game", class Game extends module {
             draw(...args: any[]) {
+                // const now = Date.now();
                 super.draw(...args);
+                // if (this.playing && this.updateSpeedLevel === 5) {
+                //     totalOffset += Date.now() - now;
+                // }
             }
             updateFrame(e=() => {}) {
                 if (!this.playing) {
                     return
                 }
                 PlayerSettings ??= patchLoader.getDefinition('PlayerSettings');
+                const startTick = this.tick;
                 if (this.updateSpeedLevel === 5) {
-                    let frames = 0;
                     do {
                         const now = Date.now();
                         this.updateTick(e);
                         totalOffset += Date.now() - now;
-                        frames += 1;
                     } while (totalOffset < 1000 / 60)
                     totalOffset -= 1000 / 60;
-                    console.log(totalOffset, frames);
                 }
                 else {
                     if (this.frame % PlayerSettings.framesToSkip[this.updateSpeedLevel] == 0)
@@ -146,6 +148,7 @@ export function PatchGame(patchLoader: PatchLoader) {
                                 this.updatesPerSecond = 0),
                                 this.updatesPerSecond++
                 }
+                tpsInfo!.updateInfo(this.tick - startTick);
             }
         });
     });
@@ -156,17 +159,57 @@ export function PatchPlayerUI(patchLoader: PatchLoader) {
         let UIRange: any;
         let PlayerSettings: any;
         let GameText: any;
+        let TPSInfo: any;
         patchLoader.setDefinition("PlayerUI", class PlayerUI extends module {
             addSpeedController() {
                 UIRange ??= patchLoader.getDefinition('UIRange');
                 PlayerSettings ??= patchLoader.getDefinition('PlayerSettings');
                 GameText ??= patchLoader.getDefinition('GameText');
+                TPSInfo ??= patchLoader.getDefinition('TPSInfo');
                 this.speedController = new UIRange(document.body, 6, (e: number) => {
                     if (e === 5) {
                         return 'MAX TPS';
                     }
                     return `${PlayerSettings.framesToUpdate[e] / PlayerSettings.framesToSkip[e] * 60} ${GameText.PER_SECOND.get()}`;
-                })
+                });
+                tpsInfo = new TPSInfo(document.body);
+            }
+        });
+    });
+}
+
+export function PatchTPSInfo(patchLoader: PatchLoader) {
+    patchLoader.addDefinitionPatch("UIComponent", function (name: string, UIComponent: any): any {
+        patchLoader.setDefinition("TPSInfo", class TPSInfo extends UIComponent {
+            info: HTMLElement;
+            // element: HTMLElement | undefined;
+            tps: number;
+            updatedTicks: number;
+            lastUpdate: number;
+
+            constructor(...args: any[]) {
+                super(...args);
+                this.info = document.createElement("div");
+                this.element!.appendChild(this.info);
+                this.tps = 0;
+                this.updatedTicks = 0;
+                this.lastUpdate = Date.now();
+            }
+
+            updateInfo(updatedTicks: number) {
+                this.updatedTicks += updatedTicks;
+                const now = Date.now();
+                if (now - this.lastUpdate < 1000) {
+                    return;
+                }
+                this.tps = this.updatedTicks / (now - this.lastUpdate) * 1000;
+                this.updatedTicks = 0;
+                this.lastUpdate = now;
+                this.info.innerText = `TPS: ${Math.floor(this.tps)}`
+            }
+
+            getClass() {
+                return "cuicomponent tps-info"
             }
         });
     });
