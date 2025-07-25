@@ -1,22 +1,18 @@
 import {GraphNode} from "./graph_node";
-import {ADDITIONAL_UPDATE_ARROWS, ENTRY_POINTS, getRelativeArrow, HANDLERS, NOT_ALLOWED_TO_CHANGE} from "./handlers";
+import {ENTRY_POINTS, getRelativeArrow, HANDLERS, NOT_ALLOWED_TO_CHANGE} from "./handlers";
 import {Arrow} from "../api/arrow";
 import {Chunk} from "../api/chunk";
 import {GameMap} from "../api/game_map";
 import {ArrowType} from "../api/arrow_type";
+import {Graph} from "./graph";
 
 const CHUNK_SIZE = 16;
-let temp_set: Set<GraphNode> = new Set();
 
 export class CompiledMapGraph {
-    entry_points: Set<GraphNode>;
-    changed_nodes: Set<GraphNode>;
-    restarted: boolean;
+    graph: Graph;
     
     constructor() {
-        this.entry_points = new Set();
-        this.changed_nodes = new Set();
-        this.restarted = false;
+        this.graph = new Graph();
     }
 
     compile_from(game_map: GameMap) {
@@ -31,10 +27,7 @@ export class CompiledMapGraph {
             });
         });
 
-        this.changed_nodes = new Set();
-        this.entry_points = new Set();
-        this.restarted = true;
-
+        this.graph.restarted = true;
         const to_compile_queue: { arrow: Arrow; x: number; y: number; chunk: Chunk }[] = [];
         const processed_arrows: Set<Arrow> = new Set();
         
@@ -65,9 +58,9 @@ export class CompiledMapGraph {
             }
 
             if (ENTRY_POINTS.has(arrow.type)) {
-                this.entry_points.add(node);
+                this.graph.entry_points.add(node);
             }
-            this.changed_nodes.add(node);
+            this.graph.changed_nodes.add(node);
             
             node.handler!.get_edges(arrow, x, y, chunk).forEach((data) => {
                 if (!data) return;
@@ -117,56 +110,57 @@ export class CompiledMapGraph {
                 }
             });
         }
+        
+        this.optimize_cycles();
     }
-    
-    update() {
-        let changed_nodes: Set<GraphNode> = temp_set;
-        temp_set.clear();
-        this.changed_nodes.forEach(node => {
-            const isChanged = node.arrow.signal !== node.arrow.lastSignal;
-            if (isChanged && !node.arrow.pending) {
-                const isActive = node.arrow.signal === node.handler!.active_signal;
-                const delta = +(isActive) * 2 - 1;
-                const isBlocker = node.arrow.type === ArrowType.BLOCKER;
-                node.edges.forEach(edge => {
-                    if (isBlocker) {
-                        edge.arrow.blocked += delta;
-                    } else {
-                        edge.arrow.signalsCount += delta;
+
+    optimize_cycles() {
+        const cycles = new Set<Set<GraphNode>>();
+        const visited = new Set<GraphNode>();
+        const recursionStack = new Set<GraphNode>();
+        const pathTrace = new Map<GraphNode, GraphNode>();
+
+        function dfs(node: GraphNode) {
+            visited.add(node);
+            recursionStack.add(node);
+
+            for (const neighbor of [...node.edges, ...node.detectors]) {
+                if (recursionStack.has(neighbor)) {
+                    const cycle = new Set<GraphNode>();
+                    cycle.add(neighbor);
+
+                    let currentNode = node;
+                    while (currentNode !== neighbor) {
+                        cycle.add(currentNode);
+                        currentNode = pathTrace.get(currentNode)!;
                     }
-                    changed_nodes.add(edge);
-                });
+                    cycles.add(cycle);
+                    continue;
+                }
+
+                if (!visited.has(neighbor)) {
+                    pathTrace.set(neighbor, node);
+                    dfs(neighbor);
+                }
             }
-            if (isChanged) {
-                node.detectors.forEach(edge => {
-                    edge.arrow.detectorSignal = node.arrow.signal;
-                    changed_nodes.add(edge);
-                });
+
+            recursionStack.delete(node);
+        }
+
+        for (const entry_point of this.graph.entry_points) {
+            if (!visited.has(entry_point)) {
+                dfs(entry_point);
             }
-            if (isChanged && ADDITIONAL_UPDATE_ARROWS.has(node.arrow.type) || this.restarted && ENTRY_POINTS.has(node.arrow.type)) {
-                changed_nodes.add(node);
-            }
-            if (node.arrow.signal !== 0 && node.arrow.signalsCount === 0 && (node.arrow.type === ArrowType.BUTTON || node.arrow.type === ArrowType.BRUH_BUTTON)) {
-                changed_nodes.add(node);
-            }
-            if (node.arrow.type === ArrowType.RANDOM && node.arrow.signalsCount > 0) {
-                changed_nodes.add(node);
-            }
-            node.arrow.lastType = node.arrow.type;
-            node.arrow.lastSignal = node.arrow.signal;
-            node.arrow.lastRotation = node.arrow.rotation;
-            node.arrow.lastFlipped = node.arrow.flipped;
-        });
-        changed_nodes.forEach(node => {
-            if (node.arrow.blocked > 0) {
-                node.arrow.signal = 0;
-            }
-            else {
-                node.handler!.update(node.arrow);
-            }
-        });
         this.restarted = false;
         temp_set = this.changed_nodes;
         this.changed_nodes = changed_nodes;
+        Ну я думаю можно сделать чтобы 
+         */
+        
+        console.log(cycles);
+    }
+    
+    update(tick: number) {
+        this.graph.update(tick);
     }
 }

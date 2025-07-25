@@ -8,6 +8,7 @@ import {Arrow} from "../api/arrow";
 let doRecompile: boolean = false;
 let totalOffset = 0;
 let tpsInfo;
+let currentTick = 0;
 
 window.addEventListener('keydown', function(event) {
     if (event.key === 'p') {
@@ -29,10 +30,12 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
             if (game_map.compiled_graph === undefined) {
                 oldUpdate(game_map);
             } else {
-                game_map.compiled_graph.update();
+                currentTick += 1;
+                game_map.compiled_graph.update(currentTick);
             }
         }
         module.clearSignals = function clearSignals(game_map: GameMap) {
+            currentTick = 0;
             game_map.chunks.forEach((chunk: Chunk) => {
                 chunk.arrows.forEach((arrow: Arrow) => {
                     arrow.lastSignal = 0;
@@ -44,8 +47,8 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                 });
             });
             if (game_map.compiled_graph !== undefined) {
-                game_map.compiled_graph.changed_nodes = new Set(game_map.compiled_graph.entry_points);
-                game_map.compiled_graph.restarted = true;
+                game_map.compiled_graph.graph.changed_nodes = new Set(game_map.compiled_graph.graph.entry_points);
+                game_map.compiled_graph.graph.restarted = true;
             }
         }
     });
