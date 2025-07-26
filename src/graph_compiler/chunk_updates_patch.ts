@@ -108,7 +108,7 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
                         , t = this.keyboardHandler.getShiftPressed();
                     void 0 !== e && this.freeCursor && !t && (21 !== e.type && 24 !== e.type || (0 === e.signal || this.game.playing ? (e.signal = 5, (() => {
                         if (this.game.gameMap.compiled_graph !== undefined) {
-                            this.game.gameMap.compiled_graph.changed_nodes.add(e.graph_node);
+                            this.game.gameMap.compiled_graph.graph.changed_nodes.add(e.graph_node);
                         }
                     })()) : e.signal = 0,
                         this.game.screenUpdated = !0))
