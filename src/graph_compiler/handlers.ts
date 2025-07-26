@@ -125,18 +125,14 @@ export const DELAY_ARROW_HANDLER = new ArrowHandler(
     (arrow: any) => {
         if (arrow.signal === 2) {
             arrow.signal = 1;
-            arrow.pending = false;
         } else if (arrow.signalsCount > 0) {
             if (arrow.signal === 0) {
                 arrow.signal = 2;
-                arrow.pending = true;
             } else if (arrow.signal === 1) {
                 arrow.signal = 1;
-                arrow.pending = false;
             }
         } else {
             arrow.signal = 0;
-            arrow.pending = false;
         }
     },
 );

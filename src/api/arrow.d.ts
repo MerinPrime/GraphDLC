@@ -14,6 +14,5 @@ export interface Arrow {
 
     detectorSignal: number;
     blocked: number;
-    pending: boolean;
     graph_node?: GraphNode;
 }

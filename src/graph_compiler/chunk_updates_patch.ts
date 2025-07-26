@@ -43,7 +43,6 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                     arrow.signalsCount = 0;
                     arrow.detectorSignal = 0;
                     arrow.blocked = 0;
-                    arrow.pending = false;
                 });
             });
             if (game_map.compiled_graph !== undefined) {

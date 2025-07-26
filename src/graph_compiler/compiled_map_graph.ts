@@ -23,7 +23,6 @@ export class CompiledMapGraph {
                 arrow.signalsCount = 0;
                 arrow.graph_node = undefined;
                 arrow.blocked = 0;
-                arrow.pending = false;
             });
         });
 

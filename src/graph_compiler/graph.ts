@@ -20,7 +20,7 @@ export class Graph {
         changed_nodes.clear();
         this.changed_nodes.forEach(node => {
             const isChanged = node.arrow.signal !== node.arrow.lastSignal;
-            if (isChanged && !node.arrow.pending) {
+            if (isChanged && !(node.arrow.type === ArrowType.DELAY && node.arrow.signal === 2)) {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 const delta = +(isActive) * 2 - 1;
                 const isBlocker = node.arrow.type === ArrowType.BLOCKER;

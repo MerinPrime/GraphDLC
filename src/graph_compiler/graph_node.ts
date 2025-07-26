@@ -1,7 +1,8 @@
 import {ArrowHandler} from "./handlers";
+import {Arrow} from "../api/arrow";
 
 export class GraphNode {
-    public arrow: any;
+    public arrow: Arrow;
     public handler?: ArrowHandler;
     public edges: GraphNode[];
     public detectors: GraphNode[];
