@@ -116,15 +116,15 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
                 const prevKeyDownCallback = this.keyboardHandler.keyDownCallback;
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
                     prevKeyDownCallback(code, key);
-                    if (code === 'KeyT') {
-                        const e = this.mouseHandler.getMousePosition();
-                        const t = e[0] * window.devicePixelRatio / this.game.scale - this.game.offset[0] / patchLoader.getDefinition("CELL_SIZE");
-                        const s = e[1] * window.devicePixelRatio / this.game.scale - this.game.offset[1] / patchLoader.getDefinition("CELL_SIZE");
-                        const i = ~~t - (t < 0 ? 1 : 0);
-                        const n = ~~s - (s < 0 ? 1 : 0);
-                        this.game.selectedMap.select(i, n);
-                        
-                    }
+                    // if (code === 'KeyT') {
+                    //     const e = this.mouseHandler.getMousePosition();
+                    //     const t = e[0] * window.devicePixelRatio / this.game.scale - this.game.offset[0] / patchLoader.getDefinition("CELL_SIZE");
+                    //     const s = e[1] * window.devicePixelRatio / this.game.scale - this.game.offset[1] / patchLoader.getDefinition("CELL_SIZE");
+                    //     const i = ~~t - (t < 0 ? 1 : 0);
+                    //     const n = ~~s - (s < 0 ? 1 : 0);
+                    //     this.game.selectedMap.select(i, n);
+                    //    
+                    // }
                 };
             }
         });
