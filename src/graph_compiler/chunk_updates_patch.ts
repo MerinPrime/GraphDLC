@@ -1,6 +1,5 @@
 import {PatchLoader} from "../loader/patchloader";
 import {CompiledMapGraph} from "./compiled_map_graph";
-import {GraphNode} from "./graph_node";
 import {GameMap} from "../api/game_map";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
@@ -9,6 +8,7 @@ let doRecompile: boolean = false;
 let totalOffset = 0;
 let tpsInfo;
 let currentTick = 0;
+export let debugRing = false;
 
 window.addEventListener('keydown', function(event) {
     if (event.key === 'p') {
@@ -27,11 +27,13 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                 game_map.compiled_graph = new CompiledMapGraph();
                 game_map.compiled_graph.compile_from(game_map);
             }
+            if (debugRing) {
+                return;
+            }
             if (game_map.compiled_graph === undefined) {
                 oldUpdate(game_map);
             } else {
-                currentTick += 1;
-                game_map.compiled_graph.update(currentTick);
+                game_map.compiled_graph.update(currentTick++);
             }
         }
         module.clearSignals = function clearSignals(game_map: GameMap) {
@@ -41,7 +43,6 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                     arrow.lastSignal = 0;
                     arrow.signal = 0;
                     arrow.signalsCount = 0;
-                    arrow.detectorSignal = 0;
                     arrow.blocked = 0;
                 });
             });
@@ -112,6 +113,19 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
                     })()) : e.signal = 0,
                         this.game.screenUpdated = !0))
                 }
+                const prevKeyDownCallback = this.keyboardHandler.keyDownCallback;
+                this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
+                    prevKeyDownCallback(code, key);
+                    if (code === 'KeyT') {
+                        const e = this.mouseHandler.getMousePosition();
+                        const t = e[0] * window.devicePixelRatio / this.game.scale - this.game.offset[0] / patchLoader.getDefinition("CELL_SIZE");
+                        const s = e[1] * window.devicePixelRatio / this.game.scale - this.game.offset[1] / patchLoader.getDefinition("CELL_SIZE");
+                        const i = ~~t - (t < 0 ? 1 : 0);
+                        const n = ~~s - (s < 0 ? 1 : 0);
+                        this.game.selectedMap.select(i, n);
+                        
+                    }
+                };
             }
         });
     });

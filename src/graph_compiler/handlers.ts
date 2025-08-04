@@ -1,9 +1,10 @@
 import {Arrow} from "../api/arrow";
 import {Chunk} from "../api/chunk";
 import {ArrowType} from "../api/arrow_type";
+import {GraphNode} from "./graph_node";
 
 export type GetEdgesFunc = (arrow: Arrow, x: number, y: number, chunk: Chunk) => ([Arrow, number, number, Chunk] | undefined)[];
-export type UpdateFunc = (arrow: Arrow) => boolean | void;
+export type UpdateFunc = (arrow: Arrow, currentTick: number) => boolean | void;
 
 const CHUNK_SIZE = 16;
 
@@ -88,6 +89,19 @@ export const ADDITIONAL_UPDATE_ARROWS = new Set([
     ArrowType.BRUH_BUTTON,
 ]);
 
+export const NOT_ALLOWED_IN_RING = new Set([
+    ArrowType.BLOCKER,
+    ArrowType.DELAY,
+    ArrowType.LOGIC_NOT,
+    ArrowType.LOGIC_FLIP,
+    ArrowType.LOGIC_FLOP,
+    ArrowType.RANDOM,
+    ArrowType.BRUH_BUTTON,
+    ArrowType.DETECTOR,
+    ArrowType.RED_IMPULSE,
+    ArrowType.RED_SOURCE,
+]);
+
 export const EMPTY_HANDLER = new ArrowHandler(
     -1,
     (arrow: any, x: number, y: number, chunk: any) => [],
@@ -134,16 +148,6 @@ export const DELAY_ARROW_HANDLER = new ArrowHandler(
         } else {
             arrow.signal = 0;
         }
-    },
-);
-
-export const DETECTOR_HANDLER = new ArrowHandler(
-    1,
-    (arrow: any, x: number, y: number, chunk: any) => [
-        getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, -1, 0),
-    ],
-    (arrow: any) => {
-        arrow.signal = +(arrow.detectorSignal > 0);
     },
 );
 
@@ -348,9 +352,8 @@ export const HANDLERS = new Map<ArrowType, ArrowHandler>([
     [ArrowType.RED_ARROW, RED_ARROW_HANDLER],
     [ArrowType.RED_SOURCE, RED_SOURCE_HANDLER],
     [ArrowType.BLOCKER, RED_ARROW_HANDLER],
-    [ArrowType.RED_ARROW, RED_ARROW_HANDLER],
     [ArrowType.DELAY, DELAY_ARROW_HANDLER],
-    [ArrowType.DETECTOR, DETECTOR_HANDLER],
+    [ArrowType.DETECTOR, RED_ARROW_HANDLER],
     [ArrowType.SPLITTER_1, SPLITTER_1_HANDLER],
     [ArrowType.SPLITTER_2, SPLITTER_2_HANDLER],
     [ArrowType.SPLITTER_3, SPLITTER_3_HANDLER],
@@ -371,3 +374,91 @@ export const HANDLERS = new Map<ArrowType, ArrowHandler>([
     [ArrowType.LEVEL_ARROW_23, EMPTY_HANDLER],
     [ArrowType.BRUH_BUTTON, BRUH_BUTTON_HANDLER],
 ]);
+
+export function updateNode(graphNode: GraphNode, currentTick: number) {
+    const arrow = graphNode.arrow;
+    switch (graphNode.arrow.type) {
+        case ArrowType.RED_ARROW:
+        case ArrowType.BLOCKER:
+        case ArrowType.DETECTOR:
+        case ArrowType.SPLITTER_1:
+        case ArrowType.SPLITTER_2:
+        case ArrowType.SPLITTER_3:
+            arrow.signal = arrow.signalsCount > 0 ? 1 : 0;
+            break;
+        case ArrowType.RED_SOURCE:
+            arrow.signal = 1;
+            break;
+        case ArrowType.DELAY:
+            if (arrow.signal === 2) {
+                arrow.signal = 1;
+            } else if (arrow.signalsCount > 0) {
+                if (arrow.signal === 0) {
+                    arrow.signal = 2;
+                } else if (arrow.signal === 1) {
+                    arrow.signal = 1;
+                }
+            } else {
+                arrow.signal = 0;
+            }
+            break;
+        case ArrowType.RED_IMPULSE:
+            if (arrow.signal === 0) {
+                arrow.signal = 1;
+            } else {
+                arrow.signal = 2;
+            }
+            break;
+        case ArrowType.BLUE_ARROW:
+        case ArrowType.BLUE_DIAGONAL_ARROW:
+        case ArrowType.BLUE_SPLITTER_1:
+        case ArrowType.BLUE_SPLITTER_2:
+        case ArrowType.BLUE_SPLITTER_3:
+            arrow.signal = arrow.signalsCount > 0 ? 2 : 0;
+            break;
+        case ArrowType.LOGIC_NOT:
+            arrow.signal = arrow.signalsCount === 0 ? 3 : 0;
+            break;
+        case ArrowType.LOGIC_AND:
+            if (graphNode.cycleInfo !== null) {
+                if (arrow.signalsCount > 1) {
+                    arrow.signal = 3;
+                } else if (arrow.signalsCount === 0) {
+                    arrow.signal = 0;
+                } else {
+                    const len = graphNode.cycleInfo!.arrows.length;
+                    arrow.signal = graphNode.cycleInfo!.arrows[(graphNode.cycleOffset + currentTick - graphNode.cycleInfo!.graph!.lastUpdate) % len].arrow.signal !== 0 ? 3 : 0;
+                }
+            } else {
+                arrow.signal = arrow.signalsCount > 1 ? 3 : 0;
+            }
+            break;
+        case ArrowType.LOGIC_XOR:
+            arrow.signal = arrow.signalsCount % 2 === 1 ? 3 : 0;
+            break;
+        case ArrowType.LOGIC_FLIP:
+            if (arrow.signalsCount > 1)
+                arrow.signal = 3;
+            else if (arrow.signalsCount === 1)
+                arrow.signal = 0
+            break;
+        case ArrowType.LOGIC_FLOP:
+            if (arrow.signalsCount > 0) {
+                if (arrow.signal === 3) {
+                    arrow.signal = 0;
+                } else {
+                    arrow.signal = 3;
+                }
+            }
+            break;
+        case ArrowType.RANDOM:
+            arrow.signal = arrow.signalsCount > 0 && Math.random() > 0.5 ? 5 : 0;
+            break;
+        case ArrowType.BRUH_BUTTON:
+            arrow.signal = arrow.signalsCount > 0 ? 5 : 0;
+            break;
+        default:
+            arrow.signal = 0;
+            break;
+    }
+}
