@@ -3,6 +3,7 @@ import {CompiledMapGraph} from "./compiled_map_graph";
 import {GameMap} from "../api/game_map";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
+import {ArrowType} from "../api/arrow_type";
 
 let doRecompile: boolean = false;
 let totalOffset = 0;
@@ -105,14 +106,38 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
             constructor(...args: any[]) {
                 super(...args);
                 this.mouseHandler.leftClickCallback = () => {
-                    const e = this.getArrowByMousePosition()
-                        , t = this.keyboardHandler.getShiftPressed();
-                    void 0 !== e && this.freeCursor && !t && (21 !== e.type && 24 !== e.type || (0 === e.signal || this.game.playing ? (e.signal = 5, (() => {
-                        if (this.game.gameMap.compiled_graph !== undefined) {
-                            this.game.gameMap.compiled_graph.graph.changed_nodes.add(e.graph_node);
+                    const arrow = this.getArrowByMousePosition();
+                    const shiftPressed = this.keyboardHandler.getShiftPressed();
+
+                    if (arrow !== undefined && this.freeCursor && !shiftPressed) {
+                        const isTargetType = arrow.type === 21 || arrow.type === 24;
+
+                        if (isTargetType) {
+                            const shouldSetSignal = arrow.signal === 0 || this.game.playing;
+
+                            if (shouldSetSignal) {
+                                if (arrow.type == ArrowType.BUTTON) {
+                                    arrow.signal = 5;
+                                    if (this.game.gameMap.compiled_graph !== undefined) {
+                                        this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node);
+                                    }
+                                } else {
+                                    if (this.game.gameMap.compiled_graph !== undefined) {
+                                        arrow.graph_node.buttonEdge.arrow.signal = arrow.graph_node.buttonEdge.handler.active_signal;
+                                        arrow.graph_node.buttonEdge.lastSignal = 0;
+                                        this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node.buttonEdge);
+                                        this.game.gameMap.compiled_graph.graph.delayed_update.add(arrow.graph_node.buttonEdge);
+                                    } else {
+                                        arrow.signal = 5;
+                                    }
+                                }
+                            } else {
+                                arrow.signal = 0;
+                            }
+
+                            this.game.screenUpdated = true;
                         }
-                    })()) : e.signal = 0,
-                        this.game.screenUpdated = !0))
+                    }
                 }
                 const prevKeyDownCallback = this.keyboardHandler.keyDownCallback;
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {

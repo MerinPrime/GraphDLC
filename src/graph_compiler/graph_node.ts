@@ -11,6 +11,8 @@ export class GraphNode {
     public cycle: Graph | null;
     public cycleInfo: CycleInfo | null;
     public cycleOffset: number;
+    public buttonEdge: GraphNode | null;
+    public display: boolean;
     
     constructor(arrow: any, handler: ArrowHandler) {
         if (handler == null) {
@@ -23,6 +25,8 @@ export class GraphNode {
         this.cycle = null;
         this.cycleInfo = null;
         this.cycleOffset = 0;
+        this.buttonEdge = null;
+        this.display = false;
         
         arrow.graph_node = this;
     }

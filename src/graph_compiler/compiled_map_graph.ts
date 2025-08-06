@@ -1,5 +1,6 @@
 import {GraphNode} from "./graph_node";
 import {
+    ALLOWED_IN_BUTTON, ALLOWED_IN_PIXEL,
     ArrowHandler,
     ENTRY_POINTS,
     getRelativeArrow,
@@ -131,10 +132,99 @@ export class CompiledMapGraph {
         }
         
         this.optimize_cycles();
+        // this.optimize_buttons();
+        // this.optimize_pixels();
         this.graph.changed_nodes = new Set(this.graph.entry_points);
         this.graph.restarted = true;
     }
 
+    optimize_pixels() {
+        const path = new Set<GraphNode>();
+        const pixelNodes: GraphNode[] = [];
+        const cache = new Map<GraphNode, boolean>();
+        
+        function dfs(node: GraphNode): boolean {
+            if (cache.has(node))
+                return cache.get(node)!;
+            if (path.has(node))
+                return false;
+
+            path.add(node);
+
+            let isPixel = ALLOWED_IN_PIXEL.has(node.arrow.type);
+            if (node.edges.length !== 0) {
+                const tempPixelNodes = []
+                for (const edge of node.edges) {
+                    const isNodePixel = dfs(edge);
+                    if (isNodePixel) {
+                        tempPixelNodes.push(edge);
+                    }
+                    isPixel = isPixel && isNodePixel;
+                }
+                if (!isPixel) {
+                    pixelNodes.push(...tempPixelNodes);
+                }
+            }
+            path.delete(node);
+            cache.set(node, isPixel);
+            return isPixel;
+        }
+
+        for (const entry of this.graph.entry_points) {
+            dfs(entry);
+        }
+        
+        pixelNodes.forEach((pixelNode) => {
+            const pixelEdges = new Set<GraphNode>();
+            const pixelQueue: GraphNode[] = [...pixelNode.edges];
+            while (pixelQueue.length > 0) {
+                const pixelEdge = pixelQueue.pop()!;
+                pixelEdges.add(pixelEdge);
+                pixelQueue.push(...pixelEdge.edges);
+            }
+            pixelNode.display = true;
+            pixelNode.edges = [...pixelEdges];
+        });
+    }
+
+    optimize_buttons() {
+        const visited = new Set();
+        this.graph.entry_points.forEach((entryPoint) => {
+            if (entryPoint.arrow.type !== ArrowType.BRUH_BUTTON) {
+                return;
+            }
+            if (entryPoint.edges.length === 0) {
+                return;
+            }
+            const queue: Array<GraphNode> = [...entryPoint.back];
+            while (queue.length > 0) {
+                const edge = queue.pop()!;
+                for (let i = 0; i < edge.back.length; i++) {
+                    if (!ALLOWED_IN_BUTTON.has(edge.back[i].arrow.type)) {
+                        return;
+                    }
+                    queue.push(edge.back[i]);
+                }
+            }
+            let edge = entryPoint.edges[0];
+            visited.clear();
+            while (true) {
+                if (!ALLOWED_IN_BUTTON.has(edge.arrow.type)) {
+                    break;
+                }
+                if (edge.edges.length === 0) {
+                    break;
+                }
+                if (visited.has(edge)) {
+                    return;
+                }
+                visited.add(edge);
+                edge = edge.edges[0];
+            }
+            entryPoint.buttonEdge = edge;
+        });
+    }
+    
     optimize_cycles() {
         const cycles = new Set<Array<GraphNode>>();
         const visited = new Set<GraphNode>();
@@ -144,7 +234,7 @@ export class CompiledMapGraph {
         function dfs(node: GraphNode, allowed: Set<GraphNode> = new Set()) {
             visited.add(node);
             recursionStack.push(node);
-            
+
             for (const neighbor of node.edges) {
                 if (!allowed.has(neighbor) && allowed.size !== 0) {
                     continue;
