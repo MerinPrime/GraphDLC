@@ -1,6 +1,7 @@
 const path = require("node:path");
 const TerserPlugin = require('terser-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const ZipPlugin = require('zip-webpack-plugin');
 const packageJson = require('./package.json');
 
 module.exports = (env) => {
@@ -64,6 +65,12 @@ module.exports = (env) => {
                 },
             }),
         ];
+        config.plugins.push(
+            new ZipPlugin({
+                path: path.resolve(__dirname),
+                filename: 'dist.zip',
+            })
+        );
     }
     
     return config;
