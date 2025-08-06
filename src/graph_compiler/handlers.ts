@@ -377,6 +377,10 @@ export const HANDLERS = new Map<ArrowType, ArrowHandler>([
 
 export function updateNode(graphNode: GraphNode, currentTick: number) {
     const arrow = graphNode.arrow;
+    if (arrow.blocked > 0) {
+        arrow.signal = 0;
+        return;
+    }
     switch (graphNode.arrow.type) {
         case ArrowType.RED_ARROW:
         case ArrowType.BLOCKER:

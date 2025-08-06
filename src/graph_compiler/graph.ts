@@ -57,7 +57,9 @@ export class Graph {
                 const delta = isActive ? 1 : -1;
                 const isBlocker = node.arrow.type === ArrowType.BLOCKER;
                 const isDelayed = node.arrow.type === ArrowType.DELAY && node.arrow.signal === 2;
+                let i = 0;
                 node.edges.forEach(edge => {
+                    i++;
                     if (edge.cycle !== null && !this.isCycle) {
                         const updateDelta = (tick - edge.cycle.lastUpdate) % edge.cycle.cycleLength;
                         for (let i = 0; i < updateDelta; i++) {
@@ -66,12 +68,13 @@ export class Graph {
                         edge.cycle.lastUpdate = tick;
                     }
                     if (edge.arrow.type === ArrowType.DETECTOR) {
-                        if (isBlocker) {
+                        if (isBlocker && i == 0) {
                             edge.arrow.blocked += delta;
                         }
                         else {
                             edge.arrow.signalsCount = node.arrow.signal !== 0 ? 1 : 0;
                         }
+                        edge.arrow.signalsCount = node.arrow.signal !== 0 ? 1 : 0;
                         if (edge.cycle !== null && !this.isCycle) {
                             edge.cycle.changed_nodes.add(edge);
                             temp_cycle_update.add(edge);
@@ -115,20 +118,10 @@ export class Graph {
             if (node.cycle !== null && !this.isCycle) {
                 return;
             }
-            if (node.arrow.blocked > 0) {
-                node.arrow.signal = 0;
-            }
-            else {
-                updateNode(node, tick);
-            }
+            updateNode(node, tick);
         });
         temp_cycle_update.forEach(node => {
-            if (node.arrow.blocked > 0) {
-                node.arrow.signal = 0;
-            }
-            else {
-                updateNode(node, tick);
-            }
+            updateNode(node, tick);
         });
         this.restarted = false;
     }
