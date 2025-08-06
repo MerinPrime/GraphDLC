@@ -22,6 +22,7 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
         const oldUpdate = module.update;
         module.update = function update(game_map: GameMap) {
             if (doRecompile) {
+                currentTick = 0;
                 doRecompile = false;
                 totalOffset = 0;
                 game_map.compiled_graph = new CompiledMapGraph();

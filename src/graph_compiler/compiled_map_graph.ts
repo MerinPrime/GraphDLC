@@ -45,7 +45,6 @@ export class CompiledMapGraph {
             });
         });
 
-        this.graph.restarted = true;
         const to_compile_queue: { arrow: Arrow; x: number; y: number; chunk: Chunk }[] = [];
         const processed_arrows: Set<Arrow> = new Set();
         
@@ -132,6 +131,8 @@ export class CompiledMapGraph {
         }
         
         this.optimize_cycles();
+        this.graph.changed_nodes = new Set(this.graph.entry_points);
+        this.graph.restarted = true;
     }
 
     optimize_cycles() {
@@ -252,9 +253,6 @@ export class CompiledMapGraph {
                     const hasIntersection = b.some(node => setA.has(node));
                     if (hasIntersection && isValid) {
                         isValid = false;
-                        b.forEach((nodeB) => {
-                            nodeB.arrow.signal = 1;
-                        })
                         return;
                     }
                 });
