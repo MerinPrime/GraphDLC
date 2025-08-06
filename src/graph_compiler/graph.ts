@@ -66,7 +66,12 @@ export class Graph {
                         edge.cycle.lastUpdate = tick;
                     }
                     if (edge.arrow.type === ArrowType.DETECTOR) {
-                        edge.arrow.signalsCount = node.arrow.signal !== 0 ? 1 : 0;
+                        if (isBlocker) {
+                            edge.arrow.blocked += delta;
+                        }
+                        else {
+                            edge.arrow.signalsCount = node.arrow.signal !== 0 ? 1 : 0;
+                        }
                         if (edge.cycle !== null && !this.isCycle) {
                             edge.cycle.changed_nodes.add(edge);
                             temp_cycle_update.add(edge);
