@@ -116,7 +116,7 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
                             const shouldSetSignal = arrow.signal === 0 || this.game.playing;
 
                             if (shouldSetSignal) {
-                                if (arrow.type == ArrowType.BUTTON) {
+                                if (arrow.type == ArrowType.BUTTON || arrow.graph_node.buttonEdge === null) {
                                     arrow.signal = 5;
                                     if (this.game.gameMap.compiled_graph !== undefined) {
                                         this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node);
