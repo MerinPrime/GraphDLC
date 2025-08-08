@@ -104,41 +104,46 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
     patchLoader.addDefinitionPatch("PlayerControls", function (name: string, module: any): any {
         patchLoader.setDefinition("PlayerControls", class PlayerControls extends module {
             constructor(...args: any[]) {
-                super(...args);
-                this.mouseHandler.leftClickCallback = () => {
+                super(...args);this.mouseHandler.leftClickCallback = () => {
                     const arrow = this.getArrowByMousePosition();
                     const shiftPressed = this.keyboardHandler.getShiftPressed();
 
-                    if (arrow !== undefined && this.freeCursor && !shiftPressed) {
-                        const isTargetType = arrow.type === 21 || arrow.type === 24;
+                    if (!arrow || !this.freeCursor || shiftPressed) return;
 
-                        if (isTargetType) {
-                            const shouldSetSignal = arrow.signal === 0 || this.game.playing;
+                    const isTargetType = arrow.type === 21 || arrow.type === 24;
+                    if (!isTargetType) return;
 
-                            if (shouldSetSignal) {
-                                if (arrow.type == ArrowType.BUTTON || arrow.graph_node.buttonEdge === null) {
+                    const hasCompiledGraph = this.game.gameMap.compiled_graph !== undefined;
+                    const shouldSetSignal = arrow.signal === 0 || this.game.playing;
+
+                    if (shouldSetSignal) {
+                        if (arrow.type === ArrowType.BUTTON) {
+                            arrow.signal = 5;
+                            if (hasCompiledGraph) {
+                                this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node);
+                            }
+                        } else {
+                            if (hasCompiledGraph) {
+                                const buttonEdge = arrow.graph_node.buttonEdge;
+                                if (!buttonEdge) {
                                     arrow.signal = 5;
-                                    if (this.game.gameMap.compiled_graph !== undefined) {
-                                        this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node);
-                                    }
+                                    this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node);
                                 } else {
-                                    if (this.game.gameMap.compiled_graph !== undefined) {
-                                        arrow.graph_node.buttonEdge.arrow.signal = arrow.graph_node.buttonEdge.handler.active_signal;
-                                        arrow.graph_node.buttonEdge.lastSignal = 0;
-                                        this.game.gameMap.compiled_graph.graph.changed_nodes.add(arrow.graph_node.buttonEdge);
-                                        this.game.gameMap.compiled_graph.graph.delayed_update.add(arrow.graph_node.buttonEdge);
-                                    } else {
-                                        arrow.signal = 5;
-                                    }
+                                    buttonEdge.arrow.signal = buttonEdge.handler.active_signal;
+                                    buttonEdge.lastSignal = 0;
+                                    this.game.gameMap.compiled_graph.graph.changed_nodes.add(buttonEdge);
+                                    this.game.gameMap.compiled_graph.graph.delayed_update.add(buttonEdge);
                                 }
                             } else {
-                                arrow.signal = 0;
+                                arrow.signal = 5;
                             }
-
-                            this.game.screenUpdated = true;
                         }
+                    } else {
+                        arrow.signal = 0;
                     }
-                }
+
+                    this.game.screenUpdated = true;
+                };
                 const prevKeyDownCallback = this.keyboardHandler.keyDownCallback;
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
                     prevKeyDownCallback(code, key);
