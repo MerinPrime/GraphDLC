@@ -182,8 +182,11 @@ export function PatchGame(patchLoader: PatchLoader) {
                 if (this.updateSpeedLevel === 5) {
                     do {
                         const now = Date.now();
+                        let recompiled = doRecompile;
                         this.updateTick(e);
-                        totalOffset += Date.now() - now;
+                        if (!recompiled) {
+                            totalOffset += Date.now() - now;
+                        }
                     } while (totalOffset < 1000 / 60)
                     totalOffset -= 1000 / 60;
                 }
