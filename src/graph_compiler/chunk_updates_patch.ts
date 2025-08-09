@@ -249,7 +249,7 @@ export function PatchTPSInfo(patchLoader: PatchLoader) {
             updateInfo(updatedTicks: number) {
                 this.updatedTicks += updatedTicks;
                 const now = Date.now();
-                if (now - this.lastUpdate < 1000) {
+                if (now - this.lastUpdate < 500) {
                     return;
                 }
                 this.tps = this.updatedTicks / (now - this.lastUpdate) * 1000;
