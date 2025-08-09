@@ -256,6 +256,7 @@ export function PatchTPSInfo(patchLoader: PatchLoader) {
                 this.updatedTicks = 0;
                 this.lastUpdate = now;
                 this.info.innerText = `TPS: ${Math.floor(this.tps)}`
+                totalOffset = 0;
             }
 
             getClass() {
