@@ -12,7 +12,7 @@ export class GraphNode {
     public cycleInfo: CycleInfo | null;
     public cycleOffset: number;
     public buttonEdge: GraphNode | null;
-    public display: boolean;
+    public pathLength: number;
     
     constructor(arrow: any, handler: ArrowHandler) {
         if (handler == null) {
@@ -26,7 +26,7 @@ export class GraphNode {
         this.cycleInfo = null;
         this.cycleOffset = 0;
         this.buttonEdge = null;
-        this.display = false;
+        this.pathLength = -1;
         
         arrow.graph_node = this;
     }

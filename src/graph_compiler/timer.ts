@@ -4,12 +4,14 @@ export class Timer {
     length: number;
     offset: number;
     tick: number;
-    arrow: GraphNode;
+    arrows: GraphNode[];
+    restarted: boolean;
     
-    constructor(length: number, offset: number, arrow: GraphNode) {
+    constructor(length: number, offset: number, arrows: GraphNode[]) {
         this.length = length;
         this.offset = offset;
         this.tick = offset;
-        this.arrow = arrow;
+        this.arrows = arrows;
+        this.restarted = true;
     }
 }

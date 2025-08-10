@@ -29,6 +29,7 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                 game_map.compiled_graph = new CompiledMapGraph();
                 game_map.compiled_graph.compile_from(game_map);
             }
+            // return;
             if (debugRing) {
                 return;
             }
@@ -49,8 +50,7 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                 });
             });
             if (game_map.compiled_graph !== undefined) {
-                game_map.compiled_graph.graph.changed_nodes = new Set(game_map.compiled_graph.graph.entry_points);
-                game_map.compiled_graph.graph.restarted = true;
+                game_map.compiled_graph.graph.clearSignals();
             }
         }
     });

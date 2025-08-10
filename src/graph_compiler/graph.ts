@@ -1,6 +1,8 @@
 import {GraphNode} from "./graph_node";
 import {ArrowType} from "../api/arrow_type";
 import {ADDITIONAL_UPDATE_ARROWS, ENTRY_POINTS, updateNode} from "./handlers";
+import {Timer} from "./timer";
+import {Path} from "./path";
 
 export class Graph {
     entry_points: Set<GraphNode>;
@@ -10,6 +12,8 @@ export class Graph {
     temp_cycles_to_update: Set<Graph>;
     cycles_to_update: Set<Graph>;
     delayed_update: Set<GraphNode>;
+    pathes: Array<Path>;
+    timers: Array<Timer>;
     restarted: boolean;
     isCycle: boolean;
     cycleLength: number;
@@ -23,10 +27,22 @@ export class Graph {
         this.temp_cycles_to_update = new Set();
         this.cycles_to_update = new Set();
         this.delayed_update = new Set();
+        this.pathes = [];
+        this.timers = [];
         this.restarted = false;
         this.isCycle = isCycle;
         this.cycleLength = 0;
         this.lastUpdate = 0;
+    }
+    
+    clearSignals() {
+        this.changed_nodes = new Set(this.entry_points);
+        this.restarted = true;
+        this.timers.forEach((timer) => {
+            timer.tick = timer.offset;
+            timer.restarted = true;
+        });
+        this.pathes.length = 0;
     }
     
     clearTemp() {
@@ -53,24 +69,60 @@ export class Graph {
     }
     
     update(tick: number) {
+        this.clearTemp();
         const changed_nodes: Set<GraphNode> = this.temp_set;
         const temp_cycle_update: Set<GraphNode> = this.temp_cycle_update;
-        const temp_cycles_to_update = this.temp_cycles_to_update;
-        this.clearTemp();
-        this.cycles_to_update.forEach((cycle) => {
-            cycle.runUntil(tick);
-            if (cycle.hasActiveEntryPoints()) {
-                temp_cycles_to_update.add(cycle);
+        if (this.cycles_to_update.size > 0) {
+            const temp_cycles_to_update = this.temp_cycles_to_update;
+            this.cycles_to_update.forEach((cycle) => {
+                cycle.runUntil(tick);
+                if (cycle.hasActiveEntryPoints()) {
+                    temp_cycles_to_update.add(cycle);
+                }
+                return;
+            });
+            this.temp_cycles_to_update = this.cycles_to_update;
+            this.cycles_to_update = temp_cycles_to_update;
+        }
+        if (this.timers.length > 0) {
+            this.timers.forEach((timer) => {
+                if (timer.tick === timer.length && !timer.restarted) {
+                    timer.arrows.forEach((arrow) => {
+                        arrow.arrow.signalsCount -= 1;
+                        this.delayed_update.add(arrow);
+                    });
+                }
+                timer.tick -= 1;
+                if (timer.tick === 0) {
+                    timer.tick = timer.length;
+                    timer.arrows.forEach((arrow) => {
+                        arrow.arrow.signalsCount += 1;
+                        this.delayed_update.add(arrow);
+                    });
+                    timer.restarted = false;
+                }
+            });
+        }
+        if (this.pathes.length > 0) {
+            for (let i = 0; i < this.pathes.length; i++) {
+                const path = this.pathes[i];
+                path.tick -= 1;
+                if (path.tick === 0) {
+                    path.arrow.arrow.signalsCount += path.delta;
+                    this.delayed_update.add(path.arrow);
+                    this.pathes.splice(i, 1);
+                    i--;
+                }
             }
-            return;
-        });
-        this.temp_cycles_to_update = this.cycles_to_update;
-        this.cycles_to_update = temp_cycles_to_update;
+        }
         this.changed_nodes.forEach(node => {
-            if (node.display) {
+            const isChanged = node.arrow.signal !== node.arrow.lastSignal;
+            if (node.pathLength !== -1) {
+                const isActive = node.arrow.signal === node.handler!.active_signal;
+                const delta = isActive ? 1 : -1;
+                this.pathes.push(new Path(node.pathLength, node.edges[0], delta));
                 return;
             }
-            const isChanged = node.arrow.signal !== node.arrow.lastSignal;
             if (isChanged) {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 const delta = isActive ? 1 : -1;

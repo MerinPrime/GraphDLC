@@ -89,15 +89,13 @@ export const ADDITIONAL_UPDATE_ARROWS = new Set([
     ArrowType.BRUH_BUTTON,
 ]);
 
-export const NOT_ALLOWED_IN_RING = new Set([
+export const NOT_ALLOWED_IN_CYCLE = new Set([
     ArrowType.BLOCKER,
-    ArrowType.DELAY,
     ArrowType.LOGIC_NOT,
     ArrowType.LOGIC_FLIP,
     ArrowType.LOGIC_FLOP,
     ArrowType.RANDOM,
     ArrowType.BRUH_BUTTON,
-    ArrowType.DETECTOR,
     ArrowType.RED_IMPULSE,
     ArrowType.RED_SOURCE,
 ]);
@@ -124,6 +122,70 @@ export const ALLOWED_IN_PIXEL = new Set([
     ArrowType.BLUE_SPLITTER_2,
     ArrowType.BLUE_SPLITTER_3,
     ArrowType.LOGIC_XOR,
+]);
+
+export const ALLOWED_IN_PATH = new Set([
+    ArrowType.RED_ARROW,
+    ArrowType.SPLITTER_1,
+    ArrowType.SPLITTER_2,
+    ArrowType.SPLITTER_3,
+    ArrowType.BLUE_ARROW,
+    ArrowType.BLUE_DIAGONAL_ARROW,
+    ArrowType.BLUE_SPLITTER_1,
+    ArrowType.BLUE_SPLITTER_2,
+    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.LOGIC_XOR,
+]);
+
+export const ALLOWED_IN_PRETIMER = new Set([
+    ArrowType.RED_ARROW,
+    ArrowType.DELAY,
+    ArrowType.DETECTOR,
+    ArrowType.SPLITTER_1,
+    ArrowType.SPLITTER_2,
+    ArrowType.SPLITTER_3,
+    ArrowType.BLUE_ARROW,
+    ArrowType.BLUE_DIAGONAL_ARROW,
+    ArrowType.BLUE_SPLITTER_1,
+    ArrowType.BLUE_SPLITTER_2,
+    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.LOGIC_XOR,
+    ArrowType.RED_IMPULSE,
+]);
+
+export const ALLOWED_IN_TIMER = new Set([
+    ArrowType.RED_ARROW,
+    ArrowType.DELAY,
+    ArrowType.DETECTOR,
+    ArrowType.SPLITTER_1,
+    ArrowType.SPLITTER_2,
+    ArrowType.SPLITTER_3,
+    ArrowType.BLUE_ARROW,
+    ArrowType.BLUE_DIAGONAL_ARROW,
+    ArrowType.BLUE_SPLITTER_1,
+    ArrowType.BLUE_SPLITTER_2,
+    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.LOGIC_XOR,
+]);
+
+export const IS_BRANCH = new Set([
+    ArrowType.SPLITTER_1,
+    ArrowType.SPLITTER_2,
+    ArrowType.SPLITTER_3,
+    ArrowType.BLUE_SPLITTER_1,
+    ArrowType.BLUE_SPLITTER_2,
+    ArrowType.BLUE_SPLITTER_3,
+]);
+
+export const ALLOWED_IN_BRANCH = new Set([
+    ArrowType.RED_ARROW,
+    ArrowType.DETECTOR,
+    ArrowType.SPLITTER_1,
+    ArrowType.SPLITTER_2,
+    ArrowType.SPLITTER_3,
+    ArrowType.BLUE_SPLITTER_1,
+    ArrowType.BLUE_SPLITTER_2,
+    ArrowType.BLUE_SPLITTER_3,
 ]);
 
 export const EMPTY_HANDLER = new ArrowHandler(
@@ -488,10 +550,5 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
                 arrow.signal = 0;
                 break;
         }
-    }
-    if (graphNode.display) {
-        graphNode.edges.forEach(edge => {
-            edge.arrow.signal = arrow.signal === 0 ? 0 : edge.handler!.active_signal;
-        });
     }
 }
