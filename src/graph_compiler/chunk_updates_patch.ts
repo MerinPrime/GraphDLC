@@ -12,7 +12,7 @@ let currentTick = 0;
 export let debugRing = false;
 
 window.addEventListener('keydown', function(event) {
-    if (event.key === 'KeyP') {
+    if (event.code === 'KeyP') {
         doRecompile = true;
         event.preventDefault();
     }
