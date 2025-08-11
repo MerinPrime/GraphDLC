@@ -12,7 +12,7 @@ let currentTick = 0;
 export let debugRing = false;
 
 window.addEventListener('keydown', function(event) {
-    if (event.key === 'p') {
+    if (event.key === 'KeyP') {
         doRecompile = true;
         event.preventDefault();
     }
@@ -29,7 +29,6 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                 game_map.compiled_graph = new CompiledMapGraph();
                 game_map.compiled_graph.compile_from(game_map);
             }
-            // return;
             if (debugRing) {
                 return;
             }
@@ -255,7 +254,7 @@ export function PatchTPSInfo(patchLoader: PatchLoader) {
                 this.tps = this.updatedTicks / (now - this.lastUpdate) * 1000;
                 this.updatedTicks = 0;
                 this.lastUpdate = now;
-                this.info.innerText = `TPS: ${Math.floor(this.tps)}`
+                this.info.innerText = `TPS: ${Math.floor(this.tps)}`;
                 totalOffset = 0;
             }
 

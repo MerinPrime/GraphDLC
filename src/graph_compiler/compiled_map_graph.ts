@@ -195,7 +195,7 @@ export class CompiledMapGraph {
             }
         }
         
-        foundPaths.forEach(path => {
+        foundPaths.forEach((path) => {
             if (path.length < 6)
                 return;
             if (path.some((edge) => edge.cycle !== null))
