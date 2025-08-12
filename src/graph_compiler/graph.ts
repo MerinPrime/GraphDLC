@@ -3,6 +3,7 @@ import {ArrowType} from "../api/arrow_type";
 import {ADDITIONAL_UPDATE_ARROWS, ENTRY_POINTS, updateNode} from "./handlers";
 import {Timer} from "./timer";
 import {Path} from "./path";
+import {PathPool} from "./path_pool";
 
 export class Graph {
     entry_points: Set<GraphNode>;
@@ -18,6 +19,9 @@ export class Graph {
     isCycle: boolean;
     cycleLength: number;
     lastUpdate: number;
+    pathPool: PathPool;
+    nextPathUpdateTick: number;
+    lastPathUpdateTick: number;
     
     constructor(isCycle: boolean = false) {
         this.entry_points = new Set();
@@ -33,6 +37,9 @@ export class Graph {
         this.isCycle = isCycle;
         this.cycleLength = 0;
         this.lastUpdate = 0;
+        this.pathPool = new PathPool();
+        this.nextPathUpdateTick = Infinity;
+        this.lastPathUpdateTick = 0;
     }
     
     clearSignals() {
@@ -72,10 +79,15 @@ export class Graph {
         this.clearTemp();
         const changed_nodes: Set<GraphNode> = this.temp_set;
         const temp_cycle_update: Set<GraphNode> = this.temp_cycle_update;
+        const cycles_updated_this_tick = new Set<Graph>();
+
         if (this.cycles_to_update.size > 0) {
             const temp_cycles_to_update = this.temp_cycles_to_update;
             this.cycles_to_update.forEach((cycle) => {
-                cycle.runUntil(tick);
+                if (!cycles_updated_this_tick.has(cycle)) {
+                    cycle.runUntil(tick);
+                    cycles_updated_this_tick.add(cycle);
+                }
                 if (cycle.hasActiveEntryPoints()) {
                     temp_cycles_to_update.add(cycle);
                 }
@@ -104,23 +116,36 @@ export class Graph {
             });
         }
         if (this.pathes.length > 0) {
-            for (let i = 0; i < this.pathes.length; i++) {
-                const path = this.pathes[i];
-                path.tick -= 1;
-                if (path.tick === 0) {
-                    path.arrow.arrow.signalsCount += path.delta;
-                    this.delayed_update.add(path.arrow);
-                    this.pathes.splice(i, 1);
-                    i--;
+            if (this.nextPathUpdateTick <= tick) {
+                let nextMinRemainingTicks = Infinity;
+                let writeIndex = 0;
+                for (let i = 0; i < this.pathes.length; i++) {
+                    const path = this.pathes[i];
+                    if (path.tick === tick) {
+                        path.arrow.arrow.signalsCount += path.delta;
+                        this.delayed_update.add(path.arrow);
+                    } else {
+                        nextMinRemainingTicks = Math.min(nextMinRemainingTicks, path.tick);
+                        this.pathes[writeIndex] = path;
+                        writeIndex++;
+                    }
+                }
+                this.pathes.length = writeIndex;
+                if (this.pathes.length === 0) {
+                    this.nextPathUpdateTick = Infinity;
+                } else {
+                    this.nextPathUpdateTick = nextMinRemainingTicks;
                 }
             }
+            this.lastPathUpdateTick = tick;
         }
         this.changed_nodes.forEach(node => {
             const isChanged = node.arrow.signal !== node.arrow.lastSignal;
             if (node.pathLength !== -1) {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 const delta = isActive ? 1 : -1;
-                this.pathes.push(new Path(node.pathLength, node.edges[0], delta));
+                this.pathes.push(this.pathPool.get(tick + node.pathLength, node.edges[0], delta));
+                this.nextPathUpdateTick = Math.min(this.nextPathUpdateTick, tick + node.pathLength);
                 return;
             }
             if (isChanged) {
@@ -132,11 +157,10 @@ export class Graph {
                 node.edges.forEach(edge => {
                     i++;
                     if (edge.cycle !== null && !this.isCycle) {
-                        const updateDelta = (tick - edge.cycle.lastUpdate) % edge.cycle.cycleLength;
-                        for (let i = 0; i < updateDelta; i++) {
-                            edge.cycle.update(edge.cycle.lastUpdate + i);
+                        if (!cycles_updated_this_tick.has(edge.cycle)) {
+                            edge.cycle.runUntil(tick);
+                            cycles_updated_this_tick.add(edge.cycle);
                         }
-                        edge.cycle.lastUpdate = tick;
                     }
                     if (edge.arrow.type === ArrowType.DETECTOR) {
                         if (isBlocker && i == 0) {

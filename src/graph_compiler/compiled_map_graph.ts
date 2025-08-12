@@ -166,6 +166,7 @@ export class CompiledMapGraph {
             }
 
             const currentPath: GraphNode[] = [];
+            const pathNodes = new Set<GraphNode>();
             let pathWalker: GraphNode | undefined = currentNode;
 
             while (
@@ -174,12 +175,13 @@ export class CompiledMapGraph {
                 pathWalker.edges.length === 1 &&
                 pathWalker.back.length === 1
                 ) {
-                currentPath.push(pathWalker);
-                pathWalker = pathWalker.edges[0];
-
-                if (currentPath.includes(pathWalker)) {
+                if (pathNodes.has(pathWalker)) {
                     pathWalker = undefined;
+                    break;
                 }
+                currentPath.push(pathWalker);
+                pathNodes.add(pathWalker);
+                pathWalker = pathWalker.edges[0];
             }
 
             if (pathWalker && ALLOWED_IN_PATH.has(pathWalker.arrow.type)) {
@@ -367,17 +369,19 @@ export class CompiledMapGraph {
         const cycles = new Set<Array<GraphNode>>();
         const visited = new Set<GraphNode>();
         const recursionStack = new Array<GraphNode>();
+        const recursionStackSet = new Set<GraphNode>();
         const pathTrace = new Map<GraphNode, GraphNode>();
 
         function dfs(node: GraphNode, allowed: Set<GraphNode> = new Set()) {
             visited.add(node);
             recursionStack.push(node);
+            recursionStackSet.add(node);
 
             for (const neighbor of node.edges) {
                 if (!allowed.has(neighbor) && allowed.size !== 0) {
                     continue;
                 }
-                if (recursionStack.indexOf(neighbor) !== -1) {
+                if (recursionStackSet.has(neighbor)) {
                     const cycle = new Array<GraphNode>();
                     cycle.push(neighbor);
 
@@ -397,6 +401,7 @@ export class CompiledMapGraph {
             }
 
             recursionStack.pop();
+            recursionStackSet.delete(node);
         }
 
         for (const entry_point of this.graph.entry_points) {
