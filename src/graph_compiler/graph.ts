@@ -151,8 +151,7 @@ export class Graph {
             if (isChanged) {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 const delta = isActive ? 1 : -1;
-                const isBlocker = node.arrow.type === ArrowType.BLOCKER;
-                const isDelayed = node.arrow.type === ArrowType.DELAY && node.arrow.signal === 2;
+                const isDelayed = node.isDelay && node.arrow.signal === 2;
                 let i = 0;
                 node.edges.forEach(edge => {
                     i++;
@@ -162,8 +161,8 @@ export class Graph {
                             cycles_updated_this_tick.add(edge.cycle);
                         }
                     }
-                    if (edge.arrow.type === ArrowType.DETECTOR) {
-                        if (isBlocker && i == 0) {
+                    if (edge.isDetector) {
+                        if (node.isBlocker && i == 0) {
                             edge.arrow.blocked += delta;
                         }
                         else {
@@ -177,7 +176,7 @@ export class Graph {
                             changed_nodes.add(edge);
                         }
                     } else if (!isDelayed) {
-                        if (isBlocker) {
+                        if (node.isBlocker) {
                             edge.arrow.blocked += delta;
                         } else {
                             edge.arrow.signalsCount += delta;
@@ -192,13 +191,13 @@ export class Graph {
                     }
                 });
             }
-            if (isChanged && ADDITIONAL_UPDATE_ARROWS.has(node.arrow.type) || this.restarted && ENTRY_POINTS.has(node.arrow.type)) {
+            if (isChanged && node.isAdditionalUpdate || this.restarted && node.isEntryPoint) {
                 changed_nodes.add(node);
             }
-            if (node.arrow.signal !== 0 && node.arrow.signalsCount === 0 && (node.arrow.type === ArrowType.BUTTON || node.arrow.type === ArrowType.BRUH_BUTTON)) {
+            if (node.arrow.signal !== 0 && node.arrow.signalsCount === 0 && node.isButton) {
                 changed_nodes.add(node);
             }
-            if (node.arrow.type === ArrowType.RANDOM && node.arrow.signalsCount > 0 || node.arrow.type === ArrowType.LOGIC_AND && node.cycleInfo !== null && node.arrow.signalsCount > 0) {
+            if (node.isBruh && node.arrow.signalsCount > 0) {
                 changed_nodes.add(node);
             }
             node.arrow.lastType = node.arrow.type;

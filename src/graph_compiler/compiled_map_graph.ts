@@ -139,10 +139,26 @@ export class CompiledMapGraph {
         // this.optimize_buttons();
         this.optimize_pixels();
         this.optimize_pathes();
+        this.update_nodes();
         this.graph.changed_nodes = new Set(this.graph.entry_points);
         this.graph.restarted = true;
     }
-
+    
+    update_nodes() {
+        const visited = new Set<GraphNode>();
+        const queue = [...this.graph.entry_points];
+        
+        while (queue.length > 0) {
+            const node = queue.pop()!;
+            if (visited.has(node)) {
+                continue;
+            }
+            node.update();
+            visited.add(node);
+            queue.push(...node.edges);
+        }
+    }
+    
     optimize_pathes() {
         const foundPaths: GraphNode[][] = [];
         const visitedOrQueued = new Set<GraphNode>();

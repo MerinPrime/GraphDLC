@@ -164,6 +164,8 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
 export function PatchGame(patchLoader: PatchLoader) {
     patchLoader.addDefinitionPatch("Game", function (name: string, module: any): any {
         let PlayerSettings;
+        let lastUpdateTime = performance.now();
+        let accumulator = 0;
         patchLoader.setDefinition("Game", class Game extends module {
             draw(...args: any[]) {
                 // const now = Date.now();
@@ -178,7 +180,7 @@ export function PatchGame(patchLoader: PatchLoader) {
                 }
                 PlayerSettings ??= patchLoader.getDefinition('PlayerSettings');
                 const startTick = this.tick;
-                if (this.updateSpeedLevel === 5) {
+                if (this.updateSpeedLevel === 8) {
                     do {
                         const now = Date.now();
                         let recompiled = doRecompile;
@@ -186,20 +188,43 @@ export function PatchGame(patchLoader: PatchLoader) {
                         if (!recompiled) {
                             totalOffset += Date.now() - now;
                         }
-                    } while (totalOffset < 1000 / 60)
+                        this.screenUpdated = true;
+                    } while (totalOffset < 1000 / 60);
                     totalOffset -= 1000 / 60;
+                    if (totalOffset > 1) {
+                        totalOffset = 0;
+                    }
                 }
                 else {
-                    if (this.frame % PlayerSettings.framesToSkip[this.updateSpeedLevel] == 0)
-                        for (let t = 0; t < PlayerSettings.framesToUpdate[this.updateSpeedLevel]; t++)
-                            this.updateTick(e),
+                    const now = performance.now();
+                    const delta = now - lastUpdateTime;
+                    lastUpdateTime = now;
+                    accumulator += delta;
+
+                    const skip = [1000 / 3, 1000 / 12, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60][this.updateSpeedLevel];
+                    const ticks = [1, 1, 1, 5, 20, 100, 500, 2000][this.updateSpeedLevel];
+
+                    while (accumulator >= skip) {
+                        for (let i = 0; i < ticks; i++) {
+                            this.updateTick(e);
                             performance.now() - this.updateTime > 1e3 && (this.updateTime = performance.now(),
                                 this.updatesPerSecond = 0),
                                 this.updatesPerSecond++
+                        }
+                        accumulator -= skip;
+                        this.screenUpdated = true;
+                    }
                 }
                 tpsInfo!.updateInfo(this.tick - startTick);
             }
         });
+    });
+}
+
+export function PatchPlayerSettings(patchLoader: PatchLoader) {
+    patchLoader.addDefinitionPatch("PlayerSettings", function (name: string, module: any): any {
+        module.framesToSkip.push(1, 1);
+        module.framesToUpdate.push(500, 2000);
     });
 }
 
@@ -215,8 +240,8 @@ export function PatchPlayerUI(patchLoader: PatchLoader) {
                 PlayerSettings ??= patchLoader.getDefinition('PlayerSettings');
                 GameText ??= patchLoader.getDefinition('GameText');
                 TPSInfo ??= patchLoader.getDefinition('TPSInfo');
-                this.speedController = new UIRange(document.body, 6, (e: number) => {
-                    if (e === 5) {
+                this.speedController = new UIRange(document.body, 9, (e: number) => {
+                    if (e === 8) {
                         return 'MAX TPS';
                     }
                     return `${PlayerSettings.framesToUpdate[e] / PlayerSettings.framesToSkip[e] * 60} ${GameText.PER_SECOND.get()}`;
@@ -255,7 +280,6 @@ export function PatchTPSInfo(patchLoader: PatchLoader) {
                 this.updatedTicks = 0;
                 this.lastUpdate = now;
                 this.info.innerText = `TPS: ${Math.floor(this.tps)}`;
-                totalOffset = 0;
             }
 
             getClass() {

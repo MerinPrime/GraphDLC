@@ -3,7 +3,7 @@ import {
     PatchChunkUpdates,
     PatchGame,
     PatchGameMap,
-    PatchPlayerControls,
+    PatchPlayerControls, PatchPlayerSettings,
     PatchPlayerUI, PatchTPSInfo
 } from "./graph_compiler/chunk_updates_patch";
 
@@ -15,3 +15,4 @@ PatchTPSInfo(patchLoader);
 PatchGameMap(patchLoader);
 PatchPlayerControls(patchLoader);
 PatchGame(patchLoader);
+PatchPlayerSettings(patchLoader);
