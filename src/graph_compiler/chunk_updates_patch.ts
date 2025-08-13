@@ -197,6 +197,9 @@ export function PatchGame(patchLoader: PatchLoader) {
                     }
                 }
                 else {
+                    if (this.gameMap.compiled_graph === undefined) {
+                        this.updateSpeedLevel = Math.min(this.updateSpeedLevel, 5)
+                    }
                     const now = performance.now();
                     const delta = now - lastUpdateTime;
                     lastUpdateTime = now;
@@ -204,13 +207,24 @@ export function PatchGame(patchLoader: PatchLoader) {
 
                     const skip = [1000 / 3, 1000 / 12, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60][this.updateSpeedLevel];
                     const ticks = [1, 1, 1, 5, 20, 100, 500, 2000][this.updateSpeedLevel];
-
+                    
+                    if (accumulator > skip * 3) {
+                        accumulator = skip;
+                    }
+                    
                     while (accumulator >= skip) {
+                        const batchStart = performance.now();
                         for (let i = 0; i < ticks; i++) {
                             this.updateTick(e);
                             performance.now() - this.updateTime > 1e3 && (this.updateTime = performance.now(),
                                 this.updatesPerSecond = 0),
                                 this.updatesPerSecond++
+                        }
+                        const batchDuration = performance.now() - batchStart;
+                        if (batchDuration > skip * 2 && this.updateSpeedLevel > 0) {
+                            this.updateSpeedLevel--;
+                            accumulator = 0;
+                            break;
                         }
                         accumulator -= skip;
                         this.screenUpdated = true;
