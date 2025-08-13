@@ -103,7 +103,8 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
     patchLoader.addDefinitionPatch("PlayerControls", function (name: string, module: any): any {
         patchLoader.setDefinition("PlayerControls", class PlayerControls extends module {
             constructor(...args: any[]) {
-                super(...args);this.mouseHandler.leftClickCallback = () => {
+                super(...args);
+                this.mouseHandler.leftClickCallback = () => {
                     const arrow = this.getArrowByMousePosition();
                     const shiftPressed = this.keyboardHandler.getShiftPressed();
 
