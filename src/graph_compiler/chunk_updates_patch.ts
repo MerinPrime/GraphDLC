@@ -192,7 +192,7 @@ export function PatchGame(patchLoader: PatchLoader) {
                         this.screenUpdated = true;
                     } while (totalOffset < 1000 / 60);
                     totalOffset -= 1000 / 60;
-                    if (totalOffset > 1) {
+                    if (totalOffset > 1000 / 60 * 5) {
                         totalOffset = 0;
                     }
                 }
@@ -213,22 +213,15 @@ export function PatchGame(patchLoader: PatchLoader) {
                     }
                     
                     while (accumulator >= skip) {
-                        const batchStart = performance.now();
                         for (let i = 0; i < ticks; i++) {
                             this.updateTick(e);
-                            performance.now() - this.updateTime > 1e3 && (this.updateTime = performance.now(),
-                                this.updatesPerSecond = 0),
-                                this.updatesPerSecond++
-                        }
-                        const batchDuration = performance.now() - batchStart;
-                        if (batchDuration > skip * 2 && this.updateSpeedLevel > 0) {
-                            this.updateSpeedLevel--;
-                            accumulator = 0;
-                            break;
                         }
                         accumulator -= skip;
                         this.screenUpdated = true;
                     }
+                    performance.now() - this.updateTime > 1e3 && (this.updateTime = performance.now(),
+                        this.updatesPerSecond = 0),
+                        this.updatesPerSecond++
                 }
                 tpsInfo!.updateInfo(this.tick - startTick);
             }
