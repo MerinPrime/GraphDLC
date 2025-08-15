@@ -2,6 +2,7 @@ import {Arrow} from "../api/arrow";
 import {Chunk} from "../api/chunk";
 import {ArrowType} from "../api/arrow_type";
 import {GraphNode} from "./graph_node";
+import {CycleHeadType} from "./cycle_head_type";
 
 export type GetEdgesFunc = (arrow: Arrow, x: number, y: number, chunk: Chunk) => ([Arrow, number, number, Chunk] | undefined)[];
 export type UpdateFunc = (arrow: Arrow, currentTick: number) => boolean | void;
@@ -509,14 +510,13 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
                 arrow.signal = arrow.signalsCount === 0 ? 3 : 0;
                 break;
             case ArrowType.LOGIC_AND:
-                if (graphNode.cycleInfo !== null) {
+                if (graphNode.cycleHeadType === CycleHeadType.READ) {
                     if (arrow.signalsCount > 1) {
                         arrow.signal = 3;
                     } else if (arrow.signalsCount === 0) {
                         arrow.signal = 0;
                     } else {
-                        const len = graphNode.cycleInfo!.arrows.length;
-                        arrow.signal = graphNode.cycleInfo!.arrows[(graphNode.cycleOffset + currentTick - graphNode.cycleInfo!.graph!.lastUpdate) % len].arrow.signal !== 0 ? 3 : 0;
+                        arrow.signal = graphNode.newCycle!.data.read(currentTick + graphNode.cycleOffset) ? 3 : 0;
                     }
                 } else {
                     arrow.signal = arrow.signalsCount > 1 ? 3 : 0;

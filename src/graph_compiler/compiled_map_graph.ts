@@ -1,11 +1,14 @@
 import {GraphNode} from "./graph_node";
 import {
     ALLOWED_IN_BRANCH,
-    ALLOWED_IN_BUTTON, ALLOWED_IN_PATH, ALLOWED_IN_PIXEL, ALLOWED_IN_PRETIMER, ALLOWED_IN_TIMER,
-    ArrowHandler,
+    ALLOWED_IN_BUTTON,
+    ALLOWED_IN_PATH,
+    ALLOWED_IN_PIXEL,
+    ALLOWED_IN_PRETIMER,
+    ALLOWED_IN_TIMER,
     ENTRY_POINTS,
     getRelativeArrow,
-    HANDLERS, IS_BRANCH,
+    HANDLERS,
     NOT_ALLOWED_IN_CYCLE,
     NOT_ALLOWED_TO_CHANGE
 } from "./handlers";
@@ -16,7 +19,8 @@ import {ArrowType} from "../api/arrow_type";
 import {Graph} from "./graph";
 import {debugRing} from "./chunk_updates_patch";
 import {Timer} from "./timer";
-import * as path from "node:path";
+import {Cycle} from "./cycle";
+import {CycleHeadType} from "./cycle_head_type";
 
 const CHUNK_SIZE = 16;
 
@@ -632,18 +636,33 @@ export class CompiledMapGraph {
         this.graph.timers = Array.from(timerCycles.values());
         
         validCycles.forEach((cycleInfo) => {
-            let graph = new Graph(true);
-            cycleInfo.entrypoints.forEach((entryPoint) => {
+            const entry_points = new Array<GraphNode>();
+            let cycle = new Cycle(cycleInfo.arrows.length, entry_points);
+            for (let i = 0; i < cycleInfo.arrows.length; i++) {
+                const entryPoint = cycleInfo.arrows[i];
+                if (cycleInfo.entrypoints.indexOf(entryPoint) === -1) {
+                    continue;
+                }
                 entryPoint.back.forEach((edge) => {
                     if (cycleInfo.arrows.includes(edge))
                         return;
-                    graph.entry_points.add(edge);
+                    entry_points.push(edge);
+                    switch (entryPoint.arrow.type) {
+                        case ArrowType.LOGIC_XOR:
+                            edge.cycleHeadType = CycleHeadType.XOR_WRITE;
+                            break;
+                        default:
+                            edge.cycleHeadType = CycleHeadType.WRITE;
+                            break;
+                        // alert('error in cycle head type')
+                    }
+                    if (edge.arrow.type === ArrowType.BLOCKER) {
+                        edge.cycleHeadType = CycleHeadType.CLEAR;
+                    }
+                    edge.newCycle = cycle;
+                    edge.cycleOffset = (cycleInfo.arrows.length + i) % cycleInfo.arrows.length;
                 })
-            });
-            cycleInfo.arrows.forEach((arrow) => {
-                arrow.cycle = graph;
-            });
-            cycleInfo.graph = graph;
+            }
             for (let i = 0; i < cycleInfo.arrows.length; i++) {
                 const endPoint = cycleInfo.arrows[i];
                 if (cycleInfo.endpoints.indexOf(endPoint) === -1) {
@@ -653,11 +672,11 @@ export class CompiledMapGraph {
                     if (cycleInfo.arrows.includes(edge))
                         return;
                     edge.cycleOffset = (cycleInfo.arrows.length + i - 1) % cycleInfo.arrows.length;
-                    edge.cycleInfo = cycleInfo;
+                    edge.newCycle = cycle;
+                    edge.cycleHeadType = CycleHeadType.READ;
                     endPoint.edges.splice(endPoint.edges.indexOf(edge), 1);
                 })
             }
-            graph.cycleLength = cycleInfo.arrows.length;
         });
         
         /*

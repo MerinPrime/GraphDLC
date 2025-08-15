@@ -29,6 +29,7 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
                 game_map.compiled_graph = new CompiledMapGraph();
                 game_map.compiled_graph.compile_from(game_map);
             }
+            // return;
             if (debugRing) {
                 return;
             }

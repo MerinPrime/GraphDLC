@@ -3,6 +3,8 @@ import {Arrow} from "../api/arrow";
 import {Graph} from "./graph";
 import {CycleInfo} from "./compiled_map_graph";
 import {ArrowType} from "../api/arrow_type";
+import {Cycle} from "./cycle";
+import {CycleHeadType} from "./cycle_head_type";
 
 export class GraphNode {
     public arrow: Arrow;
@@ -10,8 +12,10 @@ export class GraphNode {
     public back: GraphNode[];
     public edges: GraphNode[];
     public cycle: Graph | null;
+    public newCycle: Cycle | null;
     public cycleInfo: CycleInfo | null;
     public cycleOffset: number;
+    public cycleHeadType: CycleHeadType;
     public buttonEdge: GraphNode | null;
     public pathLength: number;
     
@@ -32,8 +36,10 @@ export class GraphNode {
         this.back = [];
         this.edges = [];
         this.cycle = null;
+        this.newCycle = null;
         this.cycleInfo = null;
         this.cycleOffset = 0;
+        this.cycleHeadType = CycleHeadType.WRITE;
         this.buttonEdge = null;
         this.pathLength = -1;
         
@@ -44,7 +50,7 @@ export class GraphNode {
         this.isDelay = this.arrow.type === ArrowType.DELAY;
         this.isBlocker = this.arrow.type === ArrowType.BLOCKER;
         this.isDetector = this.arrow.type === ArrowType.DETECTOR;
-        this.isBruh = this.arrow.type === ArrowType.RANDOM || (this.arrow.type === ArrowType.LOGIC_AND && this.cycleInfo !== null);
+        this.isBruh = this.arrow.type === ArrowType.RANDOM || (this.arrow.type === ArrowType.LOGIC_AND && this.newCycle !== null);
         this.isButton = this.arrow.type === ArrowType.BUTTON || this.arrow.type === ArrowType.BRUH_BUTTON;
         this.isAdditionalUpdate = ADDITIONAL_UPDATE_ARROWS.has(this.arrow.type);
         this.isEntryPoint = ENTRY_POINTS.has(this.arrow.type);

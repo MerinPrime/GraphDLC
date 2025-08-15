@@ -1,17 +1,18 @@
 import {GraphNode} from "./graph_node";
-import {ArrowType} from "../api/arrow_type";
-import {ADDITIONAL_UPDATE_ARROWS, ENTRY_POINTS, updateNode} from "./handlers";
+import {updateNode} from "./handlers";
 import {Timer} from "./timer";
 import {Path} from "./path";
 import {PathPool} from "./path_pool";
+import {Cycle} from "./cycle";
+import {CycleHeadType} from "./cycle_head_type";
 
 export class Graph {
     entry_points: Set<GraphNode>;
     changed_nodes: Set<GraphNode>;
     temp_set: Set<GraphNode>;
     temp_cycle_update: Set<GraphNode>;
-    temp_cycles_to_update: Set<Graph>;
-    cycles_to_update: Set<Graph>;
+    temp_cycles_to_update: Set<Cycle>;
+    cycles_to_update: Set<Cycle>;
     delayed_update: Set<GraphNode>;
     pathes: Array<Path>;
     timers: Array<Timer>;
@@ -58,37 +59,15 @@ export class Graph {
         this.temp_cycles_to_update.clear();
     }
     
-    runUntil(tick: number) {
-        const updateTicks = (tick - this.lastUpdate) % this.cycleLength;
-        for (let i = 0; i < updateTicks; i++) {
-            this.update(this.lastUpdate + i);
-        }
-        this.lastUpdate = tick;
-    }
-
-    hasActiveEntryPoints() {
-        for (let entryPoint of this.entry_points) {
-            if (entryPoint.arrow.signal === entryPoint.handler?.active_signal) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
     update(tick: number) {
         this.clearTemp();
         const changed_nodes: Set<GraphNode> = this.temp_set;
-        const temp_cycle_update: Set<GraphNode> = this.temp_cycle_update;
-        const cycles_updated_this_tick = new Set<Graph>();
-
+        
         if (this.cycles_to_update.size > 0) {
             const temp_cycles_to_update = this.temp_cycles_to_update;
             this.cycles_to_update.forEach((cycle) => {
-                if (!cycles_updated_this_tick.has(cycle)) {
-                    cycle.runUntil(tick);
-                    cycles_updated_this_tick.add(cycle);
-                }
-                if (cycle.hasActiveEntryPoints()) {
+                const anyActive = cycle.update(tick);
+                if (anyActive) {
                     temp_cycles_to_update.add(cycle);
                 }
                 return;
@@ -155,12 +134,6 @@ export class Graph {
                 let i = 0;
                 node.edges.forEach(edge => {
                     i++;
-                    if (edge.cycle !== null && !this.isCycle) {
-                        if (!cycles_updated_this_tick.has(edge.cycle)) {
-                            edge.cycle.runUntil(tick);
-                            cycles_updated_this_tick.add(edge.cycle);
-                        }
-                    }
                     if (edge.isDetector) {
                         if (node.isBlocker && i == 0) {
                             edge.arrow.blocked += delta;
@@ -168,26 +141,20 @@ export class Graph {
                         else {
                             edge.arrow.signalsCount = node.arrow.signal !== 0 ? 1 : 0;
                         }
-                        if (edge.cycle !== null && !this.isCycle) {
-                            edge.cycle.changed_nodes.add(edge);
-                            temp_cycle_update.add(edge);
-                            this.cycles_to_update.add(edge.cycle);
-                        } else {
-                            changed_nodes.add(edge);
-                        }
                     } else if (!isDelayed) {
                         if (node.isBlocker) {
                             edge.arrow.blocked += delta;
                         } else {
                             edge.arrow.signalsCount += delta;
                         }
-                        if (edge.cycle !== null && !this.isCycle) {
-                            edge.cycle.changed_nodes.add(edge);
-                            temp_cycle_update.add(edge);
-                            this.cycles_to_update.add(edge.cycle);
-                        } else {
-                            changed_nodes.add(edge);
-                        }
+                    } else {
+                        return
+                    }
+                    if (edge.newCycle !== null && edge.cycleHeadType !== CycleHeadType.READ) {
+                        this.cycles_to_update.add(edge.newCycle);
+                        this.temp_cycle_update.add(edge);
+                    } else {
+                        changed_nodes.add(edge);
                     }
                 });
             }
@@ -210,7 +177,7 @@ export class Graph {
         this.changed_nodes.forEach(node => {
             updateNode(node, tick);
         });
-        temp_cycle_update.forEach(node => {
+        this.temp_cycle_update.forEach(node => {
             updateNode(node, tick);
         });
         this.delayed_update.forEach(node => {
