@@ -17,14 +17,15 @@ export class Graph {
     pathes: Array<Path>;
     timers: Array<Timer>;
     restarted: boolean;
-    isCycle: boolean;
     cycleLength: number;
     lastUpdate: number;
     pathPool: PathPool;
     nextPathUpdateTick: number;
     lastPathUpdateTick: number;
     
-    constructor(isCycle: boolean = false) {
+    cycles: Cycle[];
+    
+    constructor(cycles: Cycle[]) {
         this.entry_points = new Set();
         this.changed_nodes = new Set();
         this.temp_set = new Set();
@@ -35,12 +36,12 @@ export class Graph {
         this.pathes = [];
         this.timers = [];
         this.restarted = false;
-        this.isCycle = isCycle;
         this.cycleLength = 0;
         this.lastUpdate = 0;
         this.pathPool = new PathPool();
         this.nextPathUpdateTick = Infinity;
         this.lastPathUpdateTick = 0;
+        this.cycles = cycles;
     }
     
     clearSignals() {
@@ -50,6 +51,10 @@ export class Graph {
             timer.tick = timer.offset;
             timer.restarted = true;
         });
+        this.cycles.forEach((cycle) => {
+            cycle.activeEntryPoints.clear();
+        });
+        this.cycles_to_update.clear();
         this.pathes.length = 0;
     }
     
@@ -62,7 +67,7 @@ export class Graph {
     update(tick: number) {
         this.clearTemp();
         const changed_nodes: Set<GraphNode> = this.temp_set;
-        
+
         if (this.cycles_to_update.size > 0) {
             const temp_cycles_to_update = this.temp_cycles_to_update;
             this.cycles_to_update.forEach((cycle) => {
@@ -151,7 +156,6 @@ export class Graph {
                         return
                     }
                     if (edge.newCycle !== null && edge.cycleHeadType !== CycleHeadType.READ) {
-                        this.cycles_to_update.add(edge.newCycle);
                         this.temp_cycle_update.add(edge);
                     } else {
                         changed_nodes.add(edge);
@@ -179,6 +183,20 @@ export class Graph {
         });
         this.temp_cycle_update.forEach(node => {
             updateNode(node, tick);
+            const isChanged = node.arrow.signal !== node.arrow.lastSignal;
+            if (isChanged) {
+                const isActive = node.arrow.signal === node.handler!.active_signal;
+                if (isActive) {
+                    node.newCycle!.activeEntryPoints.add(node);
+                    this.cycles_to_update.add(node.newCycle!);
+                } else {
+                    node.newCycle!.activeEntryPoints.delete(node);
+                }
+            }
+            node.arrow.lastType = node.arrow.type;
+            node.arrow.lastSignal = node.arrow.signal;
+            node.arrow.lastRotation = node.arrow.rotation;
+            node.arrow.lastFlipped = node.arrow.flipped;
         });
         this.delayed_update.forEach(node => {
             updateNode(node, tick);

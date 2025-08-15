@@ -38,9 +38,11 @@ export interface CycleInfo {
 
 export class CompiledMapGraph {
     graph: Graph;
-    
+    cycles: Cycle[];
+
     constructor() {
-        this.graph = new Graph();
+        this.cycles = [];
+        this.graph = new Graph(this.cycles);
     }
 
     compile_from(game_map: GameMap) {
@@ -222,7 +224,7 @@ export class CompiledMapGraph {
         foundPaths.forEach((path) => {
             if (path.length < 6)
                 return;
-            if (path.some((edge) => edge.cycle !== null))
+            if (path.some((edge) => edge.newCycle !== null))
                 return;
             path[0].pathLength = path.length - 2;
             path[0].edges = [path[path.length - 1]];
@@ -640,6 +642,7 @@ export class CompiledMapGraph {
         validCycles.forEach((cycleInfo) => {
             const entry_points = new Array<GraphNode>();
             let cycle = new Cycle(cycleInfo.arrows.length, entry_points);
+            this.cycles.push(cycle);
             for (let i = 0; i < cycleInfo.arrows.length; i++) {
                 const entryPoint = cycleInfo.arrows[i];
                 if (cycleInfo.entrypoints.indexOf(entryPoint) === -1) {

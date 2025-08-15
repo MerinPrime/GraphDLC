@@ -5,10 +5,12 @@ import {CycleHeadType} from "./cycle_head_type";
 export class Cycle {
     data: BitCycle;
     entryPoints: GraphNode[];
+    activeEntryPoints: Set<GraphNode>;
     
     constructor(cycleSize: number, entryPoints: GraphNode[]) {
         this.data = new BitCycle(cycleSize);
         this.entryPoints = entryPoints;
+        this.activeEntryPoints = new Set<GraphNode>();
     }
     
     updateHead(position: number, headType: CycleHeadType) {
@@ -29,13 +31,12 @@ export class Cycle {
     }
     
     update(tick: number): boolean {
-        let anyActive = false;
-        this.entryPoints.forEach((entryPoint: GraphNode) => {
-            const isActive = entryPoint.arrow.signal === entryPoint.handler?.active_signal;
-            if (isActive)
-                this.updateHead(tick + entryPoint.cycleOffset, entryPoint.cycleHeadType);
-            anyActive ||= isActive;
+        if (this.activeEntryPoints.size === 0) {
+            return false;
+        }
+        this.activeEntryPoints.forEach((entryPoint: GraphNode) => {
+            this.updateHead(tick + entryPoint.cycleOffset, entryPoint.cycleHeadType);
         });
-        return anyActive;
+        return true;
     }
 }

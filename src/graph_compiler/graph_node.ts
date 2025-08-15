@@ -11,9 +11,7 @@ export class GraphNode {
     public handler?: ArrowHandler;
     public back: GraphNode[];
     public edges: GraphNode[];
-    public cycle: Graph | null;
     public newCycle: Cycle | null;
-    public cycleInfo: CycleInfo | null;
     public cycleOffset: number;
     public cycleHeadType: CycleHeadType;
     public buttonEdge: GraphNode | null;
@@ -35,9 +33,7 @@ export class GraphNode {
         this.handler = handler;
         this.back = [];
         this.edges = [];
-        this.cycle = null;
         this.newCycle = null;
-        this.cycleInfo = null;
         this.cycleOffset = 0;
         this.cycleHeadType = CycleHeadType.WRITE;
         this.buttonEdge = null;
