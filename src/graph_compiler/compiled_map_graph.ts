@@ -21,6 +21,7 @@ import {debugRing} from "./chunk_updates_patch";
 import {Timer} from "./timer";
 import {Cycle} from "./cycle";
 import {CycleHeadType} from "./cycle_head_type";
+import * as path from "node:path";
 
 const CHUNK_SIZE = 16;
 
@@ -193,7 +194,8 @@ export class CompiledMapGraph {
                 pathWalker &&
                 ALLOWED_IN_PATH.has(pathWalker.arrow.type) &&
                 pathWalker.edges.length === 1 &&
-                pathWalker.back.length === 1
+                pathWalker.back.length === 1 &&
+                pathWalker.newCycle === null
                 ) {
                 if (pathNodes.has(pathWalker)) {
                     pathWalker = undefined;
@@ -665,6 +667,7 @@ export class CompiledMapGraph {
             }
             for (let i = 0; i < cycleInfo.arrows.length; i++) {
                 const endPoint = cycleInfo.arrows[i];
+                endPoint.newCycle = cycle;
                 if (cycleInfo.endpoints.indexOf(endPoint) === -1) {
                     continue;
                 }
