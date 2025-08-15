@@ -1,6 +1,7 @@
 {
   "name": "layersdlc",
   "version": "1.0.0",
+  "description": "Layers-DLC для стрелочек...",
   "main": "index.js",
   "scripts": {
     "build:dev": "webpack --env development",
@@ -9,7 +10,6 @@
   "keywords": [],
   "author": "FotisDa",
   "license": "ISC",
-  "description": "Layers-DLC для стрелочек...",
   "devDependencies": {
     "@types/deflate-js": "^0.2.2",
     "copy-webpack-plugin": "^13.0.0",

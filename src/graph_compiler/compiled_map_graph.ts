@@ -146,9 +146,127 @@ export class CompiledMapGraph {
         // this.optimize_buttons();
         this.optimize_pixels();
         this.optimize_pathes();
+        // this.optimize_jit();
         this.update_nodes();
         this.graph.changed_nodes = new Set(this.graph.entry_points);
         this.graph.restarted = true;
+    }
+
+    optimize_jit() {
+        const JIT_STATEFUL_TYPES = new Set([
+            ArrowType.DELAY,
+            ArrowType.LOGIC_FLIP,
+            ArrowType.LOGIC_FLOP,
+        ]);
+
+        const isStatefulNode = (node: GraphNode): boolean => {
+            if (JIT_STATEFUL_TYPES.has(node.arrow.type)) return true;
+            if (node.newCycle !== null) return true;
+            return false;
+        };
+
+        const nodeToBlock = new Map<GraphNode, GraphNode[]>();
+        const inDegree = new Map<GraphNode, number>();
+        const queue: GraphNode[] = [];
+        const allNodes = new Set<GraphNode>();
+        const jitBlocks = new Set<GraphNode[]>();
+
+        // Этап 1: Найти все узлы в графе
+        const discoveryQueue = [...this.graph.entry_points];
+        const discovered = new Set<GraphNode>(discoveryQueue);
+        while(discoveryQueue.length > 0) {
+            const node = discoveryQueue.shift()!;
+            allNodes.add(node);
+            for (const edge of [...node.edges, ...node.back]) {
+                if (!discovered.has(edge)) {
+                    discovered.add(edge);
+                    discoveryQueue.push(edge);
+                }
+            }
+        }
+
+        // Этап 2: Инициализировать in-degree для всех узлов и найти стартовые
+        for (const node of allNodes) {
+            if (isStatefulNode(node)) continue;
+            
+            let degree = 0;
+            for (const backNode of node.back) {
+                if (!isStatefulNode(backNode)) {
+                    degree++;
+                }
+            }
+            inDegree.set(node, degree);
+            if (degree === 0) {
+                queue.push(node);
+            }
+        }
+        
+        // Этап 3: Пройти по графу в топологическом порядке
+        while (queue.length > 0) {
+            const node = queue.shift()!;
+
+            const parentBlocks = new Set<GraphNode[]>();
+            node.back.forEach(parent => {
+                if (!isStatefulNode(parent)) {
+                    const block = nodeToBlock.get(parent);
+                    if (block) {
+                        parentBlocks.add(block);
+                    }
+                }
+            });
+
+            let targetBlock: GraphNode[];
+            if (parentBlocks.size === 0) {
+                // Нет "чистых" родителей -> новый блок
+                targetBlock = [];
+                jitBlocks.add(targetBlock);
+            } else if (parentBlocks.size === 1) {
+                // Один родительский блок -> продолжаем его
+                targetBlock = parentBlocks.values().next().value!;
+            } else {
+                // Несколько родительских блоков -> СЛИЯНИЕ
+                const blocksToMerge = [...parentBlocks];
+                targetBlock = blocksToMerge[0]; // Выбираем первый как основной
+                
+                for (let i = 1; i < blocksToMerge.length; i++) {
+                    const blockToMerge = blocksToMerge[i];
+                    // Перемещаем все узлы из сливаемого блока в основной
+                    for (const nodeToMove of blockToMerge) {
+                        targetBlock.push(nodeToMove);
+                        nodeToBlock.set(nodeToMove, targetBlock); // Обновляем карту!
+                    }
+                    // Удаляем старый, теперь пустой блок
+                    jitBlocks.delete(blockToMerge);
+                }
+            }
+            
+            targetBlock.push(node);
+            nodeToBlock.set(node, targetBlock);
+
+            // Обновляем in-degree для следующих узлов
+            node.edges.forEach(edge => {
+                if (!isStatefulNode(edge)) {
+                    const newInDegree = (inDegree.get(edge) || 1) - 1;
+                    inDegree.set(edge, newInDegree);
+                    if (newInDegree === 0) {
+                        queue.push(edge);
+                    }
+                }
+            });
+        }
+
+        // Визуализация найденных блоков
+        let blockColor = 1;
+        jitBlocks.forEach(block => {
+            if (block.length === 0) return;
+            block.forEach(node => {
+                node.arrow.signal = blockColor;
+            });
+            blockColor++;
+            if (blockColor > 5) {
+                blockColor = 1;
+            }
+        });
     }
     
     update_nodes() {
