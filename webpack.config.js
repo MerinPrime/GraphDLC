@@ -65,7 +65,7 @@ module.exports = (env) => {
             new CopyPlugin({
                 patterns: [
                     {
-                        from: './template/newchrome/manifest.json',
+                        from: './templates/newchrome/manifest.json',
                         to: 'manifest.json',
                         transform: (content) => {
                             const manifest = JSON.parse(content.toString());
@@ -73,8 +73,8 @@ module.exports = (env) => {
                             return JSON.stringify(manifest, null, 2);
                         },
                     },
-                    { from: './template/newchrome/images', to: 'images' },
-                    { from: './template/newchrome/style.css', to: 'style.css' },
+                    { from: './templates/newchrome/images', to: 'images' },
+                    { from: './templates/newchrome/style.css', to: 'style.css' },
                 ],
             }),
             ...(isProduction ? [new ZipPlugin({
@@ -94,7 +94,7 @@ module.exports = (env) => {
             new CopyPlugin({
                 patterns: [
                     {
-                        from: './template/oldchrome/manifest.json',
+                        from: './templates/oldchrome/manifest.json',
                         to: 'manifest.json',
                         transform: (content) => {
                             const manifest = JSON.parse(content.toString());
@@ -102,8 +102,8 @@ module.exports = (env) => {
                             return JSON.stringify(manifest, null, 2);
                         },
                     },
-                    { from: './template/oldchrome/images', to: 'images' },
-                    { from: './template/oldchrome/style.css', to: 'style.css' },
+                    { from: './templates/oldchrome/images', to: 'images' },
+                    { from: './templates/oldchrome/style.css', to: 'style.css' },
                 ],
             }),
             ...(isProduction ? [new ZipPlugin({
