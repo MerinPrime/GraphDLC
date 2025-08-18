@@ -104,6 +104,7 @@ module.exports = (env) => {
                     },
                     { from: './templates/oldchrome/images', to: 'images' },
                     { from: './templates/oldchrome/style.css', to: 'style.css' },
+                    { from: './templates/oldchrome/injector.js', to: 'injector.js' },
                 ],
             }),
             ...(isProduction ? [new ZipPlugin({
