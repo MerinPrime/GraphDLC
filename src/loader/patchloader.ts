@@ -84,11 +84,11 @@ export class PatchLoader {
         this.patches.push(patch);
     }
 
-    public addDefinitionPatch(target: string, patch: (name: string, definition: any) => void): void {
+    public addDefinitionPatch(target: string, patch: (definition: any) => void): void {
         this.addManualPatch((name, definition) => {
             if (name !== target)
                 return false;
-            patch(name, definition);
+            patch(definition);
             return true;
         });
     }

@@ -19,7 +19,7 @@ window.addEventListener('keydown', function(event) {
 });
 
 export function PatchChunkUpdates(patchLoader: PatchLoader) {
-    patchLoader.addDefinitionPatch("ChunkUpdates", function (name: string, module: any): any {
+    patchLoader.addDefinitionPatch("ChunkUpdates", function (module: any): any {
         const oldUpdate = module.update;
         module.update = function update(game_map: GameMap) {
             if (doRecompile) {
@@ -67,7 +67,7 @@ export function PatchGameMap(patchLoader: PatchLoader) {
             });
         });
     }
-    patchLoader.addDefinitionPatch("GameMap", function (name: string, module: typeof GameMap): any {
+    patchLoader.addDefinitionPatch("GameMap", function (module: typeof GameMap): any {
         patchLoader.setDefinition("GameMap", class GameMapPatched extends module {
             setArrowType(x: number, y: number, type: ArrowType) {
                 super.setArrowType(x, y, type);
@@ -98,7 +98,7 @@ export function PatchGameMap(patchLoader: PatchLoader) {
 }
 
 export function PatchPlayerControls(patchLoader: PatchLoader) {
-    patchLoader.addDefinitionPatch("PlayerControls", function (name: string, module: any): any {
+    patchLoader.addDefinitionPatch("PlayerControls", function (module: any): any {
         patchLoader.setDefinition("PlayerControls", class PlayerControls extends module {
             constructor(...args: any[]) {
                 super(...args);
@@ -161,7 +161,7 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
 }
 
 export function PatchGame(patchLoader: PatchLoader) {
-    patchLoader.addDefinitionPatch("Game", function (name: string, module: any): any {
+    patchLoader.addDefinitionPatch("Game", function (module: any): any {
         let PlayerSettings;
         let lastUpdateTime = performance.now();
         let accumulator = 0;
@@ -228,14 +228,14 @@ export function PatchGame(patchLoader: PatchLoader) {
 }
 
 export function PatchPlayerSettings(patchLoader: PatchLoader) {
-    patchLoader.addDefinitionPatch("PlayerSettings", function (name: string, module: any): any {
+    patchLoader.addDefinitionPatch("PlayerSettings", function (module: any): any {
         module.framesToSkip.push(1, 1);
         module.framesToUpdate.push(500, 2000);
     });
 }
 
 export function PatchPlayerUI(patchLoader: PatchLoader) {
-    patchLoader.addDefinitionPatch("PlayerUI", function (name: string, module: any): any {
+    patchLoader.addDefinitionPatch("PlayerUI", function (module: any): any {
         let UIRange: any;
         let PlayerSettings: any;
         let GameText: any;
@@ -259,7 +259,7 @@ export function PatchPlayerUI(patchLoader: PatchLoader) {
 }
 
 export function PatchTPSInfo(patchLoader: PatchLoader) {
-    patchLoader.addDefinitionPatch("UIComponent", function (name: string, UIComponent: any): any {
+    patchLoader.addDefinitionPatch("UIComponent", function (UIComponent: any): any {
         patchLoader.setDefinition("TPSInfo", class TPSInfo extends UIComponent {
             info: HTMLElement;
             // element: HTMLElement | undefined;
