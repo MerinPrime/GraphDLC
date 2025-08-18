@@ -56,44 +56,42 @@ export function PatchChunkUpdates(patchLoader: PatchLoader) {
 }
 
 export function PatchGameMap(patchLoader: PatchLoader) {
-    function clearSignalsCount(gameMap: GameMap) {
+    function tryResetMapIfCompiled(gameMap: GameMap) {
+        if (gameMap.compiled_graph === undefined) {
+            return;
+        }
+        gameMap.compiled_graph = undefined;
         gameMap.chunks.forEach((chunk: Chunk) => {
             chunk.arrows.forEach((arrow: Arrow) => {
                 arrow.signalsCount = 0;
             });
         });
     }
-    patchLoader.addDefinitionPatch("GameMap", function (name: string, module: any): any {
-        patchLoader.setDefinition("GameMap", class GameMapM extends module {
-            setArrowType(...args: any[]) {
-                super.setArrowType(...args);
-                this.compiled_graph = undefined;
-                clearSignalsCount((this as any) as GameMap);
+    patchLoader.addDefinitionPatch("GameMap", function (name: string, module: typeof GameMap): any {
+        patchLoader.setDefinition("GameMap", class GameMapPatched extends module {
+            setArrowType(x: number, y: number, type: ArrowType) {
+                super.setArrowType(x, y, type);
+                tryResetMapIfCompiled(this);
             }
-            setArrowSignal(...args: any[]) {
-                super.setArrowSignal(...args);
-                this.compiled_graph = undefined;
-                clearSignalsCount((this as any) as GameMap);
+            setArrowSignal(x: number, y: number, signal: number) {
+                super.setArrowSignal(x, y, signal);
+                tryResetMapIfCompiled(this);
             }
-            setArrowRotation(...args: any[]) {
-                super.setArrowRotation(...args);
-                this.compiled_graph = undefined;
-                clearSignalsCount((this as any) as GameMap);
+            setArrowRotation(x: number, y: number, direction: number) {
+                super.setArrowRotation(x, y, direction);
+                tryResetMapIfCompiled(this);
             }
-            setArrowFlipped(...args: any[]) {
-                super.setArrowFlipped(...args);
-                this.compiled_graph = undefined;
-                clearSignalsCount((this as any) as GameMap);
+            setArrowFlipped(x: number, y: number, flipped: boolean) {
+                super.setArrowFlipped(x, y, flipped);
+                tryResetMapIfCompiled(this);
             }
-            resetArrow(...args: any[]) {
-                super.resetArrow(...args);
-                this.compiled_graph = undefined;
-                clearSignalsCount((this as any) as GameMap);
+            resetArrow(x: number, y: number, force: boolean) {
+                super.resetArrow(x, y, force);
+                tryResetMapIfCompiled(this);
             }
-            removeArrow(...args: any[]) {
-                super.removeArrow(...args);
-                this.compiled_graph = undefined;
-                clearSignalsCount((this as any) as GameMap);
+            removeArrow(x: number, y: number) {
+                super.removeArrow(x, y);
+                tryResetMapIfCompiled(this);
             }
         });
     });
