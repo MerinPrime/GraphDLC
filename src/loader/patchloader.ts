@@ -22,8 +22,7 @@ export class PatchLoader {
     private patchedCall(originalFunction: Function, thisArg: any, ...argArray: any[]): any {
         if (!this.originalCall)
             throw new Error("PatchLoader is not hooked");
-        console.log(argArray)
-
+        
         const result = Reflect.apply(originalFunction, thisArg, argArray);
         const exports = argArray[1] as Record<string, any> | undefined;
 
