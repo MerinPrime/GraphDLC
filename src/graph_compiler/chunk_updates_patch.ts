@@ -162,22 +162,17 @@ export function PatchPlayerControls(patchLoader: PatchLoader) {
 
 export function PatchGame(patchLoader: PatchLoader) {
     patchLoader.addDefinitionPatch("Game", function (module: any): any {
-        let PlayerSettings;
         let lastUpdateTime = performance.now();
         let accumulator = 0;
         patchLoader.setDefinition("Game", class Game extends module {
             draw(...args: any[]) {
-                // const now = Date.now();
                 super.draw(...args);
-                // if (this.playing && this.updateSpeedLevel === 5) {
-                //     totalOffset += Date.now() - now;
-                // }
             }
             updateFrame(e=() => {}) {
                 if (!this.playing) {
                     return
                 }
-                PlayerSettings ??= patchLoader.getDefinition('PlayerSettings');
+                const PlayerSettings = patchLoader.getDefinition<any>('PlayerSettings');
                 const startTick = this.tick;
                 if (this.updateSpeedLevel === 8) {
                     do {
@@ -236,16 +231,13 @@ export function PatchPlayerSettings(patchLoader: PatchLoader) {
 
 export function PatchPlayerUI(patchLoader: PatchLoader) {
     patchLoader.addDefinitionPatch("PlayerUI", function (module: any): any {
-        let UIRange: any;
-        let PlayerSettings: any;
-        let GameText: any;
-        let TPSInfo: any;
         patchLoader.setDefinition("PlayerUI", class PlayerUI extends module {
             addSpeedController() {
-                UIRange ??= patchLoader.getDefinition('UIRange');
-                PlayerSettings ??= patchLoader.getDefinition('PlayerSettings');
-                GameText ??= patchLoader.getDefinition('GameText');
-                TPSInfo ??= patchLoader.getDefinition('TPSInfo');
+                const UIRange = patchLoader.getDefinition<any>('UIRange');
+                const PlayerSettings = patchLoader.getDefinition<any>('PlayerSettings');
+                const GameText = patchLoader.getDefinition<any>('GameText');
+                const TPSInfo = patchLoader.getDefinition<any>('TPSInfo');
+                
                 this.speedController = new UIRange(document.body, 9, (e: number) => {
                     if (e === 8) {
                         return 'MAX TPS';

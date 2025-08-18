@@ -51,8 +51,8 @@ export class PatchLoader {
         return result;
     }
 
-    public getDefinition(name: string): any {
-        return this.definitions[name];
+    public getDefinition<T>(name: string): T {
+        return this.definitions[name] as T;
     }
 
     public setDefinition(name: string, definition: any): void {
@@ -71,8 +71,8 @@ export class PatchLoader {
         this.patches = newPatches;
     }
 
-    public getInstance(name: string): any {
-        return this.instances[name];
+    public getInstance<T>(name: string): T {
+        return this.instances[name] as T;
     }
 
     public setInstance(name: string, instance: any) {
