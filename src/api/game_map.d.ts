@@ -4,7 +4,6 @@ import {ArrowType} from "./arrow_type";
 
 export class GameMap {
     chunks: Map<string, Chunk>;
-    compiled_graph: CompiledMapGraph | undefined;
 
     setArrowType(x: number, y: number, type: ArrowType);
     setArrowSignal(x: number, y: number, signal: number);

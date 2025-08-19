@@ -15,7 +15,16 @@ function createTampermonkeyHeader(pkg) {
             // @author       ${pkg.author}
             // @match        https://logic-arrows.io/*
             // @grant        none
-            // ==/UserScript==`;
+            // @run-at       document-start
+            // ==/UserScript==
+            
+            fetch("https://raw.githubusercontent.com/MerinPrime/graphopt/refs/heads/main/templates/newchrome/style.css")
+            .then(res => res.text())
+            .then(css => {
+                const style = document.createElement("style");
+                style.textContent = css;
+                document.head.appendChild(style);
+            });`;
 }
 
 module.exports = (env) => {
@@ -77,10 +86,10 @@ module.exports = (env) => {
                     { from: './templates/newchrome/style.css', to: 'style.css' },
                 ],
             }),
-            ...(isProduction ? [new ZipPlugin({
+            new ZipPlugin({
                 path: path.resolve(__dirname, './dist'),
                 filename: 'newchrome-dist.zip',
-            })] : [])
+            })
         ],
     };
 
@@ -107,10 +116,10 @@ module.exports = (env) => {
                     { from: './templates/oldchrome/injector.js', to: 'injector.js' },
                 ],
             }),
-            ...(isProduction ? [new ZipPlugin({
+            new ZipPlugin({
                 path: path.resolve(__dirname, './dist'),
                 filename: 'oldchrome-dist.zip',
-            })] : [])
+            })
         ],
     };
     const tampermonkeyConfig = {
@@ -124,10 +133,10 @@ module.exports = (env) => {
                 banner: createTampermonkeyHeader(packageJson),
                 raw: true
             }),
-            ...(isProduction ? [new ZipPlugin({
+            new ZipPlugin({
                 path: path.resolve(__dirname, './dist'),
                 filename: 'tampermonkey-dist.zip',
-            })] : [])
+            })
         ]
     };
 

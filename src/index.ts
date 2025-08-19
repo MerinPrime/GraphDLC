@@ -1,18 +1,7 @@
-import {PatchLoader} from "./loader/patchloader";
-import {
-    PatchChunkUpdates,
-    PatchGame,
-    PatchGameMap,
-    PatchPlayerControls, PatchPlayerSettings,
-    PatchPlayerUI, PatchTPSInfo
-} from "./graph_compiler/chunk_updates_patch";
+import {PatchLoader} from "./core/patchloader";
+import { LayersDLC } from "./core/layersdlc";
 
 const patchLoader = new PatchLoader();
 patchLoader.hook();
-PatchChunkUpdates(patchLoader);
-PatchPlayerUI(patchLoader);
-PatchTPSInfo(patchLoader);
-PatchGameMap(patchLoader);
-PatchPlayerControls(patchLoader);
-PatchGame(patchLoader);
-PatchPlayerSettings(patchLoader);
+const layersdlc = new LayersDLC(patchLoader);
+layersdlc.inject();

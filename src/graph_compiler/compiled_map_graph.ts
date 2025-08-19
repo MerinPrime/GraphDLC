@@ -17,12 +17,12 @@ import {Chunk} from "../api/chunk";
 import {GameMap} from "../api/game_map";
 import {ArrowType} from "../api/arrow_type";
 import {Graph} from "./graph";
-import {debugRing} from "./chunk_updates_patch";
 import {Timer} from "./timer";
 import {Cycle} from "./cycle";
 import {CycleHeadType} from "./cycle_head_type";
 
 const CHUNK_SIZE = 16;
+const debugRing = false;
 
 export interface CycleInfo {
     arrows: Array<GraphNode>;
