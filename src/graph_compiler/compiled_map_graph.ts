@@ -21,7 +21,6 @@ import {debugRing} from "./chunk_updates_patch";
 import {Timer} from "./timer";
 import {Cycle} from "./cycle";
 import {CycleHeadType} from "./cycle_head_type";
-import * as path from "node:path";
 
 const CHUNK_SIZE = 16;
 
