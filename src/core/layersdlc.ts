@@ -67,12 +67,17 @@ export class LayersDLC {
         }
         // const mapGraph = new CompiledMapGraph();
         // const kostyli = mapGraph.compile_from(this.gameMap);
-        const debugMode = this.settings.data.debugMode - 1;
-        const rootNode = this.astParser.compileFrom(this.gameMap);
-        if (debugMode !== 2)
-            this.astOptimizer.applyOptimizations(rootNode);
-        if (debugMode !== -1)
-            this.astDebugger.showDebugSignals(rootNode, this.settings.data.debugMode - 1, this.gameMap);
+        try {
+            const debugMode = this.settings.data.debugMode - 1;
+            const rootNode = this.astParser.compileFrom(this.gameMap);
+            if (debugMode !== 2)
+                this.astOptimizer.applyOptimizations(rootNode);
+            if (debugMode !== -1)
+                this.astDebugger.showDebugSignals(rootNode, this.settings.data.debugMode - 1, this.gameMap);
+        } catch (e: any) {
+            alert(`ERROR ${e.message}`);
+            console.error(e);
+        }
     }
 }
 
