@@ -65,15 +65,19 @@ export class ASTParser {
                 rootNode.allEdges.push(astNode);
             }
 
-            const relations = this.getArrowRelations(arrow.type);
+            const relations = getArrowRelations(arrow.type);
             for (let i = 0; i < relations.length; i++) {
                 const [relativeX, relativeY] = relations[i];
 
-                const edgeData = this.getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, relativeX, relativeY);
+                const edgeData = getRelativeArrow(CHUNK_SIZE, chunk, x, y, arrow.rotation, arrow.flipped, relativeX, relativeY);
                 if (!edgeData) continue;
 
                 const [edgeArrow, edgeX, edgeY, edgeChunk] = edgeData;
                 if (NOT_ALLOWED_TO_CHANGE.has(edgeArrow.type) && arrow.type !== ArrowType.BLOCKER || edgeArrow.type === ArrowType.EMPTY) {
+                    continue;
+                }
+                if (!EXIST_TYPES.has(edgeArrow.type)) {
+                    console.warn(`Founded arrow with uncommon type: ${edgeArrow.type}`)
                     continue;
                 }
                 if (!edgeArrow.ast_node) {
@@ -89,17 +93,17 @@ export class ASTParser {
                 }
             }
 
-            const neighbourRelations = this.getArrowRelations(ArrowType.SOURCE);
+            const neighbourRelations = getArrowRelations(ArrowType.SOURCE);
             for (let i = 0; i < neighbourRelations.length; i++) {
                 const [relativeX, relativeY] = neighbourRelations[i];
 
-                const edgeData = this.getRelativeArrow(chunk, x, y, arrow.rotation, arrow.flipped, relativeX, relativeY);
+                const edgeData = getRelativeArrow(CHUNK_SIZE, chunk, x, y, arrow.rotation, arrow.flipped, relativeX, relativeY);
                 if (!edgeData) continue;
 
                 const [edgeArrow, edgeX, edgeY, edgeChunk] = edgeData;
                 if (edgeArrow.type !== ArrowType.DETECTOR) continue;
 
-                const detectData = this.getRelativeArrow(edgeChunk, edgeX, edgeY, edgeArrow.rotation, edgeArrow.flipped, 1, 0);
+                const detectData = getRelativeArrow(CHUNK_SIZE, edgeChunk, edgeX, edgeY, edgeArrow.rotation, edgeArrow.flipped, 1, 0);
                 if (!detectData) continue;
 
                 const [_, detectX, detectY, detectChunk] = detectData;
@@ -120,88 +124,86 @@ export class ASTParser {
         
         return rootNode;
     }
+}
 
-    getRelativeArrow(
-        chunk: Chunk, x: number, y: number, rotation: number,
-        flipped: boolean, forward: number = -1, sideways: number = 0
-    ): [Arrow, number, number, Chunk] | undefined {
-        const CHUNK_SIZE = this.patchLoader.getDefinition<number>('CHUNK_SIZE');
-        
-        if (flipped) sideways = -sideways;
+export function getRelativeArrow(
+    CHUNK_SIZE: number, chunk: Chunk, x: number, y: number, rotation: number,
+    flipped: boolean, forward: number = -1, sideways: number = 0
+): [Arrow, number, number, Chunk] | undefined {
+    if (flipped) sideways = -sideways;
 
-        let targetX = x;
-        let targetY = y;
+    let targetX = x;
+    let targetY = y;
 
-        switch (rotation) {
-            case 0: targetY += forward; targetX += sideways; break;
-            case 1: targetX -= forward; targetY += sideways; break;
-            case 2: targetY -= forward; targetX -= sideways; break;
-            case 3: targetX += forward; targetY -= sideways; break;
-        }
-
-        let targetChunk = chunk;
-        const dx = Math.floor(targetX / CHUNK_SIZE);
-        const dy = Math.floor(targetY / CHUNK_SIZE);
-
-        if (dx !== 0 || dy !== 0) {
-            const chunkIndex = (dy + 1) * 3 + (dx + 1);
-            const adjacentMap = [7, 0, 1, 6, -1, 2, 5, 4, 3];
-            const adjacentIndex = adjacentMap[chunkIndex];
-
-            if (adjacentIndex === -1 || !chunk.adjacentChunks[adjacentIndex]) {
-                return undefined;
-            }
-            targetChunk = chunk.adjacentChunks[adjacentIndex]!;
-            targetX %= CHUNK_SIZE;
-            targetY %= CHUNK_SIZE;
-            if (targetX < 0) targetX += CHUNK_SIZE;
-            if (targetY < 0) targetY += CHUNK_SIZE;
-        }
-
-        if (!targetChunk) return undefined;
-
-        return [targetChunk.getArrow(targetX, targetY), targetX, targetY, targetChunk];
+    switch (rotation) {
+        case 0: targetY += forward; targetX += sideways; break;
+        case 1: targetX -= forward; targetY += sideways; break;
+        case 2: targetY -= forward; targetX -= sideways; break;
+        case 3: targetX += forward; targetY -= sideways; break;
     }
-    
-    getArrowRelations(type: ArrowType): Array<[number, number]> {
-        switch (type) {
-            case ArrowType.ARROW:
-            case ArrowType.BLOCKER:
-            case ArrowType.DELAY:
-            case ArrowType.DETECTOR:
-            case ArrowType.LOGIC_NOT:
-            case ArrowType.LOGIC_AND:
-            case ArrowType.LOGIC_XOR:
-            case ArrowType.LATCH:
-            case ArrowType.FLIP_FLOP:
-            case ArrowType.RANDOM:
-            case ArrowType.DIRECTIONAL_BUTTON:
-                return [[-1, 0]];
-            case ArrowType.SOURCE:
-            case ArrowType.IMPULSE:
-            case ArrowType.BUTTON:
-                return [[-1, 0], [1, 0], [0, -1], [0, 1]];
-            case ArrowType.SPLITTER_UP_DOWN:
-                return [[-1, 0], [1, 0]];
-            case ArrowType.SPLITTER_UP_RIGHT:
-                return [[-1, 0], [0, 1]];
-            case ArrowType.SPLITTER_UP_RIGHT_LEFT:
-                return [[0, -1], [-1, 0], [0, 1]];
-            case ArrowType.BLUE_ARROW:
-                return [[-2, 0]];
-            case ArrowType.DIAGONAL_ARROW:
-                return [[-1, 1]];
-            case ArrowType.SPLITTER_UP_UP:
-                return [[-1, 0], [-2, 0]];
-            case ArrowType.SPLITTER_RIGHT_UP:
-                return [[0, 1], [-2, 0]];
-            case ArrowType.SPLITTER_UP_DIAGONAL:
-                return [[-1, 0], [-1, 1]];
-            case ArrowType.EMPTY:
-            case ArrowType.LEVEL_SOURCE:
-            case ArrowType.LEVEL_TARGET:
-            default:
-                throw new Error('How did you compile level arrow if its cant be compiled?');
+
+    let targetChunk = chunk;
+    const dx = Math.floor(targetX / CHUNK_SIZE);
+    const dy = Math.floor(targetY / CHUNK_SIZE);
+
+    if (dx !== 0 || dy !== 0) {
+        const chunkIndex = (dy + 1) * 3 + (dx + 1);
+        const adjacentMap = [7, 0, 1, 6, -1, 2, 5, 4, 3];
+        const adjacentIndex = adjacentMap[chunkIndex];
+
+        if (adjacentIndex === -1 || !chunk.adjacentChunks[adjacentIndex]) {
+            return undefined;
         }
+        targetChunk = chunk.adjacentChunks[adjacentIndex]!;
+        targetX %= CHUNK_SIZE;
+        targetY %= CHUNK_SIZE;
+        if (targetX < 0) targetX += CHUNK_SIZE;
+        if (targetY < 0) targetY += CHUNK_SIZE;
+    }
+
+    if (!targetChunk) return undefined;
+
+    return [targetChunk.getArrow(targetX, targetY), targetX, targetY, targetChunk];
+}
+
+export function getArrowRelations(type: ArrowType): Array<[number, number]> {
+    switch (type) {
+    case ArrowType.ARROW:
+    case ArrowType.BLOCKER:
+    case ArrowType.DELAY:
+    case ArrowType.DETECTOR:
+    case ArrowType.LOGIC_NOT:
+    case ArrowType.LOGIC_AND:
+    case ArrowType.LOGIC_XOR:
+    case ArrowType.LATCH:
+    case ArrowType.FLIP_FLOP:
+    case ArrowType.RANDOM:
+    case ArrowType.DIRECTIONAL_BUTTON:
+        return [[-1, 0]];
+    case ArrowType.SOURCE:
+    case ArrowType.IMPULSE:
+    case ArrowType.BUTTON:
+        return [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    case ArrowType.SPLITTER_UP_DOWN:
+        return [[-1, 0], [1, 0]];
+    case ArrowType.SPLITTER_UP_RIGHT:
+        return [[-1, 0], [0, 1]];
+    case ArrowType.SPLITTER_UP_RIGHT_LEFT:
+        return [[0, -1], [-1, 0], [0, 1]];
+    case ArrowType.BLUE_ARROW:
+        return [[-2, 0]];
+    case ArrowType.DIAGONAL_ARROW:
+        return [[-1, 1]];
+    case ArrowType.SPLITTER_UP_UP:
+        return [[-1, 0], [-2, 0]];
+    case ArrowType.SPLITTER_RIGHT_UP:
+        return [[0, 1], [-2, 0]];
+    case ArrowType.SPLITTER_UP_DIAGONAL:
+        return [[-1, 0], [-1, 1]];
+    case ArrowType.EMPTY:
+    case ArrowType.LEVEL_SOURCE:
+    case ArrowType.LEVEL_TARGET:
+    default:
+        throw new Error('How did you compile level arrow if its cant be compiled?');
     }
 }

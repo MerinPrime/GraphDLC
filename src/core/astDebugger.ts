@@ -3,6 +3,7 @@ import {RootNode} from "../graph_compiler/ast/rootNode";
 import {GameMap} from "../api/game_map";
 import {CycleHeadNode} from "../graph_compiler/ast/cycle/cycleHeadNode";
 import {ASTNodeType} from "../graph_compiler/ast/astNodeType";
+import {getArrowRelations} from "../graph_compiler/ast/astParser";
 
 export class ASTDebugger {
     showDebugSignals(rootNode: RootNode, debugMode: number, gameMap: GameMap) {
@@ -123,7 +124,7 @@ export class ASTDebugger {
                     const backEdge = backEdges[i];
                     visited.delete(backEdge);
                 }
-            } else if (node.type === ASTNodeType.LOGIC_XOR && backEdges.length < 2) {
+            } else if (node.type === ASTNodeType.LOGIC_XOR && backEdges.length < 2 || node.type === ASTNodeType.PATH && allEdges.length !== getArrowRelations(node.arrows[0].type).length) {
                 finalSignal = 4;
             }
             
