@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Layers-DLC",
+  "name": "Graph-DLC",
   "version": "1.0.0",
-  "description": "Layers-DLC для стрелочек...",
+  "description": "Graph-DLC для стрелочек...",
   "action": {
     "default_icon": "images/icon128.png",
-    "default_title": "Layers-DLC"
+    "default_title": "Graph-DLC"
   },
   "icons": {
     "128": "images/icon128.png"

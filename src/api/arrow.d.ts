@@ -1,4 +1,6 @@
 import {GraphNode} from "../graph_compiler/graph_node";
+import {ASTNode} from "../graph_compiler/ast/astNode";
+import {ArrowType} from "./arrow_type";
 
 export interface Arrow {
     type: ArrowType;
@@ -12,7 +14,7 @@ export interface Arrow {
     lastFlipped: boolean;
     lastSignal: number;
 
-    detectorSignal: number;
-    blocked: number;
+    blocked?: number;
     graph_node?: GraphNode;
+    ast_node?: ASTNode;
 }

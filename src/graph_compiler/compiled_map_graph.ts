@@ -19,10 +19,10 @@ import {ArrowType} from "../api/arrow_type";
 import {Graph} from "./graph";
 import {Timer} from "./timer";
 import {Cycle} from "./cycle";
-import {CycleHeadType} from "./cycle_head_type";
+import {CycleHeadType} from "./ast/cycle/cycleHeadType";
 
 const CHUNK_SIZE = 16;
-const debugRing = false;
+const debugRing = true;
 
 export interface CycleInfo {
     arrows: Array<GraphNode>;
@@ -32,7 +32,6 @@ export interface CycleInfo {
     startIndex: number;
     end: GraphNode | null;
     endIndex: number;
-    graph: Graph | null;
 }
 
 export class CompiledMapGraph {
@@ -82,6 +81,7 @@ export class CompiledMapGraph {
             let node = arrow.graph_node;
             if (!node) {
                 node = new GraphNode(arrow, HANDLERS.get(arrow.type)!);
+                arrow.graph_node = node;
             }
 
             if (ENTRY_POINTS.has(arrow.type)) {
@@ -103,6 +103,7 @@ export class CompiledMapGraph {
                 let edgeNode = edgeArrow.graph_node;
                 if (!edgeNode) {
                     edgeNode = new GraphNode(edgeArrow, HANDLERS.get(edgeArrow.type)!);
+                    edgeArrow.graph_node = edgeNode;
                 }
                 node.edges.push(edgeNode);
                 edgeNode.back.push(node);
@@ -128,6 +129,7 @@ export class CompiledMapGraph {
                     let detectorNode: GraphNode = detectorArrow.graph_node;
                     if (!detectorNode) {
                         detectorNode = new GraphNode(detectorArrow, HANDLERS.get(detectorArrow.type)!);
+                        detectorArrow.graph_node = detectorNode;
                     }
                     
                     node.edges.push(detectorNode);
@@ -140,11 +142,11 @@ export class CompiledMapGraph {
             });
         }
         
+        // this.optimize_pixels();
         this.optimize_branches();
-        this.optimize_cycles();
+        // this.optimize_cycles();
         // this.optimize_buttons();
-        this.optimize_pixels();
-        this.optimize_pathes();
+        // this.optimize_paths();
         // this.optimize_jit();
         this.update_nodes();
         this.graph.changed_nodes = new Set(this.graph.entry_points);
@@ -154,8 +156,8 @@ export class CompiledMapGraph {
     optimize_jit() {
         const JIT_STATEFUL_TYPES = new Set([
             ArrowType.DELAY,
-            ArrowType.LOGIC_FLIP,
-            ArrowType.LOGIC_FLOP,
+            ArrowType.LATCH,
+            ArrowType.FLIP_FLOP,
         ]);
 
         const isStatefulNode = (node: GraphNode): boolean => {
@@ -283,7 +285,7 @@ export class CompiledMapGraph {
         }
     }
     
-    optimize_pathes() {
+    optimize_paths() {
         const foundPaths: GraphNode[][] = [];
         const visitedOrQueued = new Set<GraphNode>();
         const queue: GraphNode[] = [];
@@ -398,6 +400,7 @@ export class CompiledMapGraph {
             branch.edges = [branch.edges[0]];
             let nextEdge = branch;
             for (let j = 0; j < i - 1; j++) {
+                nextEdge.arrow.signal = 1;
                 nextEdge = nextEdge.edges[0];
             }
             nextEdge.edges = branchQueue;
@@ -459,7 +462,7 @@ export class CompiledMapGraph {
     optimize_buttons() {
         const visited = new Set();
         this.graph.entry_points.forEach((entryPoint) => {
-            if (entryPoint.arrow.type !== ArrowType.BRUH_BUTTON) {
+            if (entryPoint.arrow.type !== ArrowType.DIRECTIONAL_BUTTON) {
                 return;
             }
             if (entryPoint.edges.length === 0) {
@@ -546,9 +549,11 @@ export class CompiledMapGraph {
         }
 
         for (const entry_point of this.graph.entry_points) {
+            if (entry_point.arrow.type !== ArrowType.DIRECTIONAL_BUTTON) continue;
             if (!visited.has(entry_point)) {
                 dfs(entry_point);
             }
+            break;
         }
         
         let validCycles = new Set<CycleInfo>();
@@ -557,7 +562,7 @@ export class CompiledMapGraph {
         //       и он тоже нерабочий
         cycles.forEach((cycle) => {
             let isValid = true;
-            const info: CycleInfo = {arrows: cycle, endpoints: [], entrypoints: [], start: null, startIndex: 0, end: null, endIndex: 0, graph: null};
+            const info: CycleInfo = {arrows: cycle, endpoints: [], entrypoints: [], start: null, startIndex: 0, end: null, endIndex: 0};
             for (let i = 0; i < cycle.length; i++) {
                 const cycle_arrow = cycle[i];
                 const next_arrow = cycle[i - 1 > 0 ? i - 1 : cycle.length - 1];
@@ -704,7 +709,7 @@ export class CompiledMapGraph {
                     return;
                 }
                 let nextBack: GraphNode = external!;
-                while (isValid && nextBack.arrow.type !== ArrowType.RED_IMPULSE) {
+                while (isValid && nextBack.arrow.type !== ArrowType.IMPULSE) {
                     if (!ALLOWED_IN_PRETIMER.has(nextBack.arrow.type)) {
                         isValid = false;
                         break;

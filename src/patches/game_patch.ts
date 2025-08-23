@@ -1,12 +1,15 @@
-import { LayersDLC } from "../core/layersdlc";
+import { LayersDLC } from "../core/layersDLC";
+import { GameMap } from "../api/game_map";
 
-export function PatchGame(layersdlc: LayersDLC) {
-    layersdlc.patchLoader.addDefinitionPatch("Game", function (module: any): any {
+export function PatchGame(layersDLC: LayersDLC) {
+    const settings = layersDLC.settings;
+    layersDLC.patchLoader.addDefinitionPatch("Game", function (module: any): any {
         let lastUpdateTime = -1;
         let accumulator = 0;
-        layersdlc.patchLoader.setDefinition("Game", class Game extends module {
+        layersDLC.patchLoader.setDefinition("Game", class Game extends module {
             updateFrame(e=() => {}) {
-                if (!this.playing) {
+                layersDLC.gameMap = this.gameMap as GameMap;
+                if (!this.playing || (settings.data.debugMode !== 0 && (layersDLC.graph !== undefined || true))) {
                     lastUpdateTime = -1;
                     return;
                 }
@@ -24,8 +27,7 @@ export function PatchGame(layersdlc: LayersDLC) {
                 
                 let updateSpeedLevel = this.updateSpeedLevel;
                 const isMaxTPS = updateSpeedLevel === 8;
-                layersdlc.gameMap = this.gameMap as any;
-                if (layersdlc.graph === undefined && isMaxTPS) {
+                if (layersDLC.graph === undefined && isMaxTPS) {
                     updateSpeedLevel = Math.min(updateSpeedLevel, 5);
                 }
 
@@ -55,13 +57,13 @@ export function PatchGame(layersdlc: LayersDLC) {
                 }
                 this.updatesPerSecond++;
 
-                layersdlc.tpsInfo!.updateInfo(this.tick - startTick);
+                layersDLC.tpsInfo?.updateInfo(this.tick - startTick);
                 this.screenUpdated = true;
             }
             updateTick(callback=(() => {})) {
-                callback(),
-                layersdlc.patchLoader.getDefinition<any>('ChunkUpdates').update(this.gameMap, this.tick),
-                this.tick++
+                callback();
+                layersDLC.patchLoader.getDefinition<any>('ChunkUpdates').update(this.gameMap, this.tick);
+                this.tick++;
             }
         });
     });

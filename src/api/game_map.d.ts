@@ -1,5 +1,4 @@
 import {Chunk} from "./chunk";
-import {CompiledMapGraph} from "../graph_compiler/compiled_map_graph";
 import {ArrowType} from "./arrow_type";
 
 export class GameMap {

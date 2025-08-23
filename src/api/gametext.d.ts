@@ -1,0 +1,67 @@
+import {I18nText} from "./i18ntext";
+
+export interface GameText {
+    SIGN_IN_WITH_GOOGLE: I18nText;
+    LOGIN_TEXT: I18nText;
+    LOGOUT: I18nText;
+    ARROWS_TITLE: I18nText;
+    MAPS: I18nText;
+    GUIDE: I18nText;
+    MENU_BACK: I18nText;
+    PERFOMANCE_TITLE: I18nText;
+    PER_SECOND: I18nText;
+    NEW_MAP: I18nText;
+    MAP_NAME: I18nText;
+    MAP_DESCRIPTION: I18nText;
+    SAVING: I18nText;
+    SAVED: I18nText;
+    CANCEL: I18nText;
+    DELETE: I18nText;
+    START_GAME: I18nText;
+    LEVELS: I18nText;
+    LEVEL: I18nText;
+    ACCEPT: I18nText;
+    SET_NAME: I18nText;
+    NAME: I18nText;
+    ACCOUNT: I18nText;
+    COMMUNITY_MAPS: I18nText;
+    NEWS: I18nText;
+    SETTINGS: I18nText;
+    NAME_ERROR_TOO_SHORT: I18nText;
+    NAME_ERROR_CHARS: I18nText;
+    NAME_ERROR_SPACE: I18nText;
+    NAME_ERROR_SPACES_COUNT: I18nText;
+    NAME_ERROR_UNDERSCORES_COUNT: I18nText;
+    NAME_ERROR_CANNOT_START_WITH_DIGIT: I18nText;
+    NAME_ERROR_EXIST_OR_UNAVAILABLE: I18nText;
+    PRIVACY_POLICY: I18nText;
+    TERMS_AND_CONDITIONS: I18nText;
+    LEVEL_TESTING: I18nText;
+    MAPS_10_LVL: I18nText;
+    UNABLE_TO_SAVE: I18nText;
+    MAP_TOO_LARGE: I18nText;
+    SHOW_SPOILER: I18nText;
+    COOKIES_TITLE: I18nText;
+    COOKIES_TEXT: I18nText;
+    AUTOSAVING: I18nText;
+    ACTIVATES: I18nText;
+    ON_ACTIVATION: I18nText;
+    LANGUAGE: I18nText;
+    SHOW_CONTROLS_HINTS: I18nText;
+    MAX_ZOOM_OUT: I18nText;
+    // Layers-DLC
+    TPS_UPDATE_FREQUENCY_MS: I18nText;
+    
+    OPTIMIZE_RINGS: I18nText;
+    OPTIMIZE_BUTTONS: I18nText;
+    OPTIMIZE_PIXELS: I18nText;
+    OPTIMIZE_BRANCHES: I18nText;
+    OPTIMIZE_PATHS: I18nText;
+    OPTIMIZE_TIMERS: I18nText;
+    
+    DEBUG_MODE: I18nText;
+    DEBUG_MODE_1: I18nText;
+    DEBUG_MODE_2: I18nText;
+    DEBUG_MODE_3: I18nText;
+    DEBUG_MODE_4: I18nText;
+}

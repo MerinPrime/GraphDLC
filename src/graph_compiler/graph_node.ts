@@ -1,10 +1,8 @@
 import {ADDITIONAL_UPDATE_ARROWS, ArrowHandler, ENTRY_POINTS} from "./handlers";
 import {Arrow} from "../api/arrow";
-import {Graph} from "./graph";
-import {CycleInfo} from "./compiled_map_graph";
 import {ArrowType} from "../api/arrow_type";
 import {Cycle} from "./cycle";
-import {CycleHeadType} from "./cycle_head_type";
+import {CycleHeadType} from "./ast/cycle/cycleHeadType";
 
 export class GraphNode {
     public arrow: Arrow;
@@ -38,8 +36,6 @@ export class GraphNode {
         this.cycleHeadType = CycleHeadType.WRITE;
         this.buttonEdge = null;
         this.pathLength = -1;
-        
-        arrow.graph_node = this;
     }
     
     update() {
@@ -47,7 +43,7 @@ export class GraphNode {
         this.isBlocker = this.arrow.type === ArrowType.BLOCKER;
         this.isDetector = this.arrow.type === ArrowType.DETECTOR;
         this.isBruh = this.arrow.type === ArrowType.RANDOM || (this.arrow.type === ArrowType.LOGIC_AND && this.newCycle !== null);
-        this.isButton = this.arrow.type === ArrowType.BUTTON || this.arrow.type === ArrowType.BRUH_BUTTON;
+        this.isButton = this.arrow.type === ArrowType.BUTTON || this.arrow.type === ArrowType.DIRECTIONAL_BUTTON;
         this.isAdditionalUpdate = ADDITIONAL_UPDATE_ARROWS.has(this.arrow.type);
         this.isEntryPoint = ENTRY_POINTS.has(this.arrow.type);
     }

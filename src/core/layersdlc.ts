@@ -1,30 +1,41 @@
 import { PatchGame } from "../patches/game_patch";
 import { PatchPlayerUI } from "../patches/playerui_patch";
 import { PatchTPSInfo, ITPSInfo } from "../patches/tpsinfo_patch";
-import { PatchLoader } from "./patchloader";
+import { PatchLoader } from "./patchLoader";
 import { Settings } from "./settings";
 import {Graph} from "../graph_compiler/graph";
 import {PatchPlayerControls} from "../patches/playercontrols_patch";
 import {PatchGameMap} from "../patches/gamemap_patch";
-import {CompiledMapGraph} from "../graph_compiler/compiled_map_graph";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
 import {GameMap} from "../api/game_map";
 import {PatchChunkUpdates} from "../patches/chunkupdates_patch";
+import {ASTParser} from "../graph_compiler/ast/astParser";
+import {PatchGameText} from "../patches/gametext_patch";
+import {PatchSettingsPage} from "../patches/settingspage_patch";
+import {ASTOptimizer} from "../graph_compiler/ast/astOptimizer";
+import {ASTDebugger} from "./astDebugger";
+import {CompiledMapGraph} from "../graph_compiler/compiled_map_graph";
 
 export class LayersDLC {
+    patchLoader: PatchLoader;
     settings: Settings;
     tpsInfo: ITPSInfo | undefined;
     graph: Graph | undefined;
-    patchLoader: PatchLoader;
     gameMap: GameMap | undefined;
+    astParser: ASTParser;
+    astOptimizer: ASTOptimizer;
+    astDebugger: ASTDebugger;
 
     constructor(patchLoader: PatchLoader) {
+        this.patchLoader = patchLoader;
         this.settings = new Settings();
         this.tpsInfo = undefined;
         this.graph = undefined;
-        this.patchLoader = patchLoader;
         this.gameMap = undefined;
+        this.astParser = new ASTParser(patchLoader);
+        this.astOptimizer = new ASTOptimizer(this.settings);
+        this.astDebugger = new ASTDebugger();
     }
 
     inject() {
@@ -34,6 +45,8 @@ export class LayersDLC {
         PatchPlayerUI(this);
         PatchTPSInfo(this);
         PatchChunkUpdates(this);
+        PatchGameText(this);
+        PatchSettingsPage(this);
     }
 
     invalidateGraph() {
@@ -49,13 +62,17 @@ export class LayersDLC {
     }
 
     compileGraph() {
-        console.log(this.gameMap);
         if (this.graph || !this.gameMap) {
             return;
         }
-        const kostyli = new CompiledMapGraph();
-        kostyli.compile_from(this.gameMap);
-        this.graph = kostyli.graph;
+        // const mapGraph = new CompiledMapGraph();
+        // const kostyli = mapGraph.compile_from(this.gameMap);
+        const debugMode = this.settings.data.debugMode - 1;
+        const rootNode = this.astParser.compileFrom(this.gameMap);
+        if (debugMode !== 2)
+            this.astOptimizer.applyOptimizations(rootNode);
+        if (debugMode !== -1)
+            this.astDebugger.showDebugSignals(rootNode, this.settings.data.debugMode - 1, this.gameMap);
     }
 }
 

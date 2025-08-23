@@ -1,16 +1,16 @@
 import {GameMap} from "../api/game_map";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
-import {LayersDLC} from "../core/layersdlc";
+import {LayersDLC} from "../core/layersDLC";
 
-export function PatchChunkUpdates(layersdlc: LayersDLC) {
-    layersdlc.patchLoader.addDefinitionPatch("ChunkUpdates", function (module: any): any {
+export function PatchChunkUpdates(layersDLC: LayersDLC) {
+    layersDLC.patchLoader.addDefinitionPatch("ChunkUpdates", function (module: any): any {
         const oldUpdate = module.update;
         module.update = function update(game_map: GameMap, tick: number) {
-            if (layersdlc.graph === undefined) {
+            if (layersDLC.graph === undefined) {
                 oldUpdate(game_map);
             } else {
-                layersdlc.graph.update(tick);
+                layersDLC.graph.update(tick);
             }
         }
         module.clearSignals = function clearSignals(game_map: GameMap) {
@@ -22,8 +22,8 @@ export function PatchChunkUpdates(layersdlc: LayersDLC) {
                     arrow.blocked = 0;
                 });
             });
-            if (layersdlc.graph !== undefined) {
-                layersdlc.graph.clearSignals();
+            if (layersDLC.graph !== undefined) {
+                layersDLC.graph.clearSignals();
             }
         }
     });

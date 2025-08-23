@@ -1,44 +1,59 @@
-export class Settings {
-    tpsUpdateFrequencyMs: number = 500;
-    doRenderRings: boolean = false;
+type SettingsData = {
+    tpsUpdateFrequencyMs: number;
+    fullRendering: boolean;
+    
+    optimizeRings: boolean;
+    optimizeButtons: boolean;
+    optimizePixels: boolean;
+    optimizeBranches: boolean;
+    optimizePaths: boolean;
+    
+    debugMode: number;
+}
 
-    optimizeRings: boolean = true;
-    optimizePixels: boolean = true;
-    optimizeButtons: boolean = false;
-    optimizePathes: boolean = true;
-    optimizeBranches: boolean = true;
+export class Settings {
+    private static readonly STORAGE_KEY = 'layers-dlc';
+    
+    data: SettingsData;
     
     constructor() {
+        this.data = {
+            tpsUpdateFrequencyMs: 500,
+            fullRendering: false,
+            
+            optimizeRings: true,
+            optimizeButtons: false,
+            optimizePixels: true,
+            optimizeBranches: true,
+            optimizePaths: true,
+
+            debugMode: 0,
+        }
         this.load();
     }
 
     load() {
-        this.tpsUpdateFrequencyMs = this.getData("tpsUpdateFrequencyMs", this.tpsUpdateFrequencyMs);
-        this.doRenderRings = this.getData("doRenderRings", this.doRenderRings);
+        if (!this.hasData(Settings.STORAGE_KEY))
+            this.save();
 
-        this.optimizeRings = this.getData("optimizeRings", this.optimizeRings);
-        this.optimizePixels = this.getData("optimizePixels", this.optimizePixels);
-        this.optimizeButtons = this.getData("optimizeButtons", this.optimizeButtons);
-        this.optimizePathes = this.getData("optimizePathes", this.optimizePathes);
-        this.optimizeBranches = this.getData("optimizeBranches", this.optimizeBranches);
+        const data = this.getData<Partial<SettingsData>>(Settings.STORAGE_KEY, {});
+        this.data = { ...this.data, ...data };
     }
 
     save() {
-        this.setData("tpsUpdateFrequencyMs", this.tpsUpdateFrequencyMs);
-        this.setData("doRenderRings", this.doRenderRings);
+        this.setData<SettingsData>(Settings.STORAGE_KEY, this.data);
+    }
 
-        this.setData("optimizeRings", this.optimizeRings);
-        this.setData("optimizePixels", this.optimizePixels);
-        this.setData("optimizeButtons", this.optimizeButtons);
-        this.setData("optimizePathes", this.optimizePathes);
+    hasData(key: string): boolean {
+        return localStorage.getItem(key) !== null;
     }
 
     getData<T>(key: string, defaultValue: T): T {
         const value = localStorage.getItem(key);
-        return value !== null ? JSON.parse(value) : defaultValue;
+        return value !== null ? JSON.parse(value) : defaultValue!;
     }
 
-    setData(key: string, value: any) {
+    setData<T>(key: string, value: T) {
         localStorage.setItem(key, JSON.stringify(value));
     }
 }

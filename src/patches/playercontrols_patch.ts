@@ -1,9 +1,9 @@
 import {ArrowType} from "../api/arrow_type";
-import {LayersDLC} from "../core/layersdlc";
+import {LayersDLC} from "../core/layersDLC";
 
-export function PatchPlayerControls(layersdlc: LayersDLC) {
-    layersdlc.patchLoader.addDefinitionPatch("PlayerControls", function (module: any): any {
-        layersdlc.patchLoader.setDefinition("PlayerControls", class PlayerControls extends module {
+export function PatchPlayerControls(layersDLC: LayersDLC) {
+    layersDLC.patchLoader.addDefinitionPatch("PlayerControls", function (module: any): any {
+        layersDLC.patchLoader.setDefinition("PlayerControls", class PlayerControls extends module {
             constructor(...args: any[]) {
                 super(...args);
                 this.mouseHandler.leftClickCallback = () => {
@@ -15,26 +15,26 @@ export function PatchPlayerControls(layersdlc: LayersDLC) {
                     const isTargetType = arrow.type === 21 || arrow.type === 24;
                     if (!isTargetType) return;
 
-                    const hasCompiledGraph = layersdlc.graph !== undefined;
+                    const hasCompiledGraph = layersDLC.graph !== undefined;
                     const shouldSetSignal = arrow.signal === 0 || this.game.playing;
 
                     if (shouldSetSignal) {
                         if (arrow.type === ArrowType.BUTTON) {
                             arrow.signal = 5;
                             if (hasCompiledGraph) {
-                                layersdlc.graph!.changed_nodes.add(arrow.graph_node);
+                                layersDLC.graph!.changed_nodes.add(arrow.graph_node);
                             }
                         } else {
                             if (hasCompiledGraph) {
                                 const buttonEdge = arrow.graph_node.buttonEdge;
                                 if (!buttonEdge) {
                                     arrow.signal = 5;
-                                    layersdlc.graph!.changed_nodes.add(arrow.graph_node);
+                                    layersDLC.graph!.changed_nodes.add(arrow.graph_node);
                                 } else {
                                     buttonEdge.arrow.signal = buttonEdge.handler.active_signal;
                                     buttonEdge.lastSignal = 0;
-                                    layersdlc.graph!.changed_nodes.add(buttonEdge);
-                                    layersdlc.graph!.delayed_update.add(buttonEdge);
+                                    layersDLC.graph!.changed_nodes.add(buttonEdge);
+                                    layersDLC.graph!.delayed_update.add(buttonEdge);
                                 }
                             } else {
                                 arrow.signal = 5;
@@ -50,7 +50,7 @@ export function PatchPlayerControls(layersdlc: LayersDLC) {
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
                     prevKeyDownCallback(code, key);
                     if (code === 'KeyP') {
-                        layersdlc.compileGraph();
+                        layersDLC.compileGraph();
                     }
                 };
             }

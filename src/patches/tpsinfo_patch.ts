@@ -1,4 +1,4 @@
-import { LayersDLC } from "../core/layersdlc";
+import { LayersDLC } from "../core/layersDLC";
 
 export interface ITPSInfo {
     info: HTMLElement;
@@ -9,9 +9,9 @@ export interface ITPSInfo {
     updateInfo(updatedTicks: number): void;
 }
 
-export function PatchTPSInfo(layersdlc: LayersDLC) {
-    layersdlc.patchLoader.addDefinitionPatch("UIComponent", function (UIComponent: any): any {
-        layersdlc.patchLoader.setDefinition("TPSInfo", class TPSInfo extends UIComponent implements ITPSInfo {
+export function PatchTPSInfo(layersDLC: LayersDLC) {
+    layersDLC.patchLoader.addDefinitionPatch("UIComponent", function (UIComponent: any): any {
+        layersDLC.patchLoader.setDefinition("TPSInfo", class TPSInfo extends UIComponent implements ITPSInfo {
             info: HTMLElement;
             tps: number;
             updatedTicks: number;
@@ -31,7 +31,7 @@ export function PatchTPSInfo(layersdlc: LayersDLC) {
                 this.updatedTicks += updatedTicks;
                 const now = Date.now();
                 const delta = now - this.lastUpdate;
-                if (delta < layersdlc.settings.tpsUpdateFrequencyMs) {
+                if (delta < layersDLC.settings.data.tpsUpdateFrequencyMs) {
                     return;
                 }
                 this.tps = this.updatedTicks / delta * 1000;

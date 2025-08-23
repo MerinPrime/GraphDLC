@@ -1,14 +1,14 @@
 {
-  "name": "layersdlc",
+  "name": "graphdlc",
   "version": "1.0.0",
-  "description": "Layers-DLC для стрелочек...",
+  "description": "Graph-DLC для стрелочек...",
   "main": "index.js",
   "scripts": {
     "build:dev": "webpack --env development",
     "build:prod": "webpack --env production"
   },
   "keywords": [],
-  "author": "FotisDa",
+  "author": "MerinPrime",
   "license": "ISC",
   "devDependencies": {
     "@types/deflate-js": "^0.2.2",

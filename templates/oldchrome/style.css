@@ -4,6 +4,10 @@
     --light-red: #d82222 !important;
 }
 
+.settings-space {
+    height: 1vh;
+}
+
 .ui-inventory-items {
     background-color: var(--light-blue) !important;
     border-radius: 1.2vw !important;

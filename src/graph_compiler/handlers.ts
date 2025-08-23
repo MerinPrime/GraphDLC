@@ -2,7 +2,7 @@ import {Arrow} from "../api/arrow";
 import {Chunk} from "../api/chunk";
 import {ArrowType} from "../api/arrow_type";
 import {GraphNode} from "./graph_node";
-import {CycleHeadType} from "./cycle_head_type";
+import {CycleHeadType} from "./ast/cycle/cycleHeadType";
 
 export type GetEdgesFunc = (arrow: Arrow, x: number, y: number, chunk: Chunk) => ([Arrow, number, number, Chunk] | undefined)[];
 export type UpdateFunc = (arrow: Arrow, currentTick: number) => boolean | void;
@@ -51,6 +51,95 @@ export function getRelativeArrow(
     return [targetChunk.getArrow(targetX, targetY), targetX, targetY, targetChunk];
 }
 
+export const ACTIVE_SIGNALS: Array<number> = new Array<number>(25);
+ACTIVE_SIGNALS[ArrowType.EMPTY] = -1
+ACTIVE_SIGNALS[ArrowType.ARROW] = 1
+ACTIVE_SIGNALS[ArrowType.SOURCE] = 1
+ACTIVE_SIGNALS[ArrowType.BLOCKER] = 1
+ACTIVE_SIGNALS[ArrowType.DELAY] = 1
+ACTIVE_SIGNALS[ArrowType.DETECTOR] = 1
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_DOWN] = 1
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_RIGHT] = 1
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_RIGHT_LEFT] = 1
+ACTIVE_SIGNALS[ArrowType.IMPULSE] = 1
+ACTIVE_SIGNALS[ArrowType.BLUE_ARROW] = 2
+ACTIVE_SIGNALS[ArrowType.DIAGONAL_ARROW] = 2
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_UP] = 2
+ACTIVE_SIGNALS[ArrowType.SPLITTER_RIGHT_UP] = 2
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_DIAGONAL] = 2
+ACTIVE_SIGNALS[ArrowType.LOGIC_NOT] = 3
+ACTIVE_SIGNALS[ArrowType.LOGIC_AND] = 3
+ACTIVE_SIGNALS[ArrowType.LOGIC_XOR] = 3
+ACTIVE_SIGNALS[ArrowType.LATCH] = 3
+ACTIVE_SIGNALS[ArrowType.FLIP_FLOP] = 3
+ACTIVE_SIGNALS[ArrowType.RANDOM] = 5
+ACTIVE_SIGNALS[ArrowType.BUTTON] = 5
+ACTIVE_SIGNALS[ArrowType.LEVEL_SOURCE] = -1
+ACTIVE_SIGNALS[ArrowType.LEVEL_TARGET] = -1
+ACTIVE_SIGNALS[ArrowType.DIRECTIONAL_BUTTON] = 5
+
+export const EXIST_TYPES = new Set([
+    ArrowType.ARROW,
+    ArrowType.SOURCE,
+    ArrowType.BLOCKER,
+    ArrowType.DELAY,
+    ArrowType.DETECTOR,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
+    ArrowType.IMPULSE,
+    ArrowType.BLUE_ARROW,
+    ArrowType.DIAGONAL_ARROW,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
+    ArrowType.LOGIC_NOT,
+    ArrowType.LOGIC_AND,
+    ArrowType.LOGIC_XOR,
+    ArrowType.LATCH,
+    ArrowType.FLIP_FLOP,
+    ArrowType.RANDOM,
+    ArrowType.BUTTON,
+    ArrowType.DIRECTIONAL_BUTTON,
+]);
+
+export const ENTRY_POINTS = new Set([
+    ArrowType.SOURCE,
+    ArrowType.IMPULSE,
+    ArrowType.LOGIC_NOT,
+    ArrowType.BUTTON,
+    ArrowType.DIRECTIONAL_BUTTON,
+]);
+
+export const NOT_ALLOWED_TO_CHANGE = new Set([
+    ArrowType.SOURCE,
+    ArrowType.DETECTOR,
+    ArrowType.IMPULSE,
+    ArrowType.BUTTON,
+]);
+
+export const ADDITIONAL_UPDATE_ARROWS = new Set([
+    ArrowType.DELAY,
+    ArrowType.DETECTOR,
+    ArrowType.IMPULSE,
+    ArrowType.LOGIC_NOT,
+    ArrowType.FLIP_FLOP,
+    ArrowType.LATCH,
+    ArrowType.BUTTON,
+    ArrowType.DIRECTIONAL_BUTTON,
+]);
+
+export const NOT_ALLOWED_IN_CYCLE = new Set([
+    ArrowType.BLOCKER,
+    // ArrowType.DELAY, // Not needed because timers can contain delay arrow
+    ArrowType.LOGIC_NOT,
+    ArrowType.LOGIC_AND,
+    ArrowType.LATCH,
+    ArrowType.FLIP_FLOP,
+    ArrowType.RANDOM,
+    ArrowType.DIRECTIONAL_BUTTON,
+]);
+
 export class ArrowHandler {
     active_signal: number;
     get_edges: GetEdgesFunc;
@@ -63,130 +152,92 @@ export class ArrowHandler {
     }
 }
 
-export const NOT_ALLOWED_TO_CHANGE = new Set([
-    ArrowType.EMPTY, // EMPTY
-    ArrowType.RED_SOURCE, // RED SOURCE
-    ArrowType.DETECTOR, // DETECTOR
-    ArrowType.RED_IMPULSE, // RED IMPULSE
-    ArrowType.BUTTON, // SOURCE BUTTON
-]);
-
-export const ENTRY_POINTS = new Set([
-    ArrowType.RED_SOURCE, // RED SOURCE
-    ArrowType.RED_IMPULSE, // RED IMPULSE
-    ArrowType.LOGIC_NOT, // LOGIC NOT
-    ArrowType.BUTTON,
-    ArrowType.BRUH_BUTTON,
-]);
-
-export const ADDITIONAL_UPDATE_ARROWS = new Set([
-    ArrowType.DELAY, // DELAY
-    ArrowType.DETECTOR, // DETECTOR
-    ArrowType.RED_IMPULSE, // RED IMPULSE
-    ArrowType.LOGIC_NOT, // LOGIC NOT
-    ArrowType.LOGIC_FLOP,
-    ArrowType.LOGIC_FLIP,
-    ArrowType.BUTTON,
-    ArrowType.BRUH_BUTTON,
-]);
-
-export const NOT_ALLOWED_IN_CYCLE = new Set([
-    ArrowType.BLOCKER,
-    ArrowType.LOGIC_NOT,
-    ArrowType.LOGIC_FLIP,
-    ArrowType.LOGIC_FLOP,
-    ArrowType.RANDOM,
-    ArrowType.BRUH_BUTTON,
-    ArrowType.RED_IMPULSE,
-    ArrowType.RED_SOURCE,
-]);
-
 export const ALLOWED_IN_BUTTON = new Set([
-    ArrowType.RED_IMPULSE,
-    ArrowType.BRUH_BUTTON,
-    ArrowType.RED_ARROW,
+    ArrowType.IMPULSE,
+    ArrowType.DIRECTIONAL_BUTTON,
+    ArrowType.ARROW,
     ArrowType.DETECTOR,
     ArrowType.BLUE_ARROW,
-    ArrowType.BLUE_DIAGONAL_ARROW,
+    ArrowType.DIAGONAL_ARROW,
 ]);
 
 export const ALLOWED_IN_PIXEL = new Set([
-    ArrowType.RED_ARROW,
+    ArrowType.ARROW,
     ArrowType.DELAY,
     ArrowType.DETECTOR,
-    ArrowType.SPLITTER_1,
-    ArrowType.SPLITTER_2,
-    ArrowType.SPLITTER_3,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
     ArrowType.BLUE_ARROW,
-    ArrowType.BLUE_DIAGONAL_ARROW,
-    ArrowType.BLUE_SPLITTER_1,
-    ArrowType.BLUE_SPLITTER_2,
-    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.DIAGONAL_ARROW,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
     ArrowType.LOGIC_XOR,
 ]);
 
 export const ALLOWED_IN_PATH = new Set([
-    ArrowType.RED_ARROW,
-    ArrowType.SPLITTER_1,
-    ArrowType.SPLITTER_2,
-    ArrowType.SPLITTER_3,
+    ArrowType.ARROW,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
     ArrowType.BLUE_ARROW,
-    ArrowType.BLUE_DIAGONAL_ARROW,
-    ArrowType.BLUE_SPLITTER_1,
-    ArrowType.BLUE_SPLITTER_2,
-    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.DIAGONAL_ARROW,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
     ArrowType.LOGIC_XOR,
 ]);
 
 export const ALLOWED_IN_PRETIMER = new Set([
-    ArrowType.RED_ARROW,
+    ArrowType.ARROW,
     ArrowType.DELAY,
     ArrowType.DETECTOR,
-    ArrowType.SPLITTER_1,
-    ArrowType.SPLITTER_2,
-    ArrowType.SPLITTER_3,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
     ArrowType.BLUE_ARROW,
-    ArrowType.BLUE_DIAGONAL_ARROW,
-    ArrowType.BLUE_SPLITTER_1,
-    ArrowType.BLUE_SPLITTER_2,
-    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.DIAGONAL_ARROW,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
     ArrowType.LOGIC_XOR,
-    ArrowType.RED_IMPULSE,
+    ArrowType.IMPULSE,
 ]);
 
 export const ALLOWED_IN_TIMER = new Set([
-    ArrowType.RED_ARROW,
+    ArrowType.ARROW,
     ArrowType.DELAY,
     ArrowType.DETECTOR,
-    ArrowType.SPLITTER_1,
-    ArrowType.SPLITTER_2,
-    ArrowType.SPLITTER_3,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
     ArrowType.BLUE_ARROW,
-    ArrowType.BLUE_DIAGONAL_ARROW,
-    ArrowType.BLUE_SPLITTER_1,
-    ArrowType.BLUE_SPLITTER_2,
-    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.DIAGONAL_ARROW,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
     ArrowType.LOGIC_XOR,
 ]);
 
 export const IS_BRANCH = new Set([
-    ArrowType.SPLITTER_1,
-    ArrowType.SPLITTER_2,
-    ArrowType.SPLITTER_3,
-    ArrowType.BLUE_SPLITTER_1,
-    ArrowType.BLUE_SPLITTER_2,
-    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
 ]);
 
 export const ALLOWED_IN_BRANCH = new Set([
-    ArrowType.RED_ARROW,
+    ArrowType.ARROW,
     ArrowType.DETECTOR,
-    ArrowType.SPLITTER_1,
-    ArrowType.SPLITTER_2,
-    ArrowType.SPLITTER_3,
-    ArrowType.BLUE_SPLITTER_1,
-    ArrowType.BLUE_SPLITTER_2,
-    ArrowType.BLUE_SPLITTER_3,
+    ArrowType.SPLITTER_UP_DOWN,
+    ArrowType.SPLITTER_UP_RIGHT,
+    ArrowType.SPLITTER_UP_RIGHT_LEFT,
+    ArrowType.SPLITTER_UP_UP,
+    ArrowType.SPLITTER_RIGHT_UP,
+    ArrowType.SPLITTER_UP_DIAGONAL,
 ]);
 
 export const EMPTY_HANDLER = new ArrowHandler(
@@ -436,47 +487,47 @@ export const BRUH_BUTTON_HANDLER = new ArrowHandler(
 
 export const HANDLERS = new Map<ArrowType, ArrowHandler>([
     [ArrowType.EMPTY, EMPTY_HANDLER],
-    [ArrowType.RED_ARROW, RED_ARROW_HANDLER],
-    [ArrowType.RED_SOURCE, RED_SOURCE_HANDLER],
+    [ArrowType.ARROW, RED_ARROW_HANDLER],
+    [ArrowType.SOURCE, RED_SOURCE_HANDLER],
     [ArrowType.BLOCKER, RED_ARROW_HANDLER],
     [ArrowType.DELAY, DELAY_ARROW_HANDLER],
     [ArrowType.DETECTOR, RED_ARROW_HANDLER],
-    [ArrowType.SPLITTER_1, SPLITTER_1_HANDLER],
-    [ArrowType.SPLITTER_2, SPLITTER_2_HANDLER],
-    [ArrowType.SPLITTER_3, SPLITTER_3_HANDLER],
-    [ArrowType.RED_IMPULSE, IMPULSE_HANDLER],
+    [ArrowType.SPLITTER_UP_DOWN, SPLITTER_1_HANDLER],
+    [ArrowType.SPLITTER_UP_RIGHT, SPLITTER_2_HANDLER],
+    [ArrowType.SPLITTER_UP_RIGHT_LEFT, SPLITTER_3_HANDLER],
+    [ArrowType.IMPULSE, IMPULSE_HANDLER],
     [ArrowType.BLUE_ARROW, BLUE_ARROW_HANDLER],
-    [ArrowType.BLUE_DIAGONAL_ARROW, BLUE_DIAGONAL_ARROW_HANDLER],
-    [ArrowType.BLUE_SPLITTER_1, BLUE_SPLITTER_1_HANDLER],
-    [ArrowType.BLUE_SPLITTER_2, BLUE_SPLITTER_2_HANDLER],
-    [ArrowType.BLUE_SPLITTER_3, BLUE_SPLITTER_3_HANDLER],
+    [ArrowType.DIAGONAL_ARROW, BLUE_DIAGONAL_ARROW_HANDLER],
+    [ArrowType.SPLITTER_UP_UP, BLUE_SPLITTER_1_HANDLER],
+    [ArrowType.SPLITTER_RIGHT_UP, BLUE_SPLITTER_2_HANDLER],
+    [ArrowType.SPLITTER_UP_DIAGONAL, BLUE_SPLITTER_3_HANDLER],
     [ArrowType.LOGIC_NOT, LOGIC_NOT_HANDLER],
     [ArrowType.LOGIC_AND, LOGIC_AND_HANDLER],
     [ArrowType.LOGIC_XOR, LOGIC_XOR_HANDLER],
-    [ArrowType.LOGIC_FLIP, LOGIC_FLIP_HANDLER],
-    [ArrowType.LOGIC_FLOP, LOGIC_FLOP_HANDLER],
+    [ArrowType.LATCH, LOGIC_FLIP_HANDLER],
+    [ArrowType.FLIP_FLOP, LOGIC_FLOP_HANDLER],
     [ArrowType.RANDOM, RANDOM_HANDLER],
     [ArrowType.BUTTON, BUTTON_HANDLER],
-    [ArrowType.LEVEL_ARROW_22, EMPTY_HANDLER],
-    [ArrowType.LEVEL_ARROW_23, EMPTY_HANDLER],
-    [ArrowType.BRUH_BUTTON, BRUH_BUTTON_HANDLER],
+    [ArrowType.LEVEL_SOURCE, EMPTY_HANDLER],
+    [ArrowType.LEVEL_TARGET, EMPTY_HANDLER],
+    [ArrowType.DIRECTIONAL_BUTTON, BRUH_BUTTON_HANDLER],
 ]);
 
 export function updateNode(graphNode: GraphNode, currentTick: number) {
     const arrow = graphNode.arrow;
-    if (arrow.blocked > 0) {
+    if (arrow.blocked! > 0) {
         arrow.signal = 0;
     } else {
         switch (graphNode.arrow.type) {
-            case ArrowType.RED_ARROW:
+            case ArrowType.ARROW:
             case ArrowType.BLOCKER:
             case ArrowType.DETECTOR:
-            case ArrowType.SPLITTER_1:
-            case ArrowType.SPLITTER_2:
-            case ArrowType.SPLITTER_3:
+            case ArrowType.SPLITTER_UP_DOWN:
+            case ArrowType.SPLITTER_UP_RIGHT:
+            case ArrowType.SPLITTER_UP_RIGHT_LEFT:
                 arrow.signal = arrow.signalsCount > 0 ? 1 : 0;
                 break;
-            case ArrowType.RED_SOURCE:
+            case ArrowType.SOURCE:
                 arrow.signal = 1;
                 break;
             case ArrowType.DELAY:
@@ -492,7 +543,7 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
                     arrow.signal = 0;
                 }
                 break;
-            case ArrowType.RED_IMPULSE:
+            case ArrowType.IMPULSE:
                 if (arrow.signal === 0) {
                     arrow.signal = 1;
                 } else {
@@ -500,10 +551,10 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
                 }
                 break;
             case ArrowType.BLUE_ARROW:
-            case ArrowType.BLUE_DIAGONAL_ARROW:
-            case ArrowType.BLUE_SPLITTER_1:
-            case ArrowType.BLUE_SPLITTER_2:
-            case ArrowType.BLUE_SPLITTER_3:
+            case ArrowType.DIAGONAL_ARROW:
+            case ArrowType.SPLITTER_UP_UP:
+            case ArrowType.SPLITTER_RIGHT_UP:
+            case ArrowType.SPLITTER_UP_DIAGONAL:
                 arrow.signal = arrow.signalsCount > 0 ? 2 : 0;
                 break;
             case ArrowType.LOGIC_NOT:
@@ -525,13 +576,13 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
             case ArrowType.LOGIC_XOR:
                 arrow.signal = arrow.signalsCount % 2 === 1 ? 3 : 0;
                 break;
-            case ArrowType.LOGIC_FLIP:
+            case ArrowType.LATCH:
                 if (arrow.signalsCount > 1)
                     arrow.signal = 3;
                 else if (arrow.signalsCount === 1)
                     arrow.signal = 0
                 break;
-            case ArrowType.LOGIC_FLOP:
+            case ArrowType.FLIP_FLOP:
                 if (arrow.signalsCount > 0) {
                     if (arrow.signal === 3) {
                         arrow.signal = 0;
@@ -543,7 +594,7 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
             case ArrowType.RANDOM:
                 arrow.signal = arrow.signalsCount > 0 && Math.random() > 0.5 ? 5 : 0;
                 break;
-            case ArrowType.BRUH_BUTTON:
+            case ArrowType.DIRECTIONAL_BUTTON:
                 arrow.signal = arrow.signalsCount > 0 ? 5 : 0;
                 break;
             default:

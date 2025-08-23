@@ -1,36 +1,36 @@
 import { ArrowType } from "../api/arrow_type";
 import { GameMap } from "../api/game_map";
-import { LayersDLC } from "../core/layersdlc";
+import { LayersDLC } from "../core/layersDLC";
 
-export function PatchGameMap(layersdlc: LayersDLC) {
-    layersdlc.patchLoader.addDefinitionPatch("GameMap", function (module: any): any {
-        layersdlc.patchLoader.setDefinition("GameMap", class GameMapPatched extends module {
+export function PatchGameMap(layersDLC: LayersDLC) {
+    layersDLC.patchLoader.addDefinitionPatch("GameMap", function (module: any): any {
+        layersDLC.patchLoader.setDefinition("GameMap", class GameMapPatched extends module {
             constructor(...args: any[]) {
                 super(...args);
             }
             setArrowType(x: number, y: number, type: ArrowType) {
                 super.setArrowType(x, y, type);
-                layersdlc.invalidateGraph();
+                layersDLC.invalidateGraph();
             }
             setArrowSignal(x: number, y: number, signal: number) {
                 super.setArrowSignal(x, y, signal);
-                layersdlc.invalidateGraph();
+                layersDLC.invalidateGraph();
             }
             setArrowRotation(x: number, y: number, direction: number) {
                 super.setArrowRotation(x, y, direction);
-                layersdlc.invalidateGraph();
+                layersDLC.invalidateGraph();
             }
             setArrowFlipped(x: number, y: number, flipped: boolean) {
                 super.setArrowFlipped(x, y, flipped);
-                layersdlc.invalidateGraph();
+                layersDLC.invalidateGraph();
             }
             resetArrow(x: number, y: number, force: boolean) {
                 super.resetArrow(x, y, force);
-                layersdlc.invalidateGraph();
+                layersDLC.invalidateGraph();
             }
             removeArrow(x: number, y: number) {
                 super.removeArrow(x, y);
-                layersdlc.invalidateGraph();
+                layersDLC.invalidateGraph();
             }
         });
     });

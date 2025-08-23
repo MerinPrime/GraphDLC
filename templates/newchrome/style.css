@@ -4,6 +4,20 @@
     --light-red: #d82222 !important;
 }
 
+.settings-space {
+    height: 1vh;
+}
+
+.setting-value select {
+    border-radius: 0.6vh !important;
+    padding: 0.2rem !important;
+}
+
+.setting-value input[type='checkbox'] {
+    width: 1.1rem !important;
+    height: 1.1rem !important;
+}
+
 .ui-inventory-items {
     background-color: var(--light-blue) !important;
     border-radius: 1.2vw !important;

@@ -4,7 +4,7 @@ import {Timer} from "./timer";
 import {Path} from "./path";
 import {PathPool} from "./path_pool";
 import {Cycle} from "./cycle";
-import {CycleHeadType} from "./cycle_head_type";
+import {CycleHeadType} from "./ast/cycle/cycleHeadType";
 
 export class Graph {
     entry_points: Set<GraphNode>;
@@ -14,7 +14,7 @@ export class Graph {
     temp_cycles_to_update: Set<Cycle>;
     cycles_to_update: Set<Cycle>;
     delayed_update: Set<GraphNode>;
-    pathes: Array<Path>;
+    paths: Array<Path>;
     timers: Array<Timer>;
     restarted: boolean;
     cycleLength: number;
@@ -33,7 +33,7 @@ export class Graph {
         this.temp_cycles_to_update = new Set();
         this.cycles_to_update = new Set();
         this.delayed_update = new Set();
-        this.pathes = [];
+        this.paths = [];
         this.timers = [];
         this.restarted = false;
         this.cycleLength = 0;
@@ -55,7 +55,7 @@ export class Graph {
             cycle.activeEntryPoints.clear();
         });
         this.cycles_to_update.clear();
-        this.pathes.length = 0;
+        this.paths.length = 0;
     }
     
     clearTemp() {
@@ -99,23 +99,23 @@ export class Graph {
                 }
             });
         }
-        if (this.pathes.length > 0) {
+        if (this.paths.length > 0) {
             if (this.nextPathUpdateTick <= tick) {
                 let nextMinRemainingTicks = Infinity;
                 let writeIndex = 0;
-                for (let i = 0; i < this.pathes.length; i++) {
-                    const path = this.pathes[i];
+                for (let i = 0; i < this.paths.length; i++) {
+                    const path = this.paths[i];
                     if (path.tick === tick) {
                         path.arrow.arrow.signalsCount += path.delta;
                         this.delayed_update.add(path.arrow);
                     } else {
                         nextMinRemainingTicks = Math.min(nextMinRemainingTicks, path.tick);
-                        this.pathes[writeIndex] = path;
+                        this.paths[writeIndex] = path;
                         writeIndex++;
                     }
                 }
-                this.pathes.length = writeIndex;
-                if (this.pathes.length === 0) {
+                this.paths.length = writeIndex;
+                if (this.paths.length === 0) {
                     this.nextPathUpdateTick = Infinity;
                 } else {
                     this.nextPathUpdateTick = nextMinRemainingTicks;
@@ -128,7 +128,7 @@ export class Graph {
             if (node.pathLength !== -1) {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 const delta = isActive ? 1 : -1;
-                this.pathes.push(this.pathPool.get(tick + node.pathLength, node.edges[0], delta));
+                this.paths.push(this.pathPool.get(tick + node.pathLength, node.edges[0], delta));
                 this.nextPathUpdateTick = Math.min(this.nextPathUpdateTick, tick + node.pathLength);
                 return;
             }
@@ -136,19 +136,21 @@ export class Graph {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 const delta = isActive ? 1 : -1;
                 const isDelayed = node.isDelay && node.arrow.signal === 2;
-                let i = 0;
+                let i = -1;
+                // BLOCKER WORKS INCORRECTLY
+                // IF BLOCKER NOT BLOCKING CHANGE BLOCKER TYPE TO RED_ARROW
                 node.edges.forEach(edge => {
                     i++;
                     if (edge.isDetector) {
                         if (node.isBlocker && i == 0) {
-                            edge.arrow.blocked += delta;
+                            edge.arrow.blocked! += delta;
                         }
                         else {
                             edge.arrow.signalsCount = node.arrow.signal !== 0 ? 1 : 0;
                         }
                     } else if (!isDelayed) {
                         if (node.isBlocker) {
-                            edge.arrow.blocked += delta;
+                            edge.arrow.blocked! += delta;
                         } else {
                             edge.arrow.signalsCount += delta;
                         }

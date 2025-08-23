@@ -1,5 +1,6 @@
+const ext = typeof browser !== "undefined" ? browser : chrome;
 const xhr = new XMLHttpRequest();
-xhr.open('GET', chrome.extension.getURL('index.js'), false);
+xhr.open('GET', ext.extension.getURL('index.js'), false);
 xhr.send(null);
 
 const patchCode = xhr.responseText;
