@@ -106,6 +106,7 @@ export class LayersDLC {
             
             const graphState = this.graphCompiler.compile(rootNode);
             this.graphUpdater.resetGraph(graphState);
+            this.game!.tick = 0;
             this.graphState = graphState;
         } catch (e: any) {
             alert(`ERROR ${e.message}`);
