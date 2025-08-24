@@ -254,9 +254,9 @@ export class CycleOptimizer {
                         anyEndpoint = true;
                     }
                 }
-                if (cycleArrow.back.length > 1) {
-                    for (let k = 0; k < cycleArrow.back.length; k++) {
-                        const cycleEdge = cycleArrow.back[k];
+                if (cycleArrow.backEdges.length > 1) {
+                    for (let k = 0; k < cycleArrow.backEdges.length; k++) {
+                        const cycleEdge = cycleArrow.backEdges[k];
                         if (cycleEdge === prevArrow) continue;
                         cycleHeads.push([cycleEdge, cycleArrow, j]);
                     }

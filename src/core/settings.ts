@@ -1,11 +1,14 @@
 type SettingsData = {
     tpsUpdateFrequencyMs: number;
     fullRendering: boolean;
+    showArrowConnections: boolean;
+    showArrowTarget: boolean;
     
     optimizeRings: boolean;
     optimizeButtons: boolean;
     optimizePixels: boolean;
     optimizeBranches: boolean;
+    optimizeSimple: boolean;
     optimizePaths: boolean;
     
     debugMode: number;
@@ -20,11 +23,14 @@ export class Settings {
         this.data = {
             tpsUpdateFrequencyMs: 500,
             fullRendering: false,
+            showArrowConnections: false,
+            showArrowTarget: false,
             
             optimizeRings: true,
             optimizeButtons: false,
             optimizePixels: true,
             optimizeBranches: true,
+            optimizeSimple: true,
             optimizePaths: true,
 
             debugMode: 0,

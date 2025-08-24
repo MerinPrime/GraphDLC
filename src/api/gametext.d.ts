@@ -51,12 +51,15 @@ export interface GameText {
     MAX_ZOOM_OUT: I18nText;
     // Layers-DLC
     TPS_UPDATE_FREQUENCY_MS: I18nText;
+    SHOW_ARROW_CONNECTIONS: I18nText;
+    SHOW_ARROW_TARGET: I18nText;
     
     OPTIMIZE_RINGS: I18nText;
     OPTIMIZE_BUTTONS: I18nText;
     OPTIMIZE_PIXELS: I18nText;
     OPTIMIZE_BRANCHES: I18nText;
     OPTIMIZE_PATHS: I18nText;
+    OPTIMIZE_SIMPLE: I18nText;
     OPTIMIZE_TIMERS: I18nText;
     
     DEBUG_MODE: I18nText;
@@ -64,4 +67,5 @@ export interface GameText {
     DEBUG_MODE_2: I18nText;
     DEBUG_MODE_3: I18nText;
     DEBUG_MODE_4: I18nText;
+    DEBUG_MODE_5: I18nText;
 }

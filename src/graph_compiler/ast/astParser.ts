@@ -6,6 +6,7 @@ import {ArrowType} from "../../api/arrow_type";
 import {PatchLoader} from "../../core/patchLoader";
 import {ASTNode} from "./astNode";
 import {RootNode} from "./rootNode";
+import {ASTNodeType} from "./astNodeType";
 
 type ArrowContext = {
     chunk: Chunk;
@@ -30,7 +31,7 @@ export class ASTParser {
                 arrow.signal = 0;
                 arrow.signalsCount = 0;
                 arrow.blocked = 0;
-                arrow.ast_node = undefined;
+                arrow.astNode = undefined;
             });
         });
         
@@ -39,6 +40,8 @@ export class ASTParser {
             for (let y = 0; y < CHUNK_SIZE; y++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     const arrow = chunk.arrows[x + y * CHUNK_SIZE];
+                    arrow.x = x + chunk.x * CHUNK_SIZE;
+                    arrow.y = y + chunk.y * CHUNK_SIZE;
                     if (!ENTRY_POINTS.has(arrow.type)) continue;
                     processingStack.push({chunk, arrow, x, y});
                 }
@@ -48,17 +51,17 @@ export class ASTParser {
         const rootNode = new RootNode();
         while (processingStack.length > 0) {
             const { chunk, arrow, x, y } = processingStack.pop()!;
-
+            
             if (!EXIST_TYPES.has(arrow.type)) {
                 console.warn(`Founded arrow with uncommon type: ${arrow.type}`)
                 continue;
             }
             
-            if (!arrow.ast_node) {
-                arrow.ast_node = new ASTNode().makeFromArrow(arrow);
-            } else if (arrow.ast_node.linked) continue;
+            if (!arrow.astNode) {
+                arrow.astNode = new ASTNode().makeFromArrow(arrow);
+            } else if (arrow.astNode.linked) continue;
             
-            const astNode = arrow.ast_node;
+            const astNode = arrow.astNode;
             astNode.linked = true;
             
             if (ENTRY_POINTS.has(arrow.type)) {
@@ -80,13 +83,17 @@ export class ASTParser {
                     console.warn(`Founded arrow with uncommon type: ${edgeArrow.type}`)
                     continue;
                 }
-                if (!edgeArrow.ast_node) {
-                    edgeArrow.ast_node = new ASTNode().makeFromArrow(edgeArrow);
+                if (!edgeArrow.astNode) {
+                    edgeArrow.astNode = new ASTNode().makeFromArrow(edgeArrow);
                 }
-                const edgeNode = edgeArrow.ast_node;
-                edgeNode.back.push(astNode);
+                const edgeNode = edgeArrow.astNode;
+                edgeNode.backEdges.push(astNode);
                 astNode.allEdges.push(edgeNode);
-                astNode.detectors.push(edgeNode);
+                astNode.edges.push(edgeNode);
+                
+                if (astNode.type === ASTNodeType.BLOCKER) {
+                    astNode.specialNode = edgeNode;
+                }
                 
                 if (!edgeNode.linked) {
                     processingStack.push({ chunk: edgeChunk, arrow: edgeArrow, x: edgeX, y: edgeY });
@@ -108,11 +115,12 @@ export class ASTParser {
 
                 const [_, detectX, detectY, detectChunk] = detectData;
                 if (detectX === x && detectY === y && detectChunk === chunk) {
-                    if (!edgeArrow.ast_node) {
-                        edgeArrow.ast_node = new ASTNode().makeFromArrow(edgeArrow);
+                    if (!edgeArrow.astNode) {
+                        edgeArrow.astNode = new ASTNode().makeFromArrow(edgeArrow);
                     }
-                    const detectorNode = edgeArrow.ast_node;
-                    detectorNode.back.push(astNode);
+                    const detectorNode = edgeArrow.astNode;
+                    detectorNode.specialNode = astNode;
+                    detectorNode.backEdges.push(astNode);
                     astNode.allEdges.push(detectorNode);
                     astNode.detectors.push(detectorNode);
                     if (!detectorNode.linked) {

@@ -3,5 +3,8 @@ import { LayersDLC } from "./core/layersDLC";
 
 const patchLoader = new PatchLoader();
 patchLoader.hook();
-const layersdlc = new LayersDLC(patchLoader);
-layersdlc.inject();
+const layersDLC = new LayersDLC(patchLoader);
+layersDLC.inject();
+
+// @ts-ignore
+window.layersdlc = layersDLC;

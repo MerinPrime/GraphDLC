@@ -16,5 +16,9 @@ export interface Arrow {
 
     blocked?: number;
     graph_node?: GraphNode;
-    ast_node?: ASTNode;
+    astNode?: ASTNode;
+    astIndex?: number;
+    
+    x?: number;
+    y?: number;
 }

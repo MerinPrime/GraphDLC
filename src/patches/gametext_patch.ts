@@ -14,10 +14,26 @@ export function PatchGameText(layersDLC: LayersDLC) {
             "Хуткасць абнаўлення лічыльніка ТПС (мс)",
             "Vitesse de mise à jour du compteur TPS (ms)"
         );
+
+        module.SHOW_ARROW_CONNECTIONS = new I18nText(
+            "Show arrow connections",
+            "Показывать связи стрелочек",
+            "Показувати зв’язки стрілочок",
+            "Паказваць сувязі стрэлачак",
+            "Afficher les connexions des flèches"
+        );
+        
+        module.SHOW_ARROW_TARGET = new I18nText(
+            "Show arrow signals",
+            "Показывать сигналы стрелочек",
+            "Показувати сигнали стрілочок",
+            "Паказваць сігналы стрэлачак",
+            "Afficher les signaux des flèches"
+        );
         
         module.OPTIMIZE_RINGS = new I18nText(
             "Optimize rings and timers",
-            "Оптимизация колец и таймеров",
+            "Оптимизация колец",
             "Оптимізація кілець і таймерів",
             "Аптымізацыя кольцаў і таймераў",
             "Optimiser les anneaux et les minuteurs"
@@ -53,6 +69,14 @@ export function PatchGameText(layersDLC: LayersDLC) {
             "Оптимізація шляхів",
             "Аптымізацыя шляхоў",
             "Optimisation des chemins"
+        );
+
+        module.OPTIMIZE_SIMPLE = new I18nText(
+            "Simple optimization",
+            "Простая оптимизация",
+            "Проста оптимізація",
+            "Простая аптымізацыя",
+            "Optimisation simple"
         );
 
         module.OPTIMIZE_TIMERS = new I18nText(
@@ -101,6 +125,14 @@ export function PatchGameText(layersDLC: LayersDLC) {
             "Показувати невикористані стрілочки",
             "Паказваць нявыкарыстаныя стрэлкі",
             "Afficher les flèches inutilisées"
+        );
+
+        module.DEBUG_MODE_5 = new I18nText(
+            "Disable updates",
+            "Отключить обновление",
+            "Вимкнути оновлення",
+            "Адключыць абнаўленне",
+            "Désactiver les mises à jour"
         );
     });
 }

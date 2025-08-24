@@ -17,8 +17,6 @@ export class Graph {
     paths: Array<Path>;
     timers: Array<Timer>;
     restarted: boolean;
-    cycleLength: number;
-    lastUpdate: number;
     pathPool: PathPool;
     nextPathUpdateTick: number;
     lastPathUpdateTick: number;
@@ -36,8 +34,6 @@ export class Graph {
         this.paths = [];
         this.timers = [];
         this.restarted = false;
-        this.cycleLength = 0;
-        this.lastUpdate = 0;
         this.pathPool = new PathPool();
         this.nextPathUpdateTick = Infinity;
         this.lastPathUpdateTick = 0;

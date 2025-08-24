@@ -18,6 +18,8 @@ export class ASTDebugger {
             case 2:
                 this.showDebugDeadNodes(rootNode, gameMap);
                 break;
+            case 3:
+                break;
         }
     }
 
@@ -63,12 +65,13 @@ export class ASTDebugger {
         for (const value of gameMap.chunks.values()) {
             for (let i = 0; i < value.arrows.length; i++) {
                 const arrow = value.arrows[i];
-                if (arrow.ast_node === undefined)
+                if (arrow.astNode === undefined)
                     arrow.signal = 7;
                 else
                     arrow.signal = 0;
             }
         }
+        
         const deadNodes = new Set<ASTNode>();
         const visited = new Set<ASTNode>();
         const nodeQueue: ASTNode[] = [rootNode];
@@ -89,19 +92,18 @@ export class ASTDebugger {
 
             let signal: number | null = null;
 
-            const backEdges = node.back.filter((x) => !deadNodes.has(x));
-            
-            if ((node.type === ASTNodeType.LOGIC_AND || node.type === ASTNodeType.LATCH) && backEdges.length < 2) {
+            const backEdges = node.backEdges.filter((x) => !deadNodes.has(x));
+
+            if ((node.type === ASTNodeType.LOGIC_AND || node.type === ASTNodeType.LATCH) && backEdges.length < 2 ||
+                (!node.type.isEntryPoint && backEdges.length === 0) ||
+                (node.type === ASTNodeType.DETECTOR && node.specialNode === undefined) ||
+                (node.type === ASTNodeType.BLOCKER && allEdges.length === 0)) {
                 signal = 6;
-            } else if (!node.type.isEntryPoint && backEdges.length === 0) {
-                signal = 6;
-            } else if (!node.type.isEntryPoint && allEdges.length === 0) {
-                signal = 2;
             }
             
             let finalSignal: number | null = null;
             if (signal !== null) {
-                const backDeadEdges = node.back.filter((x) => deadNodes.has(x));
+                const backDeadEdges = node.backEdges.filter((x) => deadNodes.has(x));
                 
                 let minBackSignal = signal;
                 for (const backDeadEdge of backDeadEdges) {
@@ -124,7 +126,13 @@ export class ASTDebugger {
                     const backEdge = backEdges[i];
                     visited.delete(backEdge);
                 }
-            } else if (node.type === ASTNodeType.LOGIC_XOR && backEdges.length < 2 || node.type === ASTNodeType.PATH && allEdges.length !== getArrowRelations(node.arrows[0].type).length) {
+                nodeQueue.push(...backEdges);
+            } else if (!node.type.isEntryPoint && allEdges.length === 0) {
+                finalSignal = 2;
+            } else if ((node.type === ASTNodeType.LOGIC_XOR && backEdges.length < 2) ||
+                (node.type === ASTNodeType.BLOCKER && node.specialNode === undefined) ||
+                (node.type === ASTNodeType.DETECTOR && (node.specialNode!.type === ASTNodeType.IMPULSE || node.specialNode!.type === ASTNodeType.DELAY || node.specialNode!.type === ASTNodeType.PATH)) ||
+                node.type === ASTNodeType.PATH && allEdges.length < getArrowRelations(node.arrows[0].type).length) {
                 finalSignal = 4;
             }
             
@@ -136,7 +144,6 @@ export class ASTDebugger {
                 node.arrows[i].signal = finalSignal;
             }
         }
-        // TODO: Make optimization for strip nodes like this
     }
 
     showDebugPropagation(rootNode: RootNode) {
@@ -155,8 +162,8 @@ export class ASTDebugger {
             }
             
             let signal = 0;
-            for (let i = 0; i < node.back.length; i++) {
-                const backEdge = node.back[i];
+            for (let i = 0; i < node.backEdges.length; i++) {
+                const backEdge = node.backEdges[i];
                 signal += backEdge.type.index + 1;
             }
             signal = signal % 6 + 1;
