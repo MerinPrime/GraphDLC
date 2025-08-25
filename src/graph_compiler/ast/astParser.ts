@@ -1,9 +1,9 @@
-import {GameMap} from "../../api/game_map";
+import {GameMap} from "../../api/gameMap";
 import {Chunk} from "../../api/chunk";
 import {Arrow} from "../../api/arrow";
 import {ENTRY_POINTS, EXIST_TYPES, NOT_ALLOWED_TO_CHANGE} from "../handlers";
-import {ArrowType} from "../../api/arrow_type";
-import {PatchLoader} from "../../core/patchLoader";
+import {ArrowType} from "../../api/arrowType";
+import {DefinitionPtr, PatchLoader} from "../../core/patchLoader";
 import {ASTNode} from "./astNode";
 import {RootNode} from "./rootNode";
 import {ASTNodeType} from "./astNodeType";
@@ -17,13 +17,15 @@ type ArrowContext = {
 
 export class ASTParser {
     patchLoader: PatchLoader;
+    ChunkSizePtr: DefinitionPtr<number>;
     
     constructor(patchLoader: PatchLoader) {
         this.patchLoader = patchLoader;
+        this.ChunkSizePtr = patchLoader.getDefinitionPtr<number>("CHUNK_SIZE");
     }
     
     compileFrom(gameMap: GameMap): RootNode {
-        const CHUNK_SIZE = this.patchLoader.getDefinition<number>('CHUNK_SIZE');
+        const CHUNK_SIZE = this.ChunkSizePtr.definition;
 
         gameMap.chunks.forEach((chunk) => {
             chunk.arrows.forEach((arrow) => {

@@ -1,11 +1,17 @@
+export interface DefinitionPtr<T> {
+    definition: T;
+}
+
 export class PatchLoader {
-    private definitions: Record<string, any> = {};
-    private instances: Record<string, any> = {};
-    private patches: Array<(name: string, definition: any) => boolean> = [];
+    private definitionPtrs: Map<string, DefinitionPtr<any>>;
+    private instances: Map<string, any>;
+    private patches: Array<(name: string, definition: any) => boolean>;
     private originalCall?: (this: Function, thisArg: any, ...argArray: any[]) => any;
     
     constructor() {
-        
+        this.definitionPtrs = new Map();
+        this.instances = new Map();
+        this.patches = [];
     }
     
     hook() {
@@ -45,19 +51,25 @@ export class PatchLoader {
             }
 
             this.setDefinition(key, definition);
-            exports[key] = this.definitions[key];
+            exports[key] = this.getDefinitionPtr<any>(key).definition;
         }
 
         return result;
     }
 
-    public getDefinition<T>(name: string): T {
-        return this.definitions[name] as T;
+    public getDefinitionPtr<T>(name: string): DefinitionPtr<T> {
+        if (!this.definitionPtrs.has(name)) {
+            this.definitionPtrs.set(name, { definition: undefined });
+        }
+        return this.definitionPtrs.get(name) as DefinitionPtr<T>;
     }
 
-    public setDefinition(name: string, definition: any): void {
-        this.definitions[name] = definition;
-
+    public setDefinition<T>(name: string, definition: T): void {
+        if (!this.definitionPtrs.has(name)) {
+            this.definitionPtrs.set(name, { definition: undefined });
+        }
+        this.definitionPtrs.get(name)!.definition = definition;
+        
         const oldPatches = this.patches;
         const newPatches: typeof this.patches = [];
         this.patches = [];
@@ -72,11 +84,11 @@ export class PatchLoader {
     }
 
     public getInstance<T>(name: string): T {
-        return this.instances[name] as T;
+        return this.instances.get(name) as T;
     }
 
     public setInstance(name: string, instance: any) {
-        this.instances[name] = instance;
+        this.instances.set(name, instance);
     }
 
     public addManualPatch(patch: (name: string, definition: any) => boolean): void {

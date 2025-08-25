@@ -18,7 +18,15 @@ export class GraphState {
     detectorsCount: Uint8Array;
     edges: Uint32Array;
     
-    constructor(totalEntryPointCount: number, nodeCount: number, totalEdgesCount: number) {
+    // Cycle data
+    cycleHeadTypes: Uint8Array;
+    nodeToCycleID: Int32Array;
+    cycleOffsets: Uint8Array;
+    
+    cycleLengths: Uint8Array;
+    cycleStates: Uint32Array;
+    
+    constructor(totalEntryPointCount: number, nodeCount: number, totalEdgesCount: number, cyclesCount: number) {
         this.entryPoints = new Uint32Array(totalEntryPointCount);
         
         this.changedNodes = new ChangedNodesArray(totalEntryPointCount);
@@ -35,5 +43,12 @@ export class GraphState {
         this.edgesCount = new Uint8Array(nodeCount);
         this.detectorsCount = new Uint8Array(nodeCount);
         this.edges = new Uint32Array(totalEdgesCount);
+        
+        this.cycleHeadTypes = new Uint8Array(nodeCount);
+        this.nodeToCycleID = new Int32Array(nodeCount).fill(-1);
+        this.cycleOffsets = new Uint8Array(nodeCount);
+        
+        this.cycleLengths = new Uint8Array(cyclesCount);
+        this.cycleStates = new Uint32Array(cyclesCount);
     }
 }

@@ -1,4 +1,4 @@
-import {ArrowType} from "../../api/arrow_type";
+import {ArrowType} from "../../api/arrowType";
 
 export class ASTNodeType {
     public readonly index: number;

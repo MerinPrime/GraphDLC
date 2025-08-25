@@ -1,7 +1,7 @@
 {
   "name": "graphdlc",
   "version": "1.0.0",
-  "description": "Graph-DLC для стрелочек...",
+  "description": "GraphDLC для стрелочек...",
   "main": "index.js",
   "scripts": {
     "build:dev": "webpack --env development",
@@ -20,6 +20,7 @@
     "zip-webpack-plugin": "^4.0.3"
   },
   "dependencies": {
-    "deflate-js": "^0.2.3"
+    "deflate-js": "^0.2.3",
+    "jsdom": "^26.1.0"
   }
 }

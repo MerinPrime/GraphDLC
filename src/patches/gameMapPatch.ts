@@ -1,36 +1,35 @@
-import { ArrowType } from "../api/arrow_type";
-import { GameMap } from "../api/game_map";
-import { LayersDLC } from "../core/layersDLC";
+import { ArrowType } from "../api/arrowType";
+import {GameMap, GameMapProto} from "../api/gameMap";
+import { GraphDLC } from "../core/graphdlc";
 
-export function PatchGameMap(layersDLC: LayersDLC) {
-    layersDLC.patchLoader.addDefinitionPatch("GameMap", function (module: any): any {
-        layersDLC.patchLoader.setDefinition("GameMap", class GameMapPatched extends module {
-            constructor(...args: any[]) {
-                super(...args);
-            }
+export function PatchGameMap(graphDLC: GraphDLC) {
+    const patchLoader = graphDLC.patchLoader;
+
+    patchLoader.addDefinitionPatch("GameMap", function (module: GameMapProto): any {
+        patchLoader.setDefinition("GameMap", class GameMap_GDLC extends module {
             setArrowType(x: number, y: number, type: ArrowType) {
                 super.setArrowType(x, y, type);
-                layersDLC.invalidateGraph();
+                graphDLC.invalidateGraph();
             }
             setArrowSignal(x: number, y: number, signal: number) {
                 super.setArrowSignal(x, y, signal);
-                layersDLC.invalidateGraph();
+                graphDLC.invalidateGraph();
             }
             setArrowRotation(x: number, y: number, direction: number) {
                 super.setArrowRotation(x, y, direction);
-                layersDLC.invalidateGraph();
+                graphDLC.invalidateGraph();
             }
             setArrowFlipped(x: number, y: number, flipped: boolean) {
                 super.setArrowFlipped(x, y, flipped);
-                layersDLC.invalidateGraph();
+                graphDLC.invalidateGraph();
             }
             resetArrow(x: number, y: number, force: boolean) {
                 super.resetArrow(x, y, force);
-                layersDLC.invalidateGraph();
+                graphDLC.invalidateGraph();
             }
             removeArrow(x: number, y: number) {
                 super.removeArrow(x, y);
-                layersDLC.invalidateGraph();
+                graphDLC.invalidateGraph();
             }
         });
     });

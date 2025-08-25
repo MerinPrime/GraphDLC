@@ -1,12 +1,18 @@
-import {ArrowType} from "../api/arrow_type";
-import {LayersDLC} from "../core/layersDLC";
+import {ArrowType} from "../api/arrowType";
+import {GraphDLC} from "../core/graphdlc";
 import {NodeSignal} from "../graph_compiler/graph/nodeSignal";
+import {PlayerControlsProto} from "../api/playerControls";
+import {Game} from "../api/game";
+import {PlayerUI} from "../api/playerUI";
 
-export function PatchPlayerControls(layersDLC: LayersDLC) {
-    layersDLC.patchLoader.addDefinitionPatch("PlayerControls", function (module: any): any {
-        layersDLC.patchLoader.setDefinition("PlayerControls", class PlayerControls extends module {
-            constructor(...args: any[]) {
-                super(...args);
+export function PatchPlayerControls(graphDLC: GraphDLC) {
+    const patchLoader = graphDLC.patchLoader;
+    
+    patchLoader.addDefinitionPatch("PlayerControls", function (module: PlayerControlsProto): any {
+        patchLoader.setDefinition("PlayerControls", class PlayerControls_GDLC extends module {
+            constructor(container: HTMLElement, game: Game, playerUI: PlayerUI, history?: History | null) {
+                super(container, game, playerUI, history);
+                
                 this.mouseHandler.leftClickCallback = () => {
                     const arrow = this.getArrowByMousePosition();
                     const shiftPressed = this.keyboardHandler.getShiftPressed();
@@ -16,21 +22,23 @@ export function PatchPlayerControls(layersDLC: LayersDLC) {
                     const isTargetType = arrow.type === 21 || arrow.type === 24;
                     if (!isTargetType) return;
 
-                    const hasCompiledGraph = layersDLC.graphState !== undefined;
                     const shouldSetSignal = arrow.signal === 0 || this.game.playing;
+                    const graphState = graphDLC.graphState;
+                    const astIndex = arrow.astIndex;
+                    const hasCompiledGraph = graphState !== undefined && astIndex !== undefined;
 
                     if (shouldSetSignal) {
                         if (arrow.type === ArrowType.BUTTON) {
                             if (hasCompiledGraph) {
-                                layersDLC.graphState!.signals[arrow.astIndex] = NodeSignal.ACTIVE;
-                                layersDLC.graphState!.changedNodes.add(arrow.astIndex);
+                                graphState.signals[astIndex] = NodeSignal.ACTIVE;
+                                graphState.changedNodes.add(astIndex);
                             } else {
                                 arrow.signal = 5;
                             }
                         } else {
                             if (hasCompiledGraph) {
-                                layersDLC.graphState!.signals[arrow.astIndex] = NodeSignal.ACTIVE;
-                                layersDLC.graphState!.changedNodes.add(arrow.astIndex);
+                                graphState.signals[astIndex] = NodeSignal.ACTIVE;
+                                graphState.changedNodes.add(astIndex);
                                 // const buttonEdge = arrow.graph_node.buttonEdge;
                                 // if (!buttonEdge) {
                                 //     arrow.signal = 5;
@@ -55,7 +63,7 @@ export function PatchPlayerControls(layersDLC: LayersDLC) {
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
                     prevKeyDownCallback(code, key);
                     if (code === 'KeyP') {
-                        layersDLC.compileGraph();
+                        graphDLC.compileGraph();
                     }
                 };
             }

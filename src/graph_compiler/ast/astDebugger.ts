@@ -1,24 +1,31 @@
-import {ASTNode} from "../graph_compiler/ast/astNode";
-import {RootNode} from "../graph_compiler/ast/rootNode";
-import {GameMap} from "../api/game_map";
-import {CycleHeadNode} from "../graph_compiler/ast/cycle/cycleHeadNode";
-import {ASTNodeType} from "../graph_compiler/ast/astNodeType";
-import {getArrowRelations} from "../graph_compiler/ast/astParser";
+import {ASTNode} from "./astNode";
+import {RootNode} from "./rootNode";
+import {GameMap} from "../../api/gameMap";
+import {CycleHeadNode} from "./cycle/cycleHeadNode";
+import {ASTNodeType} from "./astNodeType";
+import {getArrowRelations} from "./astParser";
+
+export enum DebugMode {
+    NONE = 0,
+    NODE_TYPES = 1,
+    DEBUG_PROPAGATION = 2,
+    DEAD_NODES = 3,
+    DISABLE_TPS = 4,
+}
 
 export class ASTDebugger {
-    showDebugSignals(rootNode: RootNode, debugMode: number, gameMap: GameMap) {
-        // return;
+    showDebugSignals(debugMode: DebugMode, rootNode: RootNode, gameMap: GameMap) {
         switch (debugMode) {
-            case 0:
+            case DebugMode.NODE_TYPES:
                 this.showDebugNodeTypes(rootNode);
                 break;
-            case 1:
+            case DebugMode.DEBUG_PROPAGATION:
                 this.showDebugPropagation(rootNode);
                 break;
-            case 2:
+            case DebugMode.DEAD_NODES:
                 this.showDebugDeadNodes(rootNode, gameMap);
                 break;
-            case 3:
+            case DebugMode.DISABLE_TPS:
                 break;
         }
     }

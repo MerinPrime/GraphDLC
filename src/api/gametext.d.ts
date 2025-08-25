@@ -1,4 +1,4 @@
-import {I18nText} from "./i18ntext";
+import {I18nText} from "./i18nText";
 
 export interface GameText {
     SIGN_IN_WITH_GOOGLE: I18nText;
@@ -49,8 +49,12 @@ export interface GameText {
     LANGUAGE: I18nText;
     SHOW_CONTROLS_HINTS: I18nText;
     MAX_ZOOM_OUT: I18nText;
-    // Layers-DLC
+    // Graph-DLC
     TPS_UPDATE_FREQUENCY_MS: I18nText;
+    TARGET_FPS: I18nText;
+    TPS_COUNTER: I18nText;
+    DEBUG_INFO: I18nText;
+    
     SHOW_ARROW_CONNECTIONS: I18nText;
     SHOW_ARROW_TARGET: I18nText;
     
@@ -68,4 +72,8 @@ export interface GameText {
     DEBUG_MODE_3: I18nText;
     DEBUG_MODE_4: I18nText;
     DEBUG_MODE_5: I18nText;
+
+    TPS_LOCALE: I18nText;
+    FPS_LOCALE: I18nText;
+    OPTIMIZATIONS_UNAVAILABLE_LOCALE: I18nText;
 }

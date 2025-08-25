@@ -34,9 +34,9 @@ export class Cycle {
         if (this.activeEntryPoints.size === 0) {
             return false;
         }
-        this.activeEntryPoints.forEach((entryPoint: GraphNode) => {
-            this.updateHead(tick + entryPoint.cycleOffset, entryPoint.cycleHeadType);
-        });
+        // this.activeEntryPoints.forEach((entryPoint: GraphNode) => {
+            // this.updateHead(tick + entryPoint.cycleOffset, entryPoint.cycleHeadType);
+        // });
         return true;
     }
 }

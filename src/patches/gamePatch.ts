@@ -1,28 +1,41 @@
-import {LayersDLC} from "../core/layersDLC";
-import {GameMap} from "../api/game_map";
+import {GraphDLC} from "../core/graphdlc";
+import {GameMap} from "../api/gameMap";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
 import {NodeSignal} from "../graph_compiler/graph/nodeSignal";
 import {getArrowRelations} from "../graph_compiler/ast/astParser";
 import {ASTNode} from "../graph_compiler/ast/astNode";
-import {ArrowType} from "../api/arrow_type";
+import {ArrowType} from "../api/arrowType";
 import {ACTIVE_SIGNALS} from "../graph_compiler/handlers";
-import {GraphState} from "../graph_compiler/graph/graphState";
+import {PlayerSettings} from "../api/playerSettings";
+import {ChunkUpdates} from "../api/chunkUpdates";
+import {GameProto} from "../api/game";
 
-export function PatchGame(layersDLC: LayersDLC) {
-    const settings = layersDLC.settings;
-    layersDLC.patchLoader.addDefinitionPatch("Game", function (module: any): any {
-        let lastUpdateTime = -1;
-        let accumulator = 0;
-        layersDLC.patchLoader.setDefinition("Game", class Game extends module {
-            // drawArrow
+export function PatchGame(graphDLC: GraphDLC) {
+    const patchLoader = graphDLC.patchLoader;
+    const settings = graphDLC.settings;
+    
+    const CellSizePtr = patchLoader.getDefinitionPtr<number>('CELL_SIZE');
+    const ChunkSizePtr = patchLoader.getDefinitionPtr<number>('CHUNK_SIZE');
+    const PlayerSettingsPtr = patchLoader.getDefinitionPtr<PlayerSettings>('PlayerSettings');
+    const ChunkUpdatesPtr = patchLoader.getDefinitionPtr<ChunkUpdates>('ChunkUpdates');
+
+    let renderDelta = 0;
+    let lastUpdateTime = -1;
+    let accumulator = 0;
+    let previousSpeed = 0;
+    
+    patchLoader.addDefinitionPatch("Game", function (module: GameProto): any {
+        patchLoader.setDefinition("Game", class Game_GDLC extends module {
+            // arrow connections & relations
             draw() {
-                const CELL_SIZE = layersDLC.patchLoader.getDefinition<number>("CELL_SIZE");
-                const CHUNK_SIZE = layersDLC.patchLoader.getDefinition<number>("CHUNK_SIZE");
-                const PlayerSettings = layersDLC.patchLoader.getDefinition<any>("PlayerSettings");
-                const ChunkUpdates = layersDLC.patchLoader.getDefinition<any>("ChunkUpdates");
+                const renderStart = performance.now();
+                const CELL_SIZE = CellSizePtr.definition;
+                const CHUNK_SIZE = ChunkSizePtr.definition;
+                const PlayerSettings = PlayerSettingsPtr.definition;
+                const ChunkUpdates = ChunkUpdatesPtr.definition;
                 
-                const graphState = layersDLC.graphState;
+                const graphState = graphDLC.graphState;
                 
                 this.updateFocus(),
                 (this.drawPastedArrows || 0 !== this.selectedMap.getSelectedArrows().length) && (this.screenUpdated = !0),
@@ -83,7 +96,7 @@ export function PatchGame(layersDLC: LayersDLC) {
                                 const l = (o + this.mousePosition[0]) * this.scale + this.offset[0] * this.scale / CELL_SIZE + .025 * this.scale
                                     , h = (a + this.mousePosition[1]) * this.scale + this.offset[1] * this.scale / CELL_SIZE + .025 * this.scale;
                                 // SHOW RELATIONS
-                                if (layersDLC.settings.data.showArrowTarget) {
+                                if (graphDLC.settings.data.showArrowTarget) {
                                     if (e.size === 1) {
                                         this.render.disableArrows();
                                         this.render.prepareSolidColor();
@@ -136,11 +149,11 @@ export function PatchGame(layersDLC: LayersDLC) {
                     this.screenUpdated = !1,
                     this.frame++
                 // SHOW RELATION ON ARROW AT MOUSE
-                if (layersDLC.settings.data.showArrowConnections) {
+                if (graphDLC.settings.data.showArrowConnections) {
                     const offsetX = this.offset[0] * this.scale / CELL_SIZE + .025 * this.scale;
                     const offsetY = this.offset[1] * this.scale / CELL_SIZE + .025 * this.scale;
                     const arrowAtCursor = this.gameMap.getArrow(this.mousePosition[0], this.mousePosition[1]);
-                    if (arrowAtCursor && layersDLC.rootNode) {
+                    if (arrowAtCursor && graphDLC.rootNode) {
                         this.render.disableArrows();
                         this.render.prepareSolidColor();
                         const oo = this.scale;
@@ -171,14 +184,30 @@ export function PatchGame(layersDLC: LayersDLC) {
                         }
                         this.render.disableSolidColor();
                         this.screenUpdated = true;
+                        
+                        const astIndex = arrowAtCursor.astIndex;
+                        if (settings.data.showDebugInfo && astIndex !== undefined) {
+                            // let signal = arrowAtCursor.signal;
+                            // let lastSignal = arrowAtCursor.lastSignal;
+                            // if (graphState) {
+                            //     const astIndex = arrowAtCursor.astIndex;
+                            //     if (astIndex !== undefined) {
+                            //         signal = graphState.signals[astIndex];
+                            //         lastSignal = graphState.lastSignals[astIndex];
+                            //         if (signal === NodeSignal.ACTIVE) signal = ACTIVE_SIGNALS[arrowAtCursor.type];
+                            //     }
+                            // }
+                        }
                     }
                 }
+                const renderEnd = performance.now();
+                renderDelta = renderEnd - renderStart;
             }
             
             updateFrame(e=() => {}) {
-                layersDLC.gameMap = this.gameMap as GameMap;
-                layersDLC.game = this as any;
-                if (!this.playing || (settings.data.debugMode !== 0 && layersDLC.rootNode)) {
+                graphDLC.gameMap = this.gameMap as GameMap;
+                graphDLC.game = this as any;
+                if (!this.playing || (settings.data.debugMode !== 0 && graphDLC.rootNode)) {
                     lastUpdateTime = -1;
                     return;
                 }
@@ -194,9 +223,14 @@ export function PatchGame(layersDLC: LayersDLC) {
                 lastUpdateTime = now;
                 accumulator += delta;
                 
-                const updateSpeedLevel = layersDLC.graphState ? this.updateSpeedLevel : Math.min(this.updateSpeedLevel, 6);
-                const isMaxTPS = updateSpeedLevel === 8;
+                const isMaxTPS = this.updateSpeedLevel === 8;
+                const updateSpeedLevel = isMaxTPS ? 8 : (graphDLC.graphState ? this.updateSpeedLevel : Math.min(this.updateSpeedLevel, 6));
 
+                if (previousSpeed !== updateSpeedLevel) {
+                    accumulator = 0;
+                    previousSpeed = updateSpeedLevel;
+                }
+                
                 const skip = [1000 / 3, 1000 / 12, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60][updateSpeedLevel];
                 const ticks = [1, 1, 1, 5, 20, 100, 500, 2000, 0][updateSpeedLevel];
 
@@ -204,18 +238,19 @@ export function PatchGame(layersDLC: LayersDLC) {
                     accumulator = skip;
                 }
 
-                while (accumulator >= skip) {
-                    if (isMaxTPS) {
-                        const start = performance.now();
-                        do {
-                            this.updateTick(e);
-                        } while (performance.now() < start + 1000 / 60)
-                    } else {
+                if (isMaxTPS) {
+                    const timeLimit = performance.now() + 1000 / settings.data.targetFPS - Math.min(renderDelta, 1000 / settings.data.targetFPS / 2);
+                    do {
+                        this.updateTick(e);
+                    } while (performance.now() < timeLimit)
+                    accumulator = 0;
+                } else {
+                    while (accumulator >= skip) {
                         for (let i = 0; i < ticks; i++) {
                             this.updateTick(e);
                         }
+                        accumulator -= skip;
                     }
-                    accumulator -= skip;
                 }
                 if (performance.now() - this.updateTime > 1000) {
                     this.updateTime = performance.now();
@@ -223,12 +258,12 @@ export function PatchGame(layersDLC: LayersDLC) {
                 }
                 this.updatesPerSecond++;
 
-                layersDLC.tpsInfo?.updateInfo(this.tick - startTick);
+                graphDLC.infoContainer?.tpsInfo?.updateTicks(this.tick - startTick);
                 this.screenUpdated = true;
             }
             updateTick(callback=(() => {})) {
                 callback();
-                layersDLC.patchLoader.getDefinition<any>('ChunkUpdates').update(this.gameMap, this.tick);
+                ChunkUpdatesPtr.definition.update(this.gameMap, this.tick);
                 this.tick++;
             }
         });

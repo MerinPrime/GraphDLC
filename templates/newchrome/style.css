@@ -1,7 +1,18 @@
 :root {
-    --light-blue: #375fbb !important;
-    --light-green: #28dc46 !important;
-    --light-red: #d82222 !important;
+    --light-blue: 55, 95, 187 !important;
+    --light-green: 40, 220, 70 !important;
+    --light-red: 216, 34, 34 !important;
+}
+
+.cuicomponent {
+    font-size: 2.0vmin;
+    font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial, serif;
+}
+
+.graphdlc-info {
+    position: absolute;
+    top: 1vmin;
+    left: 1vmin;
 }
 
 .settings-space {
@@ -38,94 +49,6 @@
 .inventory-item img {
     width: 2.8vw !important;
     height: 2.8vw !important;
-}
-
-.cuicomponent {
-    position: absolute;
-    font-size: 2vmin;
-    font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial;
-}
-
-.currentlayer-info {
-    top: 1vmin;
-    left: 1vmin;
-    color: #fff;
-    background-color: var(--accent-color);
-    padding: 1vmin;
-    border-radius: 1vmin;
-}
-
-.tps-info {
-    top: 1vmin;
-    left: 1vmin;
-}
-
-.rs-main {
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-}
-
-.rs-description {
-    left: 50%;
-    right: 50%;
-    top: 10vh;
-    transform: translate(-50%, -50%);
-    width: 40vw;
-    height: 15vh;
-    text-align: left;
-    outline: none;
-    border-radius: 2vmin;
-    padding: 2vmin;
-    border: none;
-    background-color: var(--blue);
-    color: white;
-    resize: none;
-    font-size: 1.5vmin;
-}
-
-.rs-description::placeholder {
-    color: darkgray;
-}
-
-.rs-buttons {
-    left: 50%;
-    right: 50%;
-    top: 25vh;
-    transform: translate(-50%, -50%);
-    width: calc(40vw + 2vmin);
-    height: 4vh;
-    padding: 2vmin 1vmin 2vmin 1vmin;
-    text-align: left;
-    outline: none;
-    border-radius: 2vmin;
-    background-color: var(--blue);
-    color: white;
-}
-
-.rs-button {
-    height: 4vh;
-    width: min-content;
-    border: none;
-    border-radius: 1vmin;
-    background-color: var(--light-blue);
-    position: relative;
-    margin: 0 1vmin 0 1vmin;
-    outline: none;
-    cursor: pointer;
-}
-
-.rs-button:active {
-    filter: brightness(0.8);
-}
-
-.rs-delete {
-    background-color: var(--light-red);
-}
-
-.rs-color {
-    background-color: var(--light-green);
 }
 
 * {

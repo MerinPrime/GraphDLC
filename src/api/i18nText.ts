@@ -8,7 +8,7 @@ export interface I18nText {
     get(): string;
 }
 
-export type I18nTextConstructor = new (
+export type I18nTextProto = new (
     english: string,
     russian: string,
     ukrainian: string,

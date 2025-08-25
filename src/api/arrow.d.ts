@@ -1,6 +1,6 @@
 import {GraphNode} from "../graph_compiler/graph_node";
 import {ASTNode} from "../graph_compiler/ast/astNode";
-import {ArrowType} from "./arrow_type";
+import {ArrowType} from "./arrowType";
 
 export interface Arrow {
     type: ArrowType;
@@ -13,7 +13,10 @@ export interface Arrow {
     lastRotation: number;
     lastFlipped: boolean;
     lastSignal: number;
+    
+    canBeEdited: boolean;
 
+    // Graph-DLC
     blocked?: number;
     graph_node?: GraphNode;
     astNode?: ASTNode;
@@ -22,3 +25,5 @@ export interface Arrow {
     x?: number;
     y?: number;
 }
+
+export type ArrowProto = new () => Arrow;

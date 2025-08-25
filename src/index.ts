@@ -1,10 +1,10 @@
 import {PatchLoader} from "./core/patchLoader";
-import { LayersDLC } from "./core/layersDLC";
+import { GraphDLC } from "./core/graphdlc";
 
 const patchLoader = new PatchLoader();
 patchLoader.hook();
-const layersDLC = new LayersDLC(patchLoader);
-layersDLC.inject();
+const graphDLC = new GraphDLC(patchLoader);
+graphDLC.inject();
 
 // @ts-ignore
-window.layersdlc = layersDLC;
+window.graphdlc = graphDLC;

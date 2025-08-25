@@ -1,6 +1,6 @@
 import {Arrow} from "../api/arrow";
 import {Chunk} from "../api/chunk";
-import {ArrowType} from "../api/arrow_type";
+import {ArrowType} from "../api/arrowType";
 import {GraphNode} from "./graph_node";
 import {CycleHeadType} from "./ast/cycle/cycleHeadType";
 
@@ -561,17 +561,17 @@ export function updateNode(graphNode: GraphNode, currentTick: number) {
                 arrow.signal = arrow.signalsCount === 0 ? 3 : 0;
                 break;
             case ArrowType.LOGIC_AND:
-                if (graphNode.cycleHeadType === CycleHeadType.READ) {
-                    if (arrow.signalsCount > 1) {
-                        arrow.signal = 3;
-                    } else if (arrow.signalsCount === 0) {
-                        arrow.signal = 0;
-                    } else {
-                        arrow.signal = graphNode.newCycle!.data.read(currentTick + graphNode.cycleOffset) ? 3 : 0;
-                    }
-                } else {
+                // if (graphNode.cycleHeadType === CycleHeadType.READ) {
+                //     if (arrow.signalsCount > 1) {
+                //         arrow.signal = 3;
+                //     } else if (arrow.signalsCount === 0) {
+                //         arrow.signal = 0;
+                //     } else {
+                //         arrow.signal = graphNode.newCycle!.data.read(currentTick + graphNode.cycleOffset) ? 3 : 0;
+                //     }
+                // } else {
                     arrow.signal = arrow.signalsCount > 1 ? 3 : 0;
-                }
+                // }
                 break;
             case ArrowType.LOGIC_XOR:
                 arrow.signal = arrow.signalsCount % 2 === 1 ? 3 : 0;

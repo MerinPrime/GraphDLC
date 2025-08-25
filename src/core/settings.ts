@@ -1,6 +1,13 @@
+import {DebugMode} from "../graph_compiler/ast/astDebugger";
+
 type SettingsData = {
     tpsUpdateFrequencyMs: number;
     fullRendering: boolean;
+
+    targetFPS: number;
+    showTPSInfo: boolean;
+    showDebugInfo: boolean;
+    
     showArrowConnections: boolean;
     showArrowTarget: boolean;
     
@@ -11,11 +18,11 @@ type SettingsData = {
     optimizeSimple: boolean;
     optimizePaths: boolean;
     
-    debugMode: number;
+    debugMode: DebugMode;
 }
 
 export class Settings {
-    private static readonly STORAGE_KEY = 'layers-dlc';
+    private static readonly STORAGE_KEY = 'graphdlc';
     
     data: SettingsData;
     
@@ -23,6 +30,11 @@ export class Settings {
         this.data = {
             tpsUpdateFrequencyMs: 500,
             fullRendering: false,
+
+            targetFPS: 60,
+            showTPSInfo: true,
+            showDebugInfo: true,
+            
             showArrowConnections: false,
             showArrowTarget: false,
             
@@ -33,7 +45,7 @@ export class Settings {
             optimizeSimple: true,
             optimizePaths: true,
 
-            debugMode: 0,
+            debugMode: DebugMode.NONE,
         }
         this.load();
     }

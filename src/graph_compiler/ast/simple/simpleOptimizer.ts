@@ -30,9 +30,9 @@ export class SimpleOptimizer {
             } else if (node.type === ASTNodeType.DETECTOR && node.specialNode!.type !== ASTNodeType.IMPULSE && node.specialNode!.type !== ASTNodeType.DELAY) {
                 const detectedNode = node.specialNode!;
                 node.removeFromArray(detectedNode.detectors);
-                detectedNode.edges.push(node);
-                node.type = ASTNodeType.PATH;
                 node.specialNode = undefined;
+                node.type = ASTNodeType.PATH;
+                detectedNode.edges.push(node);
             }
         }
     }

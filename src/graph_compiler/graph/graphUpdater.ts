@@ -14,7 +14,6 @@ import {
     SourceTypeIndex,
     XORTypeIndex
 } from "../ast/astNodeType";
-import {ArrowType} from "../../api/arrow_type";
 
 
 export class GraphUpdater {
@@ -29,9 +28,11 @@ export class GraphUpdater {
             const flags = graphState.flags[nodeID];
             
             if (isChanged) {
+                // If delay blocked and is pending he is make delta -1 and overflow makes 255 signalsCount
+                // Fix that
                 const isActive = signal === NodeSignal.ACTIVE;
                 const delta = isActive ? 1 : -1;
-                const isDelayed = type === DelayTypeIndex && signal === NodeSignal.PENDING;
+                const isDelayed = type === DelayTypeIndex && signal === NodeSignal.PENDING || !isActive && graphState.lastSignals[nodeID] === NodeSignal.PENDING;
                 
                 const edgesCount = graphState.edgesCount[nodeID];
                 const detectorsCount = graphState.detectorsCount[nodeID];
@@ -40,18 +41,27 @@ export class GraphUpdater {
                 let lastEdgesPointer = edgesPointer + edgesCount;
                 
                 if (!isDelayed) {
-                    for (; edgesPointer < lastEdgesPointer; edgesPointer++) {
-                        const edge = graphState.edges[edgesPointer];
+                    if (edgesCount > 0) {
+                        // BLOCK FIRST EDGE BUT DONT BLOCK OTHER BECAUSE DETECTORS MAY BE OPTIMIZED TO PATH
                         if (type === BlockerTypeIndex) {
+                            const edge = graphState.edges[edgesPointer++];
                             graphState.blockedCount[edge] += delta;
-                        } else {
-                            graphState.signalsCount[edge] += delta;
-                        }
 
-                        const flags = graphState.flags[edge];
-                        if ((flags & 0b1000) === 0) {
-                            graphState.flags[edge] = flags | 0b1000;
-                            graphState.tempChangedNodes.add(edge);
+                            const flags = graphState.flags[edge];
+                            if ((flags & 0b1000) === 0) {
+                                graphState.flags[edge] = flags | 0b1000;
+                                graphState.tempChangedNodes.add(edge);
+                            }
+                        }
+                        for (; edgesPointer < lastEdgesPointer; edgesPointer++) {
+                            const edge = graphState.edges[edgesPointer];
+                            graphState.signalsCount[edge] += delta;
+
+                            const flags = graphState.flags[edge];
+                            if ((flags & 0b1000) === 0) {
+                                graphState.flags[edge] = flags | 0b1000;
+                                graphState.tempChangedNodes.add(edge);
+                            }
                         }
                     }
                 }

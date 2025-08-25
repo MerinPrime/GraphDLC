@@ -153,11 +153,11 @@ export class Graph {
                     } else {
                         return
                     }
-                    if (edge.newCycle !== null && edge.cycleHeadType !== CycleHeadType.READ) {
-                        this.temp_cycle_update.add(edge);
-                    } else {
-                        changed_nodes.add(edge);
-                    }
+                    // if (edge.newCycle !== null && edge.cycleHeadType !== CycleHeadType.READ) {
+                    //     this.temp_cycle_update.add(edge);
+                    // } else {
+                    //     changed_nodes.add(edge);
+                    // }
                 });
             }
             if (isChanged && node.isAdditionalUpdate || this.restarted && node.isEntryPoint) {
@@ -185,10 +185,10 @@ export class Graph {
             if (isChanged) {
                 const isActive = node.arrow.signal === node.handler!.active_signal;
                 if (isActive) {
-                    node.newCycle!.activeEntryPoints.add(node);
-                    this.cycles_to_update.add(node.newCycle!);
+                    // node.newCycle!.activeEntryPoints.add(node);
+                    // this.cycles_to_update.add(node.newCycle!);
                 } else {
-                    node.newCycle!.activeEntryPoints.delete(node);
+                    // node.newCycle!.activeEntryPoints.delete(node);
                 }
             }
             node.arrow.lastType = node.arrow.type;

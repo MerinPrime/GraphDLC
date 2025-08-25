@@ -3,6 +3,7 @@ import {GraphState} from "./graphState";
 import {ASTNode} from "../ast/astNode";
 import {CycleHeadNode} from "../ast/cycle/cycleHeadNode";
 import {ASTNodeType} from "../ast/astNodeType";
+import {CycleData} from "../ast/cycle/cycleData";
 
 export class GraphCompiler {
     compile(rootNode: RootNode): GraphState {
@@ -28,7 +29,14 @@ export class GraphCompiler {
             }
         }
         
-        const graphState = new GraphState(totalEntryPointCount, indexToNode.length, totalEdgesCount);
+        const cyclesCount = rootNode.cycles.length;
+        const graphState = new GraphState(totalEntryPointCount, indexToNode.length, totalEdgesCount, cyclesCount);
+        
+        const cycleDataToID = new Map<CycleData, number>();
+        for (let i = 0; i < rootNode.cycles.length; i++) {
+            cycleDataToID.set(rootNode.cycles[i], i);
+        }
+        
         let entryPointIndex = 0;
         let edgeIndex = 0;
         
@@ -59,6 +67,17 @@ export class GraphCompiler {
             for (let j = 0; j < node.detectors.length; j++) {
                 graphState.edges[edgeIndex++] = nodeToIndex.get(node.detectors[j])!;
             }
+            
+            if (node instanceof CycleHeadNode) {
+                const cycleID = cycleDataToID.get(node.cycleData)!;
+                graphState.nodeToCycleID[i] = cycleID;
+                graphState.cycleHeadTypes[i] = node.cycleHeadType;
+                graphState.cycleOffsets[i] = node.index;
+            }
+        }
+        
+        for (let i = 0; i < cyclesCount; i++) {
+            graphState.cycleLengths[i] = rootNode.cycles[i].length;
         }
         
         return graphState;
