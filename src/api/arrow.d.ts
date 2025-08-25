@@ -1,5 +1,5 @@
 import {GraphNode} from "../graph_compiler/graph_node";
-import {ASTNode} from "../graph_compiler/ast/astNode";
+import {ASTNode} from "../ast/astNode";
 import {ArrowType} from "./arrowType";
 
 export interface Arrow {

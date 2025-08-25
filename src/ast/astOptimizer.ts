@@ -1,6 +1,6 @@
 import {ASTNode} from "./astNode";
 import {CycleOptimizer} from "./cycle/cycleOptimizer";
-import {Settings} from "../../core/settings";
+import {Settings} from "../core/settings";
 import {RootNode} from "./rootNode";
 import {BranchOptimizer} from "./branch/branchOptimizer";
 import {SimpleOptimizer} from "./simple/simpleOptimizer";

@@ -1,4 +1,4 @@
-import {Arrow} from "../../api/arrow";
+import {Arrow} from "../api/arrow";
 import {ASTNodeType, getASTType} from "./astNodeType";
 
 export class ASTNode {

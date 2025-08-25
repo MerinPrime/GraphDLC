@@ -1,6 +1,6 @@
 import {ASTNode} from "./astNode";
 import {RootNode} from "./rootNode";
-import {GameMap} from "../../api/gameMap";
+import {GameMap} from "../api/gameMap";
 import {CycleHeadNode} from "./cycle/cycleHeadNode";
 import {ASTNodeType} from "./astNodeType";
 import {getArrowRelations} from "./astParser";

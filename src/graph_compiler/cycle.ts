@@ -1,6 +1,6 @@
 import {GraphNode} from "./graph_node";
-import {BitCycle} from "./ast/cycle/bitarray";
-import {CycleHeadType} from "./ast/cycle/cycleHeadType";
+import {BitCycle} from "../ast/cycle/bitarray";
+import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 export class Cycle {
     data: BitCycle;

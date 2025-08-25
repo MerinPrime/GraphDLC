@@ -4,7 +4,7 @@ import {Timer} from "./timer";
 import {Path} from "./path";
 import {PathPool} from "./path_pool";
 import {Cycle} from "./cycle";
-import {CycleHeadType} from "./ast/cycle/cycleHeadType";
+import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 export class Graph {
     entry_points: Set<GraphNode>;

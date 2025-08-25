@@ -1,9 +1,9 @@
-import {GameMap} from "../../api/gameMap";
-import {Chunk} from "../../api/chunk";
-import {Arrow} from "../../api/arrow";
-import {ENTRY_POINTS, EXIST_TYPES, NOT_ALLOWED_TO_CHANGE} from "../handlers";
-import {ArrowType} from "../../api/arrowType";
-import {DefinitionPtr, PatchLoader} from "../../core/patchLoader";
+import {GameMap} from "../api/gameMap";
+import {Chunk} from "../api/chunk";
+import {Arrow} from "../api/arrow";
+import {ENTRY_POINTS, EXIST_TYPES, NOT_ALLOWED_TO_CHANGE} from "../graph_compiler/handlers";
+import {ArrowType} from "../api/arrowType";
+import {DefinitionPtr, PatchLoader} from "../core/patchLoader";
 import {ASTNode} from "./astNode";
 import {RootNode} from "./rootNode";
 import {ASTNodeType} from "./astNodeType";
@@ -66,7 +66,7 @@ export class ASTParser {
             const astNode = arrow.astNode;
             astNode.linked = true;
             
-            if (ENTRY_POINTS.has(arrow.type)) {
+            if (astNode.type.isEntryPoint) {
                 rootNode.allEdges.push(astNode);
             }
 

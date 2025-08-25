@@ -1,7 +1,7 @@
 import {ADDITIONAL_UPDATE_ARROWS, ArrowHandler, ENTRY_POINTS} from "./handlers";
 import {Arrow} from "../api/arrow";
 import {ArrowType} from "../api/arrowType";
-import {CycleHeadType} from "./ast/cycle/cycleHeadType";
+import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 export class GraphNode {
     public arrow: Arrow;

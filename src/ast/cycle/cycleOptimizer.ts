@@ -1,5 +1,5 @@
 import {ASTNode} from "../astNode";
-import {ArrowType} from "../../../api/arrowType";
+import {ArrowType} from "../../api/arrowType";
 import {getCycleHeadType} from "./cycleHeadType";
 import {CycleHeadNode} from "./cycleHeadNode";
 import {CycleData} from "./cycleData";

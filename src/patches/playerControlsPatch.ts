@@ -1,6 +1,6 @@
 import {ArrowType} from "../api/arrowType";
 import {GraphDLC} from "../core/graphdlc";
-import {NodeSignal} from "../graph_compiler/graph/nodeSignal";
+import {NodeSignal} from "../graph/nodeSignal";
 import {PlayerControlsProto} from "../api/playerControls";
 import {Game} from "../api/game";
 import {PlayerUI} from "../api/playerUI";

@@ -1,4 +1,4 @@
-import {ArrowType} from "../../../api/arrowType";
+import {ArrowType} from "../../api/arrowType";
 import {ASTNodeType} from "../astNodeType";
 
 export enum CycleHeadType {

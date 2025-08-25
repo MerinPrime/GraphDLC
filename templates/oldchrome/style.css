@@ -1,12 +1,11 @@
 :root {
-    --light-blue: #375fbb !important;
-    --light-green: #28dc46 !important;
-    --light-red: #d82222 !important;
+    --light-blue: 55, 95, 187 !important;
+    --light-green: 40, 220, 70 !important;
+    --light-red: 216, 34, 34 !important;
 }
 
 .cuicomponent {
-    color: rgba(var(--light-blue), 0.5);
-    font-size: 1.5vmin;
+    font-size: 2.0vmin;
     font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial, serif;
 }
 

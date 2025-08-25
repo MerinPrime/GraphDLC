@@ -2,7 +2,7 @@ import {Arrow} from "../api/arrow";
 import {Chunk} from "../api/chunk";
 import {ArrowType} from "../api/arrowType";
 import {GraphNode} from "./graph_node";
-import {CycleHeadType} from "./ast/cycle/cycleHeadType";
+import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 export type GetEdgesFunc = (arrow: Arrow, x: number, y: number, chunk: Chunk) => ([Arrow, number, number, Chunk] | undefined)[];
 export type UpdateFunc = (arrow: Arrow, currentTick: number) => boolean | void;
@@ -126,17 +126,6 @@ export const ADDITIONAL_UPDATE_ARROWS = new Set([
     ArrowType.FLIP_FLOP,
     ArrowType.LATCH,
     ArrowType.BUTTON,
-    ArrowType.DIRECTIONAL_BUTTON,
-]);
-
-export const NOT_ALLOWED_IN_CYCLE = new Set([
-    ArrowType.BLOCKER,
-    // ArrowType.DELAY, // Not needed because timers can contain delay arrow
-    ArrowType.LOGIC_NOT,
-    ArrowType.LOGIC_AND,
-    ArrowType.LATCH,
-    ArrowType.FLIP_FLOP,
-    ArrowType.RANDOM,
     ArrowType.DIRECTIONAL_BUTTON,
 ]);
 

@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Graph-DLC",
+  "name": "GraphDLC",
   "version": "1.0.0",
-  "description": "Graph-DLC для стрелочек...",
+  "description": "GraphDLC для стрелочек...",
   "action": {
     "default_icon": "images/icon128.png",
-    "default_title": "Graph-DLC"
+    "default_title": "GraphDLC"
   },
   "icons": {
     "128": "images/icon128.png"

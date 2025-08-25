@@ -1,4 +1,4 @@
-import {DebugMode} from "../graph_compiler/ast/astDebugger";
+import {DebugMode} from "../ast/astDebugger";
 
 type SettingsData = {
     tpsUpdateFrequencyMs: number;

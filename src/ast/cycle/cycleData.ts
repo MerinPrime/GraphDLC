@@ -1,5 +1,5 @@
 import {ASTNode} from "../astNode";
-import {Arrow} from "../../../api/arrow";
+import {Arrow} from "../../api/arrow";
 
 export class CycleData {
     length: number;

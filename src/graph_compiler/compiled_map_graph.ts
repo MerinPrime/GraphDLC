@@ -4,12 +4,9 @@ import {
     ALLOWED_IN_BUTTON,
     ALLOWED_IN_PATH,
     ALLOWED_IN_PIXEL,
-    ALLOWED_IN_PRETIMER,
-    ALLOWED_IN_TIMER,
     ENTRY_POINTS,
     getRelativeArrow,
     HANDLERS,
-    NOT_ALLOWED_IN_CYCLE,
     NOT_ALLOWED_TO_CHANGE
 } from "./handlers";
 import {Arrow} from "../api/arrow";
@@ -17,9 +14,7 @@ import {Chunk} from "../api/chunk";
 import {GameMap} from "../api/gameMap";
 import {ArrowType} from "../api/arrowType";
 import {Graph} from "./graph";
-import {Timer} from "./timer";
 import {Cycle} from "./cycle";
-import {CycleHeadType} from "./ast/cycle/cycleHeadType";
 
 const CHUNK_SIZE = 16;
 const debugRing = true;
