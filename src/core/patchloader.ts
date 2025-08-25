@@ -75,7 +75,7 @@ export class PatchLoader {
         this.patches = [];
         
         for (const patch of oldPatches) {
-            const removePatch = patch(name, definition);
+            const removePatch = patch(name, this.definitionPtrs.get(name)!.definition);
             if (!removePatch)
                 newPatches.push(patch);
         }
