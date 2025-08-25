@@ -1,7 +1,7 @@
 :root {
-    --light-blue: 55, 95, 187 !important;
-    --light-green: 40, 220, 70 !important;
-    --light-red: 216, 34, 34 !important;
+    --light-blue: rgb(55, 95, 187) !important;
+    --light-green: rgb(40, 220, 70) !important;
+    --light-red: rgb(216, 34, 34) !important;
 }
 
 .cuicomponent {
