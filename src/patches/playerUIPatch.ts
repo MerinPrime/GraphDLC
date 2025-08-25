@@ -24,6 +24,11 @@ export function PatchPlayerUI(graphDLC: GraphDLC) {
                 super.removeSpeedController();
                 this.gdlcInfoContainer?.remove();
             }
+            
+            dispose() {
+                super.dispose();
+                this.gdlcInfoContainer?.remove();
+            }
         });
     });
 }

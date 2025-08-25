@@ -18,7 +18,7 @@ export class InfoContainerComponent extends CUIComponent {
     }
     
     remove() {
-        this.element.remove();
+        super.remove();
         this.graphDLC.infoContainer = undefined;
     }
 }

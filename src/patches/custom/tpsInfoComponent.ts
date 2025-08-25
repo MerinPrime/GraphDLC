@@ -34,6 +34,7 @@ export class TPSInfoComponent extends CUIComponent {
     }
     
     private updateInfo() {
+        if (this.isRemoved) return;
         this.element.innerText = `${this.fpsLocale}: ${Math.round(this.fps)} | ${this.tpsLocale}: ${Math.round(this.tps)}`;
     }
     
