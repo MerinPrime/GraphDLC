@@ -50,13 +50,13 @@ export function PatchGameText(graphDLC: GraphDLC) {
             "Паказваць сувязі стрэлачак",
             "Afficher les connexions des flèches"
         );
-        
+
         module.SHOW_ARROW_TARGET = new I18nText(
-            "Show arrow signals",
-            "Показывать сигналы стрелочек",
-            "Показувати сигнали стрілочок",
-            "Паказваць сігналы стрэлачак",
-            "Afficher les signaux des flèches"
+            "Show selected arrow output",
+            "Показывать выход выбранной стрелочки",
+            "Показувати вихід вибраної стрілочки",
+            "Паказваць выхад выбранай стрэлачкі",
+            "Afficher la sortie de la flèche sélectionnée"
         );
         
         module.OPTIMIZE_RINGS = new I18nText(
