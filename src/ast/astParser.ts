@@ -211,10 +211,9 @@ export function getArrowRelations(type: ArrowType): Array<[number, number]> {
         return [[0, 1], [-2, 0]];
     case ArrowType.SPLITTER_UP_DIAGONAL:
         return [[-1, 0], [-1, 1]];
-    case ArrowType.LEVEL_TARGET:
-        return []
     case ArrowType.EMPTY:
+    case ArrowType.LEVEL_TARGET:
     default:
-        throw new Error('How did you compile level arrow if its cant be compiled?');
+        return [];
     }
 }
