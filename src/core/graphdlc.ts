@@ -82,8 +82,8 @@ export class GraphDLC {
             alert('ERROR GraphDLC.gameMap is undefined ( try restart page ).');
             return;
         } else if (this.graphState) {
-            alert('Map is already compiled!');
-            return;
+            // alert('Map is already compiled!');
+            // return;
         }
         try {
             const debugMode = this.settings.data.debugMode;
