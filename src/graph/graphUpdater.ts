@@ -4,33 +4,71 @@ import {
     ANDTypeIndex,
     BlockerTypeIndex,
     ButtonTypeIndex,
+    CycleHeadTypeIndex,
     DelayTypeIndex,
     DetectorTypeIndex,
-    DirectionalButtonTypeIndex, FlipFlopTypeIndex,
-    ImpulseTypeIndex, LatchTypeIndex,
+    DirectionalButtonTypeIndex,
+    FlipFlopTypeIndex,
+    ImpulseTypeIndex,
+    LatchTypeIndex,
     NOTTypeIndex,
     PathTypeIndex,
     RandomTypeIndex,
+    ReadCycleHeadTypeIndex,
     SourceTypeIndex,
     XORTypeIndex
 } from "../ast/astNodeType";
+import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 
 export class GraphUpdater {
     updateState(graphState: GraphState, tick: number) {
         graphState.tempChangedNodes.count = 0;
-
+        
         for (let i = 0; i < graphState.changedNodes.count; i++) {
             const nodeID = graphState.changedNodes.arr[i];
-            const signal = graphState.signals[nodeID];
-            const isChanged = graphState.lastSignals[nodeID] !== signal;
             const type: number = graphState.types[nodeID];
             const flags = graphState.flags[nodeID];
+            const isCycleHead = type === CycleHeadTypeIndex;
+            const signal = graphState.signals[nodeID];
+            const isActive = signal === NodeSignal.ACTIVE;
+            
+            if (isCycleHead) {
+                if (!isActive)
+                    continue;
+                const cycleID = graphState.nodeToCycleID[nodeID];
+                const cycleLength = graphState.cycleLengths[cycleID];
+                const cycleOffset = graphState.cycleOffsets[cycleID];
+                const nodeOffset = graphState.nodeCycleOffsets[nodeID];
+                const position = (tick + nodeOffset) % cycleLength;
+                const offset = position % 32;
+                const wordIndex = cycleOffset + (position - offset) / 32;
+                const mask = 1 << offset;
+                const cycleHeadType: CycleHeadType = graphState.cycleHeadTypes[nodeID];
+                switch (cycleHeadType) {
+                    case CycleHeadType.WRITE:
+                        graphState.cycleStates[wordIndex] |= mask;
+                        break;
+                    case CycleHeadType.XOR_WRITE:
+                        graphState.cycleStates[wordIndex] ^= mask;
+                        break;
+                    case CycleHeadType.CLEAR:
+                        graphState.cycleStates[wordIndex] &= ~mask;
+                        break;
+                }
+                if ((flags & 0b1000) === 0) {
+                    graphState.flags[nodeID] = flags | 0b1000;
+                    graphState.tempChangedNodes.add(nodeID);
+                }
+                continue;
+            }
+            
+            const signalsCount = graphState.signalsCount[nodeID];
+            const isChanged = graphState.lastSignals[nodeID] !== signal;
             
             if (isChanged) {
                 // If delay blocked and is pending he is make delta -1 and overflow makes 255 signalsCount
                 // Fix that
-                const isActive = signal === NodeSignal.ACTIVE;
                 const delta = isActive ? 1 : -1;
                 const isDelayed = type === DelayTypeIndex && signal === NodeSignal.PENDING || !isActive && graphState.lastSignals[nodeID] === NodeSignal.PENDING;
                 
@@ -86,8 +124,8 @@ export class GraphUpdater {
             
             if ((isChanged && (flags & 0b10) !== 0) ||
                 (tick === 0 && (flags & 0b1) !== 0) ||
-                (signal !== NodeSignal.NONE && graphState.signalsCount[nodeID] === 0 && (type === ButtonTypeIndex || type === DirectionalButtonTypeIndex)) ||
-                (graphState.signalsCount[nodeID] > 0 && (type === RandomTypeIndex || type === ANDTypeIndex && (flags & 0b100) !== 0))) {
+                (signal !== NodeSignal.NONE && signalsCount === 0 && (type === ButtonTypeIndex || type === DirectionalButtonTypeIndex)) ||
+                (signalsCount > 0 && (type === RandomTypeIndex || type === ReadCycleHeadTypeIndex))) {
                 if ((flags & 0b1000) === 0) {
                     graphState.flags[nodeID] = flags | 0b1000;
                     graphState.tempChangedNodes.add(nodeID);
@@ -104,13 +142,13 @@ export class GraphUpdater {
             const type = graphState.types[nodeID];
             const blockedCount = graphState.blockedCount[nodeID];
             const flags = graphState.flags[nodeID];
-            graphState.flags[nodeID] = flags & 0b0111
+            graphState.flags[nodeID] = flags & 0b11110111;
             
             if (blockedCount > 0)
                 graphState.signals[nodeID] = NodeSignal.NONE;
             else {
                 const signalCount = graphState.signalsCount[nodeID];
-                const signal = updateNode(graphState, nodeID, type, signalCount);
+                const signal = updateNode(graphState, nodeID, type, signalCount, tick);
                 if (signal !== NodeSignal.KEEP_SIGNAL)
                     graphState.signals[nodeID] = signal;
             }
@@ -125,18 +163,20 @@ export class GraphUpdater {
         graphState.signalsCount.fill(0);
         graphState.blockedCount.fill(0);
         for (let i = 0; i < graphState.flags.length; i++) {
-            graphState.flags[i] &= 0b11110111
+            graphState.flags[i] &= 0b11110111;
         }
+        graphState.cycleStates.fill(0);
     }
 }
 
-function updateNode(graphState: GraphState, nodeID: number, type: number, signalsCount: number): number {
+function updateNode(graphState: GraphState, nodeID: number, type: number, signalsCount: number, tick: number): NodeSignal {
     let signal: number = 0;
     switch (type) {
         case PathTypeIndex:
         case BlockerTypeIndex:
         case DetectorTypeIndex:
         case DirectionalButtonTypeIndex:
+        case CycleHeadTypeIndex:
             return signalsCount > 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
         case SourceTypeIndex:
             return NodeSignal.ACTIVE;
@@ -161,14 +201,24 @@ function updateNode(graphState: GraphState, nodeID: number, type: number, signal
             return signalsCount === 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
         case ANDTypeIndex:
             return signalsCount > 1 ? NodeSignal.ACTIVE : NodeSignal.NONE;
+        case ReadCycleHeadTypeIndex:
+            if (signalsCount > 1) {
+                return NodeSignal.ACTIVE;
+            } else if (signalsCount === 0) {
+                return NodeSignal.NONE;
+            } else {
+                const cycleID = graphState.nodeToCycleID[nodeID];
+                const cycleLength = graphState.cycleLengths[cycleID];
+                const cycleOffset = graphState.cycleOffsets[cycleID];
+                const nodeOffset = graphState.nodeCycleOffsets[nodeID];
+                const position = (tick + nodeOffset) % cycleLength;
+                const offset = position % 32;
+                const wordIndex = cycleOffset + (position - offset) / 32;
+                const mask = 1 << offset;
+                return (graphState.cycleStates[wordIndex] & mask) === 0 ? NodeSignal.NONE : NodeSignal.ACTIVE;
+            }
+            return signalsCount > 1 ? NodeSignal.ACTIVE : NodeSignal.NONE;
             // if (graphNode.cycleHeadType === CycleHeadType.READ) {
-            //     if (arrow.signalsCount > 1) {
-            //         arrow.signal = 3;
-            //     } else if (arrow.signalsCount === 0) {
-            //         arrow.signal = 0;
-            //     } else {
-            //         arrow.signal = graphNode.newCycle!.data.read(currentTick + graphNode.cycleOffset) ? 3 : 0;
-            //     }
             // } else {
             //     arrow.signal = arrow.signalsCount > 1 ? 3 : 0;
             // }

@@ -4,6 +4,7 @@ import {ASTNode} from "../ast/astNode";
 import {CycleHeadNode} from "../ast/cycle/cycleHeadNode";
 import {ASTNodeType} from "../ast/astNodeType";
 import {CycleData} from "../ast/cycle/cycleData";
+import {NodeFlags} from "./nodeFlags";
 
 export class GraphCompiler {
     compile(rootNode: RootNode): GraphState {
@@ -30,11 +31,17 @@ export class GraphCompiler {
         }
         
         const cyclesCount = rootNode.cycles.length;
-        const graphState = new GraphState(totalEntryPointCount, indexToNode.length, totalEdgesCount, cyclesCount);
+        const totalCycleLength = rootNode.cycles.map(x => Math.ceil(x.length / 32)).reduce((x, y) => x + y, 0);
+        const graphState = new GraphState(totalEntryPointCount, indexToNode.length, totalEdgesCount, cyclesCount, totalCycleLength);
         
         const cycleDataToID = new Map<CycleData, number>();
+        let x = 0;
         for (let i = 0; i < rootNode.cycles.length; i++) {
-            cycleDataToID.set(rootNode.cycles[i], i);
+            const cycle = rootNode.cycles[i];
+            cycleDataToID.set(cycle, i);
+            graphState.cycleLengths[i] = cycle.length;
+            graphState.cycleOffsets[i] = x;
+            x += Math.ceil(cycle.length / 32);
         }
         
         let entryPointIndex = 0;
@@ -49,11 +56,11 @@ export class GraphCompiler {
             
             let flags = 0;
             if (node.type.isEntryPoint)
-                flags |= 0b1
+                flags |= NodeFlags.EntryPoint;
             if (node.type.isAdditionalUpdate)
-                flags |= 0b10
+                flags |= NodeFlags.AdditionalUpdate;
             if (node.type === ASTNodeType.CYCLE_HEAD)
-                flags |= 0b100
+                flags |= NodeFlags.CycleHead
             
             graphState.flags[i] = flags;
             graphState.types[i] = node.type.index;
@@ -69,15 +76,10 @@ export class GraphCompiler {
             }
             
             if (node instanceof CycleHeadNode) {
-                const cycleID = cycleDataToID.get(node.cycleData)!;
-                graphState.nodeToCycleID[i] = cycleID;
+                graphState.nodeToCycleID[i] = cycleDataToID.get(node.cycleData)!;
                 graphState.cycleHeadTypes[i] = node.cycleHeadType;
-                graphState.cycleOffsets[i] = node.index;
+                graphState.nodeCycleOffsets[i] = node.index;
             }
-        }
-        
-        for (let i = 0; i < cyclesCount; i++) {
-            graphState.cycleLengths[i] = rootNode.cycles[i].length;
         }
         
         return graphState;

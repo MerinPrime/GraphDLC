@@ -7,6 +7,6 @@ export class CycleData {
     constructor(
         public cycle: Arrow[]
     ) {
-        this.length = cycle.length;
+        this.length = 0;
     }
 }

@@ -28,6 +28,7 @@ export class ASTNodeType {
     static readonly BUTTON = new ASTNodeType(true, false, false);
     static readonly DIRECTIONAL_BUTTON = new ASTNodeType(true, false, false);
     static readonly CYCLE_HEAD = new ASTNodeType(false, false, false);
+    static readonly READ_CYCLE_HEAD = new ASTNodeType(false, false, false);
     
     // TODO: COMPRESS TO 4 BITS
     
@@ -54,6 +55,8 @@ export const FlipFlopTypeIndex = ASTNodeType.FLIP_FLOP.index;
 export const RandomTypeIndex = ASTNodeType.RANDOM.index;
 export const ButtonTypeIndex = ASTNodeType.BUTTON.index;
 export const DirectionalButtonTypeIndex = ASTNodeType.DIRECTIONAL_BUTTON.index;
+export const CycleHeadTypeIndex = ASTNodeType.CYCLE_HEAD.index;
+export const ReadCycleHeadTypeIndex = ASTNodeType.READ_CYCLE_HEAD.index;
 
 export function getASTType(arrowType: ArrowType): ASTNodeType {
     switch (arrowType) {

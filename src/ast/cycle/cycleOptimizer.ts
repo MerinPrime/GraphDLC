@@ -1,6 +1,5 @@
 import {ASTNode} from "../astNode";
-import {ArrowType} from "../../api/arrowType";
-import {getCycleHeadType} from "./cycleHeadType";
+import {CycleHeadType, getCycleHeadType} from "./cycleHeadType";
 import {CycleHeadNode} from "./cycleHeadNode";
 import {CycleData} from "./cycleData";
 import {ASTNodeType} from "../astNodeType";
@@ -250,7 +249,7 @@ export class CycleOptimizer {
                     for (let k = 0; k < cycleArrow.allEdges.length; k++) {
                         const cycleEdge = cycleArrow.allEdges[k];
                         if (cycleEdge === nextArrow) continue;
-                        cycleHeads.push([cycleEdge, cycleArrow, j]);
+                        cycleHeads.push([cycleArrow, cycleEdge, j]);
                         anyEndpoint = true;
                     }
                 }
@@ -284,6 +283,7 @@ export class CycleOptimizer {
             if (!isValid) continue;
             const cycleHeadNodes: [ASTNode, CycleHeadNode][] = [];
             const cycleData = new CycleData([]);
+            cycleData.length = cycle.length;
             for (let j = 0; j < cycleHeads.length; j++) {
                 const [prev, current, index] = cycleHeads[j];
                 const cycleHeadType = getCycleHeadType(prev.type, current.type)
@@ -291,20 +291,30 @@ export class CycleOptimizer {
                     isValid = false;
                     break;
                 }
+                if (cycleHeadType === CycleHeadType.CLEAR) {
+                    if (prev.specialNode !== current) {
+                        isValid = false;
+                        break;
+                    }
+                    prev.type = ASTNodeType.PATH;
+                }
                 const newNode = new CycleHeadNode(cycleData);
                 newNode.cycleHeadType = cycleHeadType;
                 newNode.index = index;
-                cycleHeadNodes.push([prev, newNode])
+                cycleHeadNodes.push([current, newNode])
             }
             if (!isValid) continue;
             for (let j = 0; j < cycle.length; j++) {
                 const cycleArrow = cycle[j];
                 cycleData.cycle.push(...cycleArrow.arrows);
+                if (tempCurrents.has(cycleArrow))
+                    continue;
                 cycleArrow.remove();
             }
             for (let j = 0; j < cycleHeadNodes.length; j++) {
                 const [oldNode, newNode] = cycleHeadNodes[j];
                 oldNode.replaceBy(newNode);
+                newNode.type = newNode.cycleHeadType === CycleHeadType.READ ? ASTNodeType.READ_CYCLE_HEAD : ASTNodeType.CYCLE_HEAD;
             }
             rootNode.cycles.push(cycleData);
         }

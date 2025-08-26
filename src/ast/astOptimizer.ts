@@ -21,8 +21,8 @@ export class ASTOptimizer {
     applyOptimizations(rootNode: RootNode) {
         if (this.settings.data.optimizeSimple)
             this.simpleOptimizer.optimizeSimple(rootNode);
-        // if (this.settings.data.optimizeRings)
-        //     this.cycleOptimizer.optimizeCycles(rootNode);
+        if (this.settings.data.optimizeRings)
+            this.cycleOptimizer.optimizeCycles(rootNode);
         if (this.settings.data.optimizeBranches)
             this.branchOptimizer.optimizeBranches(rootNode);
     }

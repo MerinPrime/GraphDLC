@@ -43,7 +43,7 @@ export function PatchSettingsPage(graphDLC: GraphDLC) {
                 this.addBoolSetting(GameText.OPTIMIZE_RINGS, settings.data.optimizeRings, (value: boolean) => {
                     settings.data.optimizeRings = value;
                     settings.save();
-                }, true);
+                });
                 this.addBoolSetting(GameText.OPTIMIZE_BUTTONS, settings.data.optimizeButtons, (value: boolean) => {
                     settings.data.optimizeButtons = value;
                     settings.save();
