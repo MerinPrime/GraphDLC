@@ -66,6 +66,8 @@ export function getASTType(arrowType: ArrowType): ASTNodeType {
         case ArrowType.SPLITTER_UP_UP:
         case ArrowType.SPLITTER_RIGHT_UP:
         case ArrowType.SPLITTER_UP_DIAGONAL:
+        case ArrowType.LEVEL_SOURCE:
+        case ArrowType.LEVEL_TARGET:
             return ASTNodeType.PATH;
         case ArrowType.SOURCE:
             return ASTNodeType.SOURCE;
@@ -94,8 +96,6 @@ export function getASTType(arrowType: ArrowType): ASTNodeType {
         case ArrowType.DIRECTIONAL_BUTTON:
             return ASTNodeType.DIRECTIONAL_BUTTON;
         case ArrowType.EMPTY:
-        case ArrowType.LEVEL_SOURCE:
-        case ArrowType.LEVEL_TARGET:
         default:
             throw new Error('How did you compile level arrow if its cant be compiled?');
     }

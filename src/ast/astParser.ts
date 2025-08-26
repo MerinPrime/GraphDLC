@@ -188,6 +188,7 @@ export function getArrowRelations(type: ArrowType): Array<[number, number]> {
     case ArrowType.LATCH:
     case ArrowType.FLIP_FLOP:
     case ArrowType.RANDOM:
+    case ArrowType.LEVEL_SOURCE:
     case ArrowType.DIRECTIONAL_BUTTON:
         return [[-1, 0]];
     case ArrowType.SOURCE:
@@ -210,9 +211,9 @@ export function getArrowRelations(type: ArrowType): Array<[number, number]> {
         return [[0, 1], [-2, 0]];
     case ArrowType.SPLITTER_UP_DIAGONAL:
         return [[-1, 0], [-1, 1]];
-    case ArrowType.EMPTY:
-    case ArrowType.LEVEL_SOURCE:
     case ArrowType.LEVEL_TARGET:
+        return []
+    case ArrowType.EMPTY:
     default:
         throw new Error('How did you compile level arrow if its cant be compiled?');
     }
