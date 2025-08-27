@@ -38,6 +38,10 @@ export function PatchSettingsPage(graphDLC: GraphDLC) {
                     settings.data.showArrowTarget = value;
                     settings.save();
                 });
+                this.addBoolSetting(GameText.FULL_RENDERING, settings.data.fullRendering, (value: boolean) => {
+                    settings.data.fullRendering = value;
+                    settings.save();
+                });
                 this.addSpace();
                 this.addText(GameText.OPTIMIZATIONS_UNAVAILABLE_LOCALE, 'red');
                 this.addBoolSetting(GameText.OPTIMIZE_RINGS, settings.data.optimizeRings, (value: boolean) => {

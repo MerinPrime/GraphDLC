@@ -217,11 +217,6 @@ function updateNode(graphState: GraphState, nodeID: number, type: number, signal
                 const mask = 1 << offset;
                 return (graphState.cycleStates[wordIndex] & mask) === 0 ? NodeSignal.NONE : NodeSignal.ACTIVE;
             }
-            return signalsCount > 1 ? NodeSignal.ACTIVE : NodeSignal.NONE;
-            // if (graphNode.cycleHeadType === CycleHeadType.READ) {
-            // } else {
-            //     arrow.signal = arrow.signalsCount > 1 ? 3 : 0;
-            // }
         case XORTypeIndex:
             return signalsCount % 2 === 1 ? NodeSignal.ACTIVE : NodeSignal.NONE;
         case LatchTypeIndex:

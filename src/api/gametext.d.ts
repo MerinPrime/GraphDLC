@@ -57,6 +57,7 @@ export interface GameText {
     
     SHOW_ARROW_CONNECTIONS: I18nText;
     SHOW_ARROW_TARGET: I18nText;
+    FULL_RENDERING: I18nText;
     
     OPTIMIZE_RINGS: I18nText;
     OPTIMIZE_BUTTONS: I18nText;

@@ -29,7 +29,7 @@ export class Settings {
     constructor() {
         this.data = {
             tpsUpdateFrequencyMs: 500,
-            fullRendering: false,
+            fullRendering: true,
 
             targetFPS: 60,
             showTPSInfo: true,

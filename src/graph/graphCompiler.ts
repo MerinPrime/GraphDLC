@@ -41,6 +41,11 @@ export class GraphCompiler {
             cycleDataToID.set(cycle, i);
             graphState.cycleLengths[i] = cycle.length;
             graphState.cycleOffsets[i] = x;
+            for (let j = 0; j < cycle.length; j++) {
+                const arrow = cycle.cycle[j];
+                arrow.cycleID = i;
+                arrow.cycleIndex = (cycle.length + j - 1) % cycle.length;
+            }
             x += Math.ceil(cycle.length / 32);
         }
         

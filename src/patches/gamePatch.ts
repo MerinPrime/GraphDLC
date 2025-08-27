@@ -60,11 +60,25 @@ export function PatchGame(graphDLC: GraphDLC) {
                                     let lastSignal = o.lastSignal;
                                     if (graphState) {
                                         const astIndex = o.astIndex;
+                                        signal = 0;
+                                        lastSignal = 0;
                                         if (astIndex !== undefined) {
                                             signal = graphState.signals[astIndex];
                                             lastSignal = graphState.lastSignals[astIndex];
-                                            if (signal === NodeSignal.ACTIVE) signal = ACTIVE_SIGNALS[o.type];
+                                        } else if (!this.playing || settings.data.fullRendering) {
+                                            const cycleID = o.cycleID;
+                                            const cycleIndex = o.cycleIndex;
+                                            if (cycleID !== undefined && cycleIndex !== undefined) {
+                                                const cycleLength = graphState.cycleLengths[cycleID];
+                                                const cycleOffset = graphState.cycleOffsets[cycleID];
+                                                const position = (this.tick + cycleIndex) % cycleLength;
+                                                const offset = position % 32;
+                                                const wordIndex = cycleOffset + (position - offset) / 32;
+                                                const mask = 1 << offset;
+                                                signal = (graphState.cycleStates[wordIndex] & mask) !== 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
+                                            }
                                         }
+                                        if (signal === NodeSignal.ACTIVE) signal = ACTIVE_SIGNALS[o.type];
                                     }
                                     if (o.type > 0 && (this.screenUpdated || ChunkUpdates.wasArrowChanged(o) || signal !== lastSignal)) {
                                         const i = (e.x * CHUNK_SIZE + t) * this.scale + r
@@ -178,9 +192,19 @@ export function PatchGame(graphDLC: GraphDLC) {
                                 this.render.drawSolidColor(ar.x * this.scale + offsetX, ar.y * this.scale + offsetY, oo, oo);
                             });
                         } else if (arrowAtCursor.type !== ArrowType.EMPTY) {
-                            this.render.setSolidColor(0.0, 0.0, 0.0, 0.1);
-                            if (arrowAtCursor.x === undefined || arrowAtCursor.y === undefined) return;
-                            this.render.drawSolidColor(arrowAtCursor.x * this.scale + offsetX, arrowAtCursor.y * this.scale + offsetY, oo, oo);
+                            const cycleID = arrowAtCursor.cycleID;
+                            if (cycleID !== undefined) {
+                                const cycle = graphDLC.rootNode.cycles[cycleID];
+                                this.render.setSolidColor(0.0, 0.5, 0.5, 0.1);
+                                for (let i = 0; i < cycle.length; i++) {
+                                    const arrow = cycle.cycle[i];
+                                    this.render.drawSolidColor(arrow.x! * this.scale + offsetX, arrow.y! * this.scale + offsetY, oo, oo);
+                                }
+                            } else {
+                                this.render.setSolidColor(0.0, 0.0, 0.0, 0.1);
+                                if (arrowAtCursor.x === undefined || arrowAtCursor.y === undefined) return;
+                                this.render.drawSolidColor(arrowAtCursor.x * this.scale + offsetX, arrowAtCursor.y * this.scale + offsetY, oo, oo);
+                            }
                         }
                         this.render.disableSolidColor();
                         this.screenUpdated = true;

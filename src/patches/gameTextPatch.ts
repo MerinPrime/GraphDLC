@@ -58,6 +58,14 @@ export function PatchGameText(graphDLC: GraphDLC) {
             "Паказваць выхад выбранай стрэлачкі",
             "Afficher la sortie de la flèche sélectionnée"
         );
+
+        module.FULL_RENDERING = new I18nText(
+            "Detailed view",
+            "Подробный вид",
+            "Детальний вигляд",
+            "Падрабязны выгляд",
+            "Vue détaillée"
+        );
         
         module.OPTIMIZE_RINGS = new I18nText(
             "Optimize rings and timers",

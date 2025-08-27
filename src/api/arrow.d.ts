@@ -21,6 +21,8 @@ export interface Arrow {
     graph_node?: GraphNode;
     astNode?: ASTNode;
     astIndex?: number;
+    cycleID?: number;
+    cycleIndex?: number;
     
     x?: number;
     y?: number;

@@ -311,8 +311,6 @@ export class CycleOptimizer {
             for (let j = 0; j < cycle.length; j++) {
                 const cycleArrow = cycle[j];
                 cycleData.cycle.push(...cycleArrow.arrows);
-                if (tempCurrents.has(cycleArrow))
-                    continue;
                 cycleArrow.remove();
             }
             for (let j = 0; j < cycleHeadNodes.length; j++) {
