@@ -86,7 +86,7 @@ export function PatchSettingsPage(graphDLC: GraphDLC) {
             
             addText(text: I18nText, colorCode: string) {
                 const errorText = document.createElement("div");
-                errorText.style.color = `rgb(var(--light-${colorCode}))`;
+                errorText.style.color = `var(--light-${colorCode})`;
                 errorText.innerHTML = text.get();
                 this.table.appendChild(errorText);
             }
