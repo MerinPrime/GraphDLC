@@ -1,14 +1,11 @@
 import {GraphNode} from "./graph_node";
-import {BitCycle} from "../ast/cycle/bitarray";
 import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 export class Cycle {
-    data: BitCycle;
     entryPoints: GraphNode[];
     activeEntryPoints: Set<GraphNode>;
     
     constructor(cycleSize: number, entryPoints: GraphNode[]) {
-        this.data = new BitCycle(cycleSize);
         this.entryPoints = entryPoints;
         this.activeEntryPoints = new Set<GraphNode>();
     }
@@ -16,16 +13,11 @@ export class Cycle {
     updateHead(position: number, headType: CycleHeadType) {
         switch (headType) {
             case CycleHeadType.WRITE:
-                this.data.write(position);
                 break;
             case CycleHeadType.XOR_WRITE:
-                this.data.xor_write(position);
-                break;
             case CycleHeadType.READ:
-                alert('BRUH ERROR')
                 break;
             case CycleHeadType.CLEAR:
-                this.data.clear(position);
                 break;
         }
     }

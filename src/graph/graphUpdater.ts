@@ -27,9 +27,8 @@ export class GraphUpdater {
         
         for (let i = 0; i < graphState.changedNodes.count; i++) {
             const nodeID = graphState.changedNodes.arr[i];
-            const type: number = graphState.types[nodeID];
             const flags = graphState.flags[nodeID];
-            const isCycleHead = type === CycleHeadTypeIndex;
+            const isCycleHead = (flags & 0b100) !== 0;
             const signal = graphState.signals[nodeID];
             const isActive = signal === NodeSignal.ACTIVE;
             
@@ -62,7 +61,8 @@ export class GraphUpdater {
                 }
                 continue;
             }
-            
+
+            const type: number = graphState.types[nodeID];
             const signalsCount = graphState.signalsCount[nodeID];
             const isChanged = graphState.lastSignals[nodeID] !== signal;
             

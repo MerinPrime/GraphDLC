@@ -11,6 +11,7 @@ export class ASTNode {
     type: ASTNodeType = ASTNodeType.PATH;
     isBranch: boolean = false;
     specialNode: ASTNode | undefined = undefined; // Detector & Blocker
+    skipOptimization: boolean = false;
 
     makeFromArrow(arrow: Arrow): ASTNode {
         this.arrows.push(arrow);

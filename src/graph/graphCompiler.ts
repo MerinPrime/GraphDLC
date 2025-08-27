@@ -2,9 +2,9 @@ import {RootNode} from "../ast/rootNode";
 import {GraphState} from "./graphState";
 import {ASTNode} from "../ast/astNode";
 import {CycleHeadNode} from "../ast/cycle/cycleHeadNode";
-import {ASTNodeType} from "../ast/astNodeType";
 import {CycleData} from "../ast/cycle/cycleData";
 import {NodeFlags} from "./nodeFlags";
+import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 
 export class GraphCompiler {
     compile(rootNode: RootNode): GraphState {
@@ -59,7 +59,7 @@ export class GraphCompiler {
                 flags |= NodeFlags.EntryPoint;
             if (node.type.isAdditionalUpdate)
                 flags |= NodeFlags.AdditionalUpdate;
-            if (node.type === ASTNodeType.CYCLE_HEAD)
+            if (node instanceof CycleHeadNode && node.cycleHeadType !== CycleHeadType.READ)
                 flags |= NodeFlags.CycleHead
             
             graphState.flags[i] = flags;

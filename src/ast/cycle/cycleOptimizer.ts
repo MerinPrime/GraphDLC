@@ -296,12 +296,16 @@ export class CycleOptimizer {
                         isValid = false;
                         break;
                     }
-                    prev.type = ASTNodeType.PATH;
+                }
+                const oldNode = cycleHeadType === CycleHeadType.READ ? current : prev;
+                if (oldNode.skipOptimization) {
+                    isValid = false;
+                    break;
                 }
                 const newNode = new CycleHeadNode(cycleData);
                 newNode.cycleHeadType = cycleHeadType;
-                newNode.index = index;
-                cycleHeadNodes.push([current, newNode])
+                newNode.index = cycleHeadType === CycleHeadType.READ ? (cycle.length + index - 1) % cycle.length : index;
+                cycleHeadNodes.push([oldNode, newNode])
             }
             if (!isValid) continue;
             for (let j = 0; j < cycle.length; j++) {
@@ -314,7 +318,9 @@ export class CycleOptimizer {
             for (let j = 0; j < cycleHeadNodes.length; j++) {
                 const [oldNode, newNode] = cycleHeadNodes[j];
                 oldNode.replaceBy(newNode);
-                newNode.type = newNode.cycleHeadType === CycleHeadType.READ ? ASTNodeType.READ_CYCLE_HEAD : ASTNodeType.CYCLE_HEAD;
+                if (newNode.cycleHeadType === CycleHeadType.READ) {
+                    newNode.type = ASTNodeType.READ_CYCLE_HEAD;
+                }
             }
             rootNode.cycles.push(cycleData);
         }

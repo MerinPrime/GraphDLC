@@ -7,7 +7,7 @@ export class CycleHeadNode extends ASTNode {
     cycleHeadType: CycleHeadType = CycleHeadType.WRITE;
     index: number = -1;
     cycleData: CycleData;
-    type: ASTNodeType = ASTNodeType.CYCLE_HEAD;
+    skipOptimization = true;
     
     constructor(cycleData: CycleData) {
         super();
