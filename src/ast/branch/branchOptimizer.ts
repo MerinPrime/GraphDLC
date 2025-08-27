@@ -18,14 +18,17 @@ export class BranchOptimizer {
                 // FORWARD
                 if (node.arrows.length !== 0) {
                     const validNodes = [];
+                    const logicSet = new Set();
                     for (let i = 0; i < node.allEdges.length; i++) {
                         const edge = node.allEdges[i];
                         if (edge.backEdges.some((x) => x.type === ASTNodeType.BLOCKER)) {
                             continue;
                         }
-                        if (edge.allEdges.some((x) => x.type.isLogic)) {
+                        const logicEdges = edge.allEdges.filter((x) => x.type.isLogic);
+                        if (logicEdges.some((x) => logicSet.has(x))) {
                             continue;
                         }
+                        logicEdges.forEach((x) => logicSet.add(x));
                         if (edge.type === ASTNodeType.PATH) {
                             validNodes.push(edge);
                         }
