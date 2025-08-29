@@ -12,7 +12,10 @@ export function PatchPlayerControls(graphDLC: GraphDLC) {
         patchLoader.setDefinition("PlayerControls", class PlayerControls_GDLC extends module {
             constructor(container: HTMLElement, game: Game, playerUI: PlayerUI, history?: History | null) {
                 super(container, game, playerUI, history);
-                
+
+                document.addEventListener('mousedown', () => {
+                    graphDLC.customTpsField?.field.blur();
+                });
                 this.mouseHandler.leftClickCallback = () => {
                     const arrow = this.getArrowByMousePosition();
                     const shiftPressed = this.keyboardHandler.getShiftPressed();
@@ -61,6 +64,12 @@ export function PatchPlayerControls(graphDLC: GraphDLC) {
                 };
                 const prevKeyDownCallback = this.keyboardHandler.keyDownCallback;
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
+                    if (graphDLC.customTpsField && graphDLC.customTpsField.isFocused()) {
+                        if (code.startsWith('Digit') || code.startsWith('Arrow') || code === 'Backspace' || code === 'Delete') {
+                            return;
+                        }
+                        graphDLC.customTpsField.field.blur();
+                    }
                     prevKeyDownCallback(code, key);
                     if (code === 'KeyP') {
                         graphDLC.compileGraph();

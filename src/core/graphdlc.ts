@@ -19,11 +19,13 @@ import {GraphState} from "../graph/graphState";
 import {GraphUpdater} from "../graph/graphUpdater";
 import {Game} from "../api/game";
 import {InfoContainerComponent} from "../patches/custom/infoContainerComponent";
+import {CustomTPSComponent} from "../patches/custom/customTPSComponent";
 
 export class GraphDLC {
     patchLoader: PatchLoader;
     settings: Settings;
     infoContainer: InfoContainerComponent | undefined;
+    customTpsField: CustomTPSComponent | undefined;
     
     astParser: ASTParser;
     astOptimizer: ASTOptimizer;
@@ -41,6 +43,7 @@ export class GraphDLC {
         this.patchLoader = patchLoader;
         this.settings = new Settings();
         this.infoContainer = undefined;
+        this.customTpsField = undefined;
         
         this.astParser = new ASTParser(patchLoader);
         this.astOptimizer = new ASTOptimizer(this.settings);

@@ -1,0 +1,53 @@
+import {CUIComponent} from "./cuiComponent";
+import {GraphDLC} from "../../core/graphdlc";
+
+export class CustomTPSComponent extends CUIComponent {
+    graphDLC: GraphDLC;
+    field: HTMLInputElement;
+    tps: number;
+    
+    constructor(graphDLC: GraphDLC, parent: HTMLElement) {
+        super(parent);
+        this.setVisibility(false);
+
+        this.graphDLC = graphDLC;
+        this.tps = 0;
+        
+        this.element.classList.add("custom-tps-container");
+        
+        this.field = document.createElement('input');
+        this.field.type = 'number';
+        this.field.min = '1';
+        this.field.max = '1000000';
+        this.field.value = '1';
+        this.field.classList.add('custom-tps-input');
+        
+        this.field.addEventListener('input', () => {
+            let value = parseInt(this.field.value);
+            value = Number.isNaN(value) ? 1 : value;
+            this.tps = Math.max(1, Math.min(value, 1000000))
+            this.field.value = this.tps.toString(10);
+        });
+        
+        this.element.appendChild(this.field);
+
+        this.graphDLC.customTpsField = this;
+    }
+    
+    isFocused() {
+        return this.field === document.activeElement;
+    }
+    
+    setVisibility(visibility: boolean) {
+        const beHidden = this.element.hidden;
+        super.setVisibility(visibility);
+        if (beHidden && visibility) {
+            this.field.focus();
+        }
+    }
+
+    remove() {
+        this.graphDLC.customTpsField = undefined;
+        super.remove();
+    }
+}

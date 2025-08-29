@@ -2,6 +2,7 @@ import { GraphDLC } from "../core/graphdlc";
 import {UIRangeProto} from "../api/uiRange";
 import {InfoContainerComponent} from "./custom/infoContainerComponent";
 import {PlayerUIProto} from "../api/playerUI";
+import {CustomTPSComponent} from "./custom/customTPSComponent";
 
 export function PatchPlayerUI(graphDLC: GraphDLC) {
     const patchLoader = graphDLC.patchLoader;
@@ -13,21 +14,25 @@ export function PatchPlayerUI(graphDLC: GraphDLC) {
             addSpeedController() {
                 const UIRange = UIRangePtr.definition;
                 
-                this.speedController = new UIRange(document.body, 9, (e: number) => {
-                    return ['3', '12', '60', '300', '1200', '6000', '30000', '120000', 'MAX'][e] + ' TPS';
+                this.speedController = new UIRange(document.body, 10, (e: number) => {
+                    this.customTPS?.setVisibility(e === 9);
+                    return ['3', '12', '60', '300', '1200', '6000', '30000', '120000', 'MAX', 'CUSTOM'][e] + ' TPS';
                 });
-                
+
+                this.customTPS = new CustomTPSComponent(graphDLC, this.speedController.element);
                 this.gdlcInfoContainer = new InfoContainerComponent(graphDLC);
             }
             
             removeSpeedController() {
-                super.removeSpeedController();
+                this.customTPS?.remove();
                 this.gdlcInfoContainer?.remove();
+                super.removeSpeedController();
             }
             
             dispose() {
-                super.dispose();
+                this.customTPS?.remove();
                 this.gdlcInfoContainer?.remove();
+                super.dispose();
             }
         });
     });

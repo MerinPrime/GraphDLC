@@ -248,16 +248,17 @@ export function PatchGame(graphDLC: GraphDLC) {
                 accumulator += delta;
                 
                 const isMaxTPS = this.updateSpeedLevel === 8;
-                const updateSpeedLevel = isMaxTPS ? 8 : (graphDLC.graphState ? this.updateSpeedLevel : Math.min(this.updateSpeedLevel, 6));
+                const isCustomTPS = this.updateSpeedLevel === 9;
+                const updateSpeedLevel = isMaxTPS || isCustomTPS ? this.updateSpeedLevel : (graphDLC.graphState ? this.updateSpeedLevel : Math.min(this.updateSpeedLevel, 6));
 
                 if (previousSpeed !== updateSpeedLevel) {
                     accumulator = 0;
                     previousSpeed = updateSpeedLevel;
                 }
                 
-                const skip = [1000 / 3, 1000 / 12, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60][updateSpeedLevel];
-                const ticks = [1, 1, 1, 5, 20, 100, 500, 2000, 0][updateSpeedLevel];
-
+                const skip = [1000 / 3, 1000 / 12, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60][updateSpeedLevel];
+                const ticks = !isCustomTPS ? [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][updateSpeedLevel] : Math.round(graphDLC.customTpsField!.tps / 60.0);
+                
                 if (accumulator > skip * 3) {
                     accumulator = skip;
                 }

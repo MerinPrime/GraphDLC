@@ -4,6 +4,34 @@
     --light-red: rgb(216, 34, 34) !important;
 }
 
+.custom-tps-container {
+    position: inherit;
+    left: 0;
+    z-index: 2;
+}
+
+.ui-range-thumb {
+    z-index: 3 !important;
+}
+
+.custom-tps-input {
+    height: 1.5vw;
+    border-radius: 0.5vw;
+    background: #ccc;
+    border: none;
+    margin: 0;
+    position: absolute;
+    top: 0;
+    width: 11.5vw;
+    font-size: 1.25vw;
+    padding: 0.25vw;
+    font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial, serif;
+}
+
+.custom-tps-input:focus-visible {
+    outline: 2px solid var(--light-blue);
+}
+
 .cuicomponent {
     font-size: 2.0vmin;
     font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial, serif;
