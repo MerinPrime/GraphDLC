@@ -22,9 +22,9 @@ export class CustomTPSComponent extends CUIComponent {
         this.field.value = '1';
         this.field.classList.add('custom-tps-input');
         
-        this.field.addEventListener('input', () => {
-            let value = parseInt(this.field.value);
-            value = Number.isNaN(value) ? 1 : value;
+        this.field.addEventListener('change', () => {
+            const parsedValue = parseInt(this.field.value);
+            const value = Number.isNaN(parsedValue) ? 1 : parsedValue;
             this.tps = Math.max(1, Math.min(value, 1000000))
             this.field.value = this.tps.toString(10);
         });
