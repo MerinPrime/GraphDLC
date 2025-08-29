@@ -195,10 +195,12 @@ export function PatchGame(graphDLC: GraphDLC) {
                             const cycleID = arrowAtCursor.cycleID;
                             if (cycleID !== undefined) {
                                 const cycle = graphDLC.rootNode.cycles[cycleID];
-                                this.render.setSolidColor(0.0, 0.5, 0.5, 0.1);
-                                for (let i = 0; i < cycle.length; i++) {
-                                    const arrow = cycle.cycle[i];
-                                    this.render.drawSolidColor(arrow.x! * this.scale + offsetX, arrow.y! * this.scale + offsetY, oo, oo);
+                                if (cycle !== undefined) {
+                                    this.render.setSolidColor(0.0, 0.5, 0.5, 0.1);
+                                    for (let i = 0; i < cycle.length; i++) {
+                                        const arrow = cycle.cycle[i];
+                                        this.render.drawSolidColor(arrow.x! * this.scale + offsetX, arrow.y! * this.scale + offsetY, oo, oo);
+                                    }
                                 }
                             } else {
                                 this.render.setSolidColor(0.0, 0.0, 0.0, 0.1);
