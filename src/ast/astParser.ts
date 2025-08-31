@@ -1,12 +1,11 @@
 import {GameMap} from "../api/gameMap";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
-import {ENTRY_POINTS, EXIST_TYPES, NOT_ALLOWED_TO_CHANGE} from "../graph_compiler/handlers";
 import {ArrowType} from "../api/arrowType";
 import {DefinitionPtr, PatchLoader} from "../core/patchLoader";
 import {ASTNode} from "./astNode";
 import {RootNode} from "./rootNode";
-import {ASTNodeType} from "./astNodeType";
+import {ASTNodeType, getASTType} from "./astNodeType";
 
 type ArrowContext = {
     chunk: Chunk;
@@ -44,7 +43,8 @@ export class ASTParser {
                     const arrow = chunk.arrows[x + y * CHUNK_SIZE];
                     arrow.x = x + chunk.x * CHUNK_SIZE;
                     arrow.y = y + chunk.y * CHUNK_SIZE;
-                    if (!ENTRY_POINTS.has(arrow.type)) continue;
+                    const astType = getASTType(arrow.type);
+                    if (!astType.isEntryPoint) continue;
                     processingStack.push({chunk, arrow, x, y});
                 }
             }
@@ -53,8 +53,9 @@ export class ASTParser {
         const rootNode = new RootNode();
         while (processingStack.length > 0) {
             const { chunk, arrow, x, y } = processingStack.pop()!;
-            
-            if (!EXIST_TYPES.has(arrow.type)) {
+            const astType = getASTType(arrow.type);
+
+            if (astType === ASTNodeType.UNKNOWN) {
                 console.warn(`Founded arrow with uncommon type: ${arrow.type}`)
                 continue;
             }
@@ -78,10 +79,11 @@ export class ASTParser {
                 if (!edgeData) continue;
 
                 const [edgeArrow, edgeX, edgeY, edgeChunk] = edgeData;
-                if (NOT_ALLOWED_TO_CHANGE.has(edgeArrow.type) && arrow.type !== ArrowType.BLOCKER || edgeArrow.type === ArrowType.EMPTY) {
+                const astType = getASTType(edgeArrow.type);
+                if (astType.notAllowedToChange && arrow.type !== ArrowType.BLOCKER || astType === ASTNodeType.EMPTY) {
                     continue;
                 }
-                if (!EXIST_TYPES.has(edgeArrow.type)) {
+                if (astType === ASTNodeType.UNKNOWN) {
                     console.warn(`Founded arrow with uncommon type: ${edgeArrow.type}`)
                     continue;
                 }

@@ -8,29 +8,32 @@ export class ASTNodeType {
         public readonly isEntryPoint: boolean,
         public readonly isAdditionalUpdate: boolean,
         public readonly isLogic: boolean,
+        public readonly notAllowedToChange: boolean,
     ) {
         this.index = ASTNodeType._values.length;
         ASTNodeType._values.push(this);
     }
     
-    static readonly PATH = new ASTNodeType(false, false, false);
-    static readonly SOURCE = new ASTNodeType(true, false, false);
-    static readonly BLOCKER = new ASTNodeType(false, false, false);
-    static readonly DELAY = new ASTNodeType(false, true, false);
-    static readonly DETECTOR = new ASTNodeType(false, false, false);
-    static readonly IMPULSE = new ASTNodeType(true, true, false);
-    static readonly LOGIC_NOT = new ASTNodeType(true, false, true);
-    static readonly LOGIC_AND = new ASTNodeType(false, false, true);
-    static readonly LOGIC_XOR = new ASTNodeType(false, false, true);
-    static readonly LATCH = new ASTNodeType(false, false, true);
-    static readonly FLIP_FLOP = new ASTNodeType(false, true, true);
-    static readonly RANDOM = new ASTNodeType(false, true, false);
-    static readonly BUTTON = new ASTNodeType(true, false, false);
-    static readonly DIRECTIONAL_BUTTON = new ASTNodeType(true, false, false);
-    static readonly CYCLE_HEAD = new ASTNodeType(false, false, false);
-    static readonly READ_CYCLE_HEAD = new ASTNodeType(false, false, false);
+    static readonly PATH = new ASTNodeType(false, false, false, false);
+    static readonly SOURCE = new ASTNodeType(true, false, false, true);
+    static readonly BLOCKER = new ASTNodeType(false, false, false, false);
+    static readonly DELAY = new ASTNodeType(false, true, false, false);
+    static readonly DETECTOR = new ASTNodeType(false, false, false, true);
+    static readonly IMPULSE = new ASTNodeType(true, true, false, true);
+    static readonly LOGIC_NOT = new ASTNodeType(true, false, true, false);
+    static readonly LOGIC_AND = new ASTNodeType(false, false, true, false);
+    static readonly LOGIC_XOR = new ASTNodeType(false, false, true, false);
+    static readonly LATCH = new ASTNodeType(false, false, true, false);
+    static readonly FLIP_FLOP = new ASTNodeType(false, true, true, false);
+    static readonly RANDOM = new ASTNodeType(false, true, false, false);
+    static readonly BUTTON = new ASTNodeType(true, false, false, true);
+    static readonly DIRECTIONAL_BUTTON = new ASTNodeType(true, false, false, false);
     
-    // TODO: COMPRESS TO 4 BITS
+    static readonly WRITE_CYCLE_HEAD = new ASTNodeType(false, false, false, false);
+    static readonly READ_CYCLE_HEAD = new ASTNodeType(false, false, false, false);
+    
+    static readonly EMPTY = new ASTNodeType(false, false, false, true);
+    static readonly UNKNOWN = new ASTNodeType(false, false, false, true);
     
     static values(): ASTNodeType[] {
         return [...ASTNodeType._values];
@@ -55,11 +58,13 @@ export const FlipFlopTypeIndex = ASTNodeType.FLIP_FLOP.index;
 export const RandomTypeIndex = ASTNodeType.RANDOM.index;
 export const ButtonTypeIndex = ASTNodeType.BUTTON.index;
 export const DirectionalButtonTypeIndex = ASTNodeType.DIRECTIONAL_BUTTON.index;
-export const CycleHeadTypeIndex = ASTNodeType.CYCLE_HEAD.index;
+export const CycleHeadTypeIndex = ASTNodeType.WRITE_CYCLE_HEAD.index;
 export const ReadCycleHeadTypeIndex = ASTNodeType.READ_CYCLE_HEAD.index;
 
 export function getASTType(arrowType: ArrowType): ASTNodeType {
     switch (arrowType) {
+        case ArrowType.EMPTY:
+            return ASTNodeType.EMPTY;
         case ArrowType.ARROW:
         case ArrowType.SPLITTER_UP_DOWN:
         case ArrowType.SPLITTER_UP_RIGHT:
@@ -98,8 +103,7 @@ export function getASTType(arrowType: ArrowType): ASTNodeType {
             return ASTNodeType.BUTTON;
         case ArrowType.DIRECTIONAL_BUTTON:
             return ASTNodeType.DIRECTIONAL_BUTTON;
-        case ArrowType.EMPTY:
         default:
-            throw new Error('How did you compile level arrow if its cant be compiled?');
+            return ASTNodeType.UNKNOWN;
     }
 }

@@ -6,7 +6,7 @@ import {NodeSignal} from "../graph/nodeSignal";
 import {getArrowRelations} from "../ast/astParser";
 import {ASTNode} from "../ast/astNode";
 import {ArrowType} from "../api/arrowType";
-import {ACTIVE_SIGNALS} from "../graph_compiler/handlers";
+import {ACTIVE_SIGNALS} from "../graph/signals";
 import {PlayerSettings} from "../api/playerSettings";
 import {ChunkUpdates} from "../api/chunkUpdates";
 import {GameProto} from "../api/game";
