@@ -18,9 +18,8 @@ import {GraphCompiler} from "../graph/graphCompiler";
 import {GraphState} from "../graph/graphState";
 import {GraphUpdater} from "../graph/graphUpdater";
 import {Game} from "../api/game";
-import {InfoContainerComponent} from "../patches/custom/infoContainerComponent";
-import {CustomTPSComponent} from "../patches/custom/customTPSComponent";
 import {CustomUI} from "../patches/custom/customUI";
+import {PatchRender} from "../patches/renderPatch";
 
 export class GraphDLC {
     patchLoader: PatchLoader;
@@ -60,6 +59,7 @@ export class GraphDLC {
 
     inject() {
         PatchGame(this);
+        PatchRender(this);
         PatchGameMap(this);
         PatchPlayerControls(this);
         PatchPlayerUI(this);
@@ -75,6 +75,7 @@ export class GraphDLC {
         this.gameMap.chunks.forEach((chunk: Chunk) => {
             chunk.arrows.forEach((arrow: Arrow) => {
                 arrow.astIndex = undefined;
+                arrow.signal = 0;
             });
         });
         this.graphState = undefined;

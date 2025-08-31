@@ -115,8 +115,8 @@ export class ASTDebugger {
                 let minBackSignal = signal;
                 for (const backDeadEdge of backDeadEdges) {
                     for (const arrow of backDeadEdge.arrows) {
-                        if (arrow.signal > 0) {
-                            minBackSignal = Math.min(minBackSignal, arrow.signal);
+                        if (+arrow.signal > 0) {
+                            minBackSignal = Math.min(minBackSignal, +arrow.signal);
                         }
                     }
                 }

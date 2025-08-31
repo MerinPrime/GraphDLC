@@ -31,7 +31,6 @@ export class ASTParser {
                 arrow.lastSignal = 0;
                 arrow.signal = 0;
                 arrow.signalsCount = 0;
-                arrow.blocked = 0;
                 arrow.astNode = undefined;
             });
         });

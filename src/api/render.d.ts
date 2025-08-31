@@ -1,3 +1,6 @@
+import {SignalWrapper} from "../graph/signalWrapper";
+import {Game} from "./game";
+
 export interface Render {
     gl: WebGLRenderingContext;
 
@@ -16,6 +19,7 @@ export interface Render {
     backgroundShader: any;
     solidColorShader: any;
     textureShader: any;
+    game?: Game;
 
     resize(width: number, height: number): void;
 
@@ -26,7 +30,7 @@ export interface Render {
         x: number,
         y: number,
         type: number,
-        signal: number,
+        signal: number | SignalWrapper,
         rotation: number,
         flipped: boolean
     ): void;

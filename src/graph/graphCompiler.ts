@@ -5,6 +5,7 @@ import {CycleHeadNode} from "../ast/cycle/cycleHeadNode";
 import {CycleData} from "../ast/cycle/cycleData";
 import {NodeFlags} from "./nodeFlags";
 import {CycleHeadType} from "../ast/cycle/cycleHeadType";
+import {SignalWrapper} from "./signalWrapper";
 
 export class GraphCompiler {
     compile(rootNode: RootNode): GraphState {
@@ -19,7 +20,8 @@ export class GraphCompiler {
             if (!nodeToIndex.has(node)) {
                 nodeToIndex.set(node, indexToNode.length);
                 for (let i = 0; i < node.arrows.length; i++) {
-                    node.arrows[i].astIndex = indexToNode.length;
+                    const arrow = node.arrows[i];
+                    arrow.astIndex = indexToNode.length;
                 }
                 indexToNode.push(node);
                 queue.push(...node.allEdges);
@@ -45,6 +47,11 @@ export class GraphCompiler {
                 const arrow = cycle.cycle[j];
                 arrow.cycleID = i;
                 arrow.cycleIndex = (cycle.length + j - 1) % cycle.length;
+                arrow.signal = new SignalWrapper(
+                    undefined,
+                    arrow.cycleID,
+                    arrow.cycleIndex,
+                );
             }
             x += Math.ceil(cycle.length / 32);
         }
@@ -54,6 +61,16 @@ export class GraphCompiler {
         
         for (let i = 0; i < indexToNode.length; i++) {
             const node = indexToNode[i];
+            
+            const signalWrapper = new SignalWrapper(
+                node.arrows[0].astIndex!,
+                node.arrows[0].cycleID,
+                node.arrows[0].cycleIndex,
+            );
+            for (let i = 0; i < node.arrows.length; i++) {
+                const arrow = node.arrows[i];
+                arrow.signal = signalWrapper;
+            }
             
             if (node.type.isEntryPoint) {
                 graphState.entryPoints[entryPointIndex++] = i;

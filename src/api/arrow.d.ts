@@ -1,12 +1,13 @@
 import {GraphNode} from "../graph_compiler/graph_node";
 import {ASTNode} from "../ast/astNode";
 import {ArrowType} from "./arrowType";
+import {SignalWrapper} from "../graph/signalWrapper";
 
 export interface Arrow {
     type: ArrowType;
     rotation: number;
     flipped: boolean;
-    signal: number;
+    signal: SignalWrapper | number;
     signalsCount: number;
     
     lastType: ArrowType;
@@ -17,8 +18,6 @@ export interface Arrow {
     canBeEdited: boolean;
 
     // Graph-DLC
-    blocked?: number;
-    graph_node?: GraphNode;
     astNode?: ASTNode;
     astIndex?: number;
     cycleID?: number;
