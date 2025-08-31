@@ -1,7 +1,7 @@
 export class CUIComponent {
-    parent: HTMLElement;
-    element: HTMLElement;
-    isRemoved: boolean;
+    protected readonly parent: HTMLElement;
+    protected readonly element: HTMLElement;
+    protected isRemoved: boolean;
     
     constructor(parent: HTMLElement) {
         this.parent = parent;

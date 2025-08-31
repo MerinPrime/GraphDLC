@@ -15,23 +15,23 @@ export function PatchPlayerUI(graphDLC: GraphDLC) {
                 const UIRange = UIRangePtr.definition;
                 
                 this.speedController = new UIRange(document.body, 10, (e: number) => {
-                    this.customTPS?.setVisibility(e === 9);
+                    graphDLC.customUI.customTPSField?.setVisibility(e === 9);
                     return ['3', '12', '60', '300', '1200', '6000', '30000', '120000', 'MAX', 'CUSTOM'][e] + ' TPS';
                 });
-
-                this.customTPS = new CustomTPSComponent(graphDLC, this.speedController.element);
-                this.gdlcInfoContainer = new InfoContainerComponent(graphDLC);
+                
+                graphDLC.customUI.customTPSField = new CustomTPSComponent(this.speedController.element);
+                graphDLC.customUI.infoContainer = new InfoContainerComponent(graphDLC);
             }
             
             removeSpeedController() {
-                this.customTPS?.remove();
-                this.gdlcInfoContainer?.remove();
+                graphDLC.customUI.customTPSField?.remove();
+                graphDLC.customUI.infoContainer?.remove();
                 super.removeSpeedController();
             }
             
             dispose() {
-                this.customTPS?.remove();
-                this.gdlcInfoContainer?.remove();
+                graphDLC.customUI.customTPSField?.remove();
+                graphDLC.customUI.infoContainer?.remove();
                 super.dispose();
             }
         });

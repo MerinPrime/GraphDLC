@@ -5,8 +5,6 @@ import { UIRange } from "./uiRange";
 import { UIControlsHint } from "./ui_controls_hint";
 import { UIMenu } from "./ui_menu";
 import { PlayerAccess } from "./player_access";
-import {InfoContainerComponent} from "../patches/custom/infoContainerComponent";
-import {CustomTPSComponent} from "../patches/custom/customTPSComponent";
 
 export interface PlayerUI {
     mapInfo: MapInfo | undefined;
@@ -16,9 +14,6 @@ export interface PlayerUI {
     speedController: UIRange | null;
     controlsHint: UIControlsHint | null;
     autoSaveMessage: HTMLSpanElement;
-
-    gdlcInfoContainer?: InfoContainerComponent; // Graph-DLC
-    customTPS?: CustomTPSComponent;
 
     updateToolbar(groups: any): void;
     addSpeedController(): void;

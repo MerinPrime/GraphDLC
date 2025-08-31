@@ -5,8 +5,8 @@ import {GameText} from "../../api/gameText";
 
 export class TPSInfoComponent extends CUIComponent {
     private settings: Settings;
-    private tpsLocale: string;
-    private fpsLocale: string;
+    private readonly tpsLocale: string;
+    private readonly fpsLocale: string;
     
     private lastUpdate: number;
     private ticks: number;
@@ -17,10 +17,11 @@ export class TPSInfoComponent extends CUIComponent {
     constructor(graphDLC: GraphDLC, parent: HTMLElement) {
         super(parent);
         
+        this.settings = graphDLC.settings;
+        
         const GameText = graphDLC.patchLoader.getDefinitionPtr<GameText>("GameText").definition;
         this.tpsLocale = GameText.TPS_LOCALE.get();
         this.fpsLocale = GameText.FPS_LOCALE.get();
-        this.settings = graphDLC.settings;
         
         this.lastUpdate = 0;
         this.ticks = 0;
@@ -29,7 +30,6 @@ export class TPSInfoComponent extends CUIComponent {
         this.fps = 0;
 
         this.element.classList.add("tps-info");
-        this.setVisibility(this.settings.data.showTPSInfo);
         this.updateInfo();
     }
     

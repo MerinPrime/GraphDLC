@@ -14,7 +14,7 @@ export function PatchPlayerControls(graphDLC: GraphDLC) {
                 super(container, game, playerUI, history);
 
                 document.addEventListener('mousedown', () => {
-                    graphDLC.customTpsField?.field.blur();
+                    graphDLC.customUI.customTPSField?.blur();
                 });
                 this.mouseHandler.leftClickCallback = () => {
                     const arrow = this.getArrowByMousePosition();
@@ -64,11 +64,11 @@ export function PatchPlayerControls(graphDLC: GraphDLC) {
                 };
                 const prevKeyDownCallback = this.keyboardHandler.keyDownCallback;
                 this.keyboardHandler.keyDownCallback = (code: string, key: number) => {
-                    if (graphDLC.customTpsField && graphDLC.customTpsField.isFocused()) {
+                    if (graphDLC.customUI.customTPSField && graphDLC.customUI.customTPSField.isFocused()) {
                         if (code.startsWith('Digit') || code.startsWith('Arrow') || code === 'Backspace' || code === 'Delete') {
                             return;
                         }
-                        graphDLC.customTpsField.field.blur();
+                        graphDLC.customUI.customTPSField.blur();
                     }
                     prevKeyDownCallback(code, key);
                     if (code === 'KeyP') {

@@ -259,7 +259,7 @@ export function PatchGame(graphDLC: GraphDLC) {
                 }
                 
                 const skip = [1000 / 3, 1000 / 12, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60, 1000 / 60][updateSpeedLevel];
-                const ticks = !isCustomTPS ? [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][updateSpeedLevel] : Math.round(graphDLC.customTpsField!.tps / 60.0);
+                const ticks = !isCustomTPS ? [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][updateSpeedLevel] : graphDLC.customUI.customTPSField!.getTicksPerFrame();
                 
                 if (accumulator > skip * 3) {
                     accumulator = skip;
@@ -285,7 +285,7 @@ export function PatchGame(graphDLC: GraphDLC) {
                 }
                 this.updatesPerSecond++;
 
-                graphDLC.infoContainer?.tpsInfo?.updateTicks(this.tick - startTick);
+                graphDLC.customUI.tpsInfo?.updateTicks(this.tick - startTick);
                 this.screenUpdated = true;
             }
             updateTick(callback=(() => {})) {

@@ -1,16 +1,12 @@
 import {CUIComponent} from "./cuiComponent";
-import {GraphDLC} from "../../core/graphdlc";
 
 export class CustomTPSComponent extends CUIComponent {
-    graphDLC: GraphDLC;
-    field: HTMLInputElement;
-    tps: number;
+    private readonly field: HTMLInputElement;
+    private tps: number;
     
-    constructor(graphDLC: GraphDLC, parent: HTMLElement) {
+    constructor(parent: HTMLElement) {
         super(parent);
-        this.setVisibility(false);
 
-        this.graphDLC = graphDLC;
         this.tps = 0;
         
         this.element.classList.add("custom-tps-container");
@@ -30,24 +26,32 @@ export class CustomTPSComponent extends CUIComponent {
         });
         
         this.element.appendChild(this.field);
-
-        this.graphDLC.customTpsField = this;
+        this.setVisibility(false);
     }
     
-    isFocused() {
+    getTicksPerFrame(): number {
+        return Math.max(1, Math.round(this.tps / 60.0));
+    }
+    
+    isFocused(): boolean {
+        if (this.isRemoved) return false;
         return this.field === document.activeElement;
     }
     
-    setVisibility(visibility: boolean) {
+    focus() {
+        this.field.focus();
+    }
+    
+    blur() {
+        this.field.blur();
+    }
+    
+    setVisibility(visibility: boolean): void {
+        if (this.isRemoved) return;
         const beHidden = this.element.hidden;
         super.setVisibility(visibility);
         if (beHidden && visibility) {
-            this.field.focus();
+            this.focus();
         }
-    }
-
-    remove() {
-        this.graphDLC.customTpsField = undefined;
-        super.remove();
     }
 }
