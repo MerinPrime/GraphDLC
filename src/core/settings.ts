@@ -1,6 +1,6 @@
 import {DebugMode} from "../ast/astDebugger";
 
-type SettingsData = {
+export type SettingsData = {
     tpsUpdateFrequencyMs: number;
     fullRendering: boolean;
 
@@ -20,6 +20,14 @@ type SettingsData = {
     
     debugMode: DebugMode;
 }
+
+export type SettingKey = keyof SettingsData;
+export type BoolSettingKey = {
+    [K in SettingKey]: SettingsData[K] extends boolean ? K : never
+}[SettingKey];
+export type NumberSettingKey = {
+    [K in SettingKey]: SettingsData[K] extends number ? K : never
+}[SettingKey];
 
 export class Settings {
     private static readonly STORAGE_KEY = 'graphdlc';

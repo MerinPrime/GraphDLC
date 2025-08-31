@@ -43,10 +43,6 @@
     left: 1vmin;
 }
 
-.settings-space {
-    height: 1vh;
-}
-
 .setting-value select {
     border-radius: 0.6vh !important;
     padding: 0.2rem !important;
