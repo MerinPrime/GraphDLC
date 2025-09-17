@@ -22,7 +22,8 @@ export function PatchSettingsPage(graphDLC: GraphDLC) {
         const PageProtoPtr = patchLoader.getDefinitionPtr<PageProto>("Page");
         const LangSettingsPtr = patchLoader.getDefinitionPtr<any>("LangSettings");
         const LangUtilsPtr = patchLoader.getDefinitionPtr<any>("LangUtils");
-        patchLoader.setDefinition("SettingsPage", class SettingsPage extends PageProtoPtr.definition {
+        const PageProto = PageProtoPtr.definition;
+        patchLoader.setDefinition("SettingsPage", class SettingsPage extends PageProto {
             table: HTMLTableElement;
 
             constructor(container: HTMLElement) {
