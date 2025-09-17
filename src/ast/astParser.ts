@@ -26,22 +26,15 @@ export class ASTParser {
     compileFrom(gameMap: GameMap): RootNode {
         const CHUNK_SIZE = this.ChunkSizePtr.definition;
 
-        gameMap.chunks.forEach((chunk) => {
-            chunk.arrows.forEach((arrow) => {
-                arrow.lastSignal = 0;
-                arrow.signal = 0;
-                arrow.signalsCount = 0;
-                arrow.astNode = undefined;
-            });
-        });
-        
         const processingStack: Array<ArrowContext> = [];
         gameMap.chunks.forEach((chunk) => {
             for (let y = 0; y < CHUNK_SIZE; y++) {
                 for (let x = 0; x < CHUNK_SIZE; x++) {
                     const arrow = chunk.arrows[x + y * CHUNK_SIZE];
+                    
                     arrow.x = x + chunk.x * CHUNK_SIZE;
-                    arrow.y = y + chunk.y * CHUNK_SIZE;
+                    arrow.y = y + chunk.y * CHUNK_SIZE; // TODO: Implement XY position saving in GameMap
+                    
                     const astType = getASTType(arrow.type);
                     if (!astType.isEntryPoint) continue;
                     processingStack.push({chunk, arrow, x, y});
@@ -49,6 +42,7 @@ export class ASTParser {
             }
         });
         
+        const linkedNodes = new Set<Arrow>();
         const rootNode = new RootNode();
         while (processingStack.length > 0) {
             const { chunk, arrow, x, y } = processingStack.pop()!;
@@ -59,13 +53,14 @@ export class ASTParser {
                 continue;
             }
             
-            if (!arrow.astNode) {
-                arrow.astNode = new ASTNode().makeFromArrow(arrow);
-            } else if (arrow.astNode.linked) continue;
+            if (linkedNodes.has(arrow))
+                continue;
+            if (!rootNode.astNodes.has(arrow))
+                rootNode.astNodes.set(arrow, new ASTNode().makeFromArrow(arrow));
             
-            const astNode = arrow.astNode;
-            astNode.linked = true;
-            
+            const astNode = rootNode.astNodes.get(arrow)!;
+            linkedNodes.add(arrow);
+
             if (astNode.type.isEntryPoint) {
                 rootNode.allEdges.push(astNode);
             }
@@ -79,6 +74,7 @@ export class ASTParser {
 
                 const [edgeArrow, edgeX, edgeY, edgeChunk] = edgeData;
                 const astType = getASTType(edgeArrow.type);
+                
                 if (astType.notAllowedToChange && arrow.type !== ArrowType.BLOCKER || astType === ASTNodeType.EMPTY) {
                     continue;
                 }
@@ -86,10 +82,12 @@ export class ASTParser {
                     console.warn(`Founded arrow with uncommon type: ${edgeArrow.type}`)
                     continue;
                 }
-                if (!edgeArrow.astNode) {
-                    edgeArrow.astNode = new ASTNode().makeFromArrow(edgeArrow);
+                
+                if (!rootNode.astNodes.has(edgeArrow)) {
+                    rootNode.astNodes.set(edgeArrow, new ASTNode().makeFromArrow(edgeArrow));
                 }
-                const edgeNode = edgeArrow.astNode;
+
+                const edgeNode = rootNode.astNodes.get(edgeArrow)!;
                 edgeNode.backEdges.push(astNode);
                 astNode.allEdges.push(edgeNode);
                 astNode.edges.push(edgeNode);
@@ -118,10 +116,10 @@ export class ASTParser {
 
                 const [_, detectX, detectY, detectChunk] = detectData;
                 if (detectX === x && detectY === y && detectChunk === chunk) {
-                    if (!edgeArrow.astNode) {
-                        edgeArrow.astNode = new ASTNode().makeFromArrow(edgeArrow);
+                    if (!rootNode.astNodes.has(edgeArrow)) {
+                        rootNode.astNodes.set(edgeArrow, new ASTNode().makeFromArrow(edgeArrow));
                     }
-                    const detectorNode = edgeArrow.astNode;
+                    const detectorNode = rootNode.astNodes.get(edgeArrow)!;
                     detectorNode.specialNode = astNode;
                     detectorNode.backEdges.push(astNode);
                     astNode.allEdges.push(detectorNode);

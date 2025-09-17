@@ -18,7 +18,6 @@ export interface Arrow {
     canBeEdited: boolean;
 
     // Graph-DLC
-    astNode?: ASTNode;
     astIndex?: number;
     cycleID?: number;
     cycleIndex?: number;

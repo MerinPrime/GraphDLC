@@ -72,11 +72,6 @@ export class ASTNode {
             removeInArray(edge.backEdges);
         }
 
-        for (let i = 0; i < this.arrows.length; i++) {
-            const arrow = this.arrows[i];
-            if (arrow.astNode === this) arrow.astNode = undefined;
-        }
-        
         this.arrows.length = 0;
         this.backEdges.length = 0;
         this.allEdges.length = 0;
@@ -123,7 +118,6 @@ export class ASTNode {
 
         for (let i = 0; i < this.arrows.length; i++) {
             const arrow = this.arrows[i];
-            arrow.astNode = newNode;
             newNode.arrows.push(arrow);
         }
     }

@@ -72,7 +72,7 @@ export class ASTDebugger {
         for (const value of gameMap.chunks.values()) {
             for (let i = 0; i < value.arrows.length; i++) {
                 const arrow = value.arrows[i];
-                if (arrow.astNode === undefined)
+                if (!rootNode.astNodes.has(arrow))
                     arrow.signal = 7;
                 else
                     arrow.signal = 0;

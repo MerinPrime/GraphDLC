@@ -1,13 +1,9 @@
 import {GraphDLC} from "../core/graphdlc";
 import {GameMap} from "../api/gameMap";
-import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
-import {NodeSignal} from "../graph/nodeSignal";
 import {getArrowRelations} from "../ast/astParser";
 import {ASTNode} from "../ast/astNode";
 import {ArrowType} from "../api/arrowType";
-import {ACTIVE_SIGNALS} from "../graph/signals";
-import {PlayerSettings} from "../api/playerSettings";
 import {ChunkUpdates} from "../api/chunkUpdates";
 import {GameProto} from "../api/game";
 
@@ -16,8 +12,6 @@ export function PatchGame(graphDLC: GraphDLC) {
     const settings = graphDLC.settings;
     
     const CellSizePtr = patchLoader.getDefinitionPtr<number>('CELL_SIZE');
-    const ChunkSizePtr = patchLoader.getDefinitionPtr<number>('CHUNK_SIZE');
-    const PlayerSettingsPtr = patchLoader.getDefinitionPtr<PlayerSettings>('PlayerSettings');
     const ChunkUpdatesPtr = patchLoader.getDefinitionPtr<ChunkUpdates>('ChunkUpdates');
 
     let renderDelta = 0;
@@ -66,23 +60,24 @@ export function PatchGame(graphDLC: GraphDLC) {
                 }
                 if (!selectedArrowDrawn && settings.data.showArrowConnections && graphDLC.rootNode) {
                     if (arrowAtCursor) {
-                        if (arrowAtCursor.astNode) {
+                        const astNode = graphDLC.rootNode.astNodes.get(arrowAtCursor);
+                        if (astNode) {
                             this.render.setSolidColor(0.0, 1.0, 0.0, 0.25);
-                            arrowAtCursor.astNode.allEdges.forEach((edge: ASTNode) => {
+                            astNode.allEdges.forEach((edge: ASTNode) => {
                                 edge.arrows.forEach((ar) => {
                                     if (ar.x === undefined || ar.y === undefined) return;
                                     this.render.drawSolidColor(ar.x * scale + offsetX, ar.y * scale + offsetY, scale, scale);
                                 });
                             })
                             this.render.setSolidColor(1.0, 0.0, 0.0, 0.25);
-                            arrowAtCursor.astNode.backEdges.forEach((edge: ASTNode) => {
+                            astNode.backEdges.forEach((edge: ASTNode) => {
                                 edge.arrows.forEach((ar) => {
                                     if (ar.x === undefined || ar.y === undefined) return;
                                     this.render.drawSolidColor(ar.x * scale + offsetX, ar.y * scale + offsetY, scale, scale);
                                 });
                             });
                             this.render.setSolidColor(0.0, 0.0, 1.0, 0.25);
-                            arrowAtCursor.astNode.arrows.forEach((ar: Arrow) => {
+                            astNode.arrows.forEach((ar: Arrow) => {
                                 if (ar.x === undefined || ar.y === undefined) return;
                                 this.render.drawSolidColor(ar.x * scale + offsetX, ar.y * scale + offsetY, scale, scale);
                             });

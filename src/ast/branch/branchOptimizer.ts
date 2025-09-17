@@ -1,5 +1,4 @@
 import {ASTNode} from "../astNode";
-import {CycleHeadNode} from "../cycle/cycleHeadNode";
 import {RootNode} from "../rootNode";
 import {ASTNodeType} from "../astNodeType";
 
