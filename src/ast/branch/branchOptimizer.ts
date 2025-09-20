@@ -14,7 +14,6 @@ export class BranchOptimizer {
             }
             visited.add(node);
             if (!node.skipOptimization) {
-                // FORWARD
                 if (node.arrows.length !== 0) {
                     const validNodes = [];
                     const logicSet = new Set();
@@ -61,45 +60,6 @@ export class BranchOptimizer {
                         }
                     }
                 }
-                // BACKWARD
-                // CURRENTLY BROKEN AND IDK WHY
-                // I think we need to check circular edges to fix that
-                // if (node.arrows.length !== 0 && node.type === ASTNodeType.PATH) {
-                //     const validNodes = [];
-                //     for (let i = 0; i < node.backEdges.length; i++) {
-                //         const backEdge = node.backEdges[i];
-                //         if (backEdge.backEdges.some((x) => x.type === ASTNodeType.BLOCKER)) {
-                //             continue;
-                //         }
-                //         if (backEdge.type === ASTNodeType.PATH) {
-                //             validNodes.push(backEdge);
-                //         }
-                //     }
-                //     if (validNodes.length >= 2) {
-                //         const mustBeEdges = new Set(validNodes[0].allEdges);
-                //         let isValid = true;
-                //         for (let i = 0; i < validNodes.length && isValid; i++) {
-                //             const validNode = validNodes[i];
-                //             if (validNode.allEdges.length !== mustBeEdges.size) {
-                //                 isValid = false;
-                //                 break
-                //             }
-                //             for (let j = 0; j < validNode.allEdges.length; j++) {
-                //                 const edge = validNode.allEdges[j];
-                //                 if (!mustBeEdges.has(edge)) {
-                //                     isValid = false;
-                //                     break;
-                //                 }
-                //             }
-                //         }
-                //         if (isValid) {
-                //             const newNode = new ASTNode().combine(validNodes);
-                //             newNode.isBranch = true;
-                //             node.backEdges.push(newNode);
-                //             node.filterDuplicates();
-                //         }
-                //     }
-                // }
             }
             nodeQueue.push(...node.allEdges);
         }
