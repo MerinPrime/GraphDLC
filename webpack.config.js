@@ -54,6 +54,9 @@ module.exports = (env) => {
             minimizer: isProduction ? [
                 new TerserPlugin({
                     terserOptions: {
+                        format: {
+                            comments: /==UserScript==|@name|@version|@author|@description|@match|@grant|@run-at|@namespace/,
+                        },
                         compress: {
                             drop_console: false,
                             unsafe: true,
