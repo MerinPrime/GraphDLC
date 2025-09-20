@@ -5,7 +5,7 @@ import {CycleHeadNode} from "./cycle/cycleHeadNode";
 import {ASTNodeType} from "./astNodeType";
 import {getArrowRelations} from "./astParser";
 
-export enum DebugMode {
+export const enum DebugMode {
     NONE = 0,
     NODE_TYPES = 1,
     DEBUG_PROPAGATION = 2,

@@ -4,7 +4,7 @@ import {I18nText} from "../api/i18nText";
 import {Page, PageProto} from "../api/page";
 import {BoolSettingKey, NumberSettingKey, SettingKey, SettingsData} from "../core/settings";
 
-export enum TextColor {
+export const enum TextColor {
     BLACK = "rgb(0, 0, 0)",
     GRAY = "rgb(80, 80, 80)",
     BLUE = "rgb(55, 95, 187)",

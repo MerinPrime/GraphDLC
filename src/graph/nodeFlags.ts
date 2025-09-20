@@ -1,4 +1,4 @@
-export enum NodeFlags {
+export const enum NodeFlags {
     EntryPoint = 0b1,
     AdditionalUpdate = 0b10,
     CycleHead = 0b100,

@@ -1,7 +1,7 @@
 import {ArrowType} from "../../api/arrowType";
 import {ASTNodeType} from "../astNodeType";
 
-export enum CycleHeadType {
+export const enum CycleHeadType {
     WRITE = 0,
     XOR_WRITE = 1,
     READ = 2,

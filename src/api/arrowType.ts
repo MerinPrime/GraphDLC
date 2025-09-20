@@ -1,4 +1,4 @@
-export enum ArrowType {
+export const enum ArrowType {
     EMPTY = 0,
     ARROW = 1,
     SOURCE = 2,
