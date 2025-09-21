@@ -1,4 +1,4 @@
-import { GraphDLC } from "../core/graphdlc";
+import { GraphDLC } from "../core/graphDLC";
 import {UIRangeProto} from "../api/uiRange";
 import {InfoContainerComponent} from "./custom/infoContainerComponent";
 import {PlayerUIProto} from "../api/playerUI";

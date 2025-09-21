@@ -1,4 +1,4 @@
-import {GraphDLC} from "../core/graphdlc";
+import {GraphDLC} from "../core/graphDLC";
 import {GameMap} from "../api/gameMap";
 import {Arrow} from "../api/arrow";
 import {getArrowRelations} from "../ast/astParser";

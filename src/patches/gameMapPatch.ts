@@ -1,6 +1,6 @@
 import { ArrowType } from "../api/arrowType";
 import {GameMap, GameMapProto} from "../api/gameMap";
-import { GraphDLC } from "../core/graphdlc";
+import { GraphDLC } from "../core/graphDLC";
 
 export function PatchGameMap(graphDLC: GraphDLC) {
     const patchLoader = graphDLC.patchLoader;

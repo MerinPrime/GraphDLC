@@ -1,5 +1,5 @@
 import {ArrowType} from "../api/arrowType";
-import {GraphDLC} from "../core/graphdlc";
+import {GraphDLC} from "../core/graphDLC";
 import {NodeSignal} from "../graph/nodeSignal";
 import {PlayerControlsProto} from "../api/playerControls";
 import {Game} from "../api/game";
