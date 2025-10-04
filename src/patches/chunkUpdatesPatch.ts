@@ -1,7 +1,7 @@
 import {GameMap} from "../api/gameMap";
 import {Chunk} from "../api/chunk";
 import {Arrow} from "../api/arrow";
-import {GraphDLC} from "../core/graphdlc";
+import {GraphDLC} from "../core/graphDLC";
 import {Game} from "../api/game";
 import {ChunkUpdates} from "../api/chunkUpdates";
 

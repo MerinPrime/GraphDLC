@@ -2,18 +2,19 @@ import {GraphNode} from "../graph_compiler/graph_node";
 import {ASTNode} from "../ast/astNode";
 import {ArrowType} from "./arrowType";
 import {SignalWrapper} from "../graph/signalWrapper";
+import { ArrowSignal } from "./arrowSignal";
 
 export interface Arrow {
     type: ArrowType;
     rotation: number;
     flipped: boolean;
-    signal: SignalWrapper | number;
+    signal: SignalWrapper | ArrowSignal;
     signalsCount: number;
     
     lastType: ArrowType;
     lastRotation: number;
     lastFlipped: boolean;
-    lastSignal: number;
+    lastSignal: ArrowSignal;
     
     canBeEdited: boolean;
 

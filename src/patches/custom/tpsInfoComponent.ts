@@ -1,5 +1,5 @@
 import {CUIComponent} from "./cuiComponent";
-import {GraphDLC} from "../../core/graphdlc";
+import {GraphDLC} from "../../core/graphDLC";
 import {Settings} from "../../core/settings";
 import {GameText} from "../../api/gameText";
 

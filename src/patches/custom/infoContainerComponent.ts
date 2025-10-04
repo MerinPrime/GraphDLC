@@ -1,5 +1,5 @@
 import {CUIComponent} from "./cuiComponent";
-import {GraphDLC} from "../../core/graphdlc";
+import {GraphDLC} from "../../core/graphDLC";
 import {TPSInfoComponent} from "./tpsInfoComponent";
 
 export class InfoContainerComponent extends CUIComponent {

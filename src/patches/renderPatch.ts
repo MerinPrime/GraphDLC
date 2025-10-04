@@ -1,4 +1,4 @@
-import { GraphDLC } from "../core/graphdlc";
+import { GraphDLC } from "../core/graphDLC";
 import {RenderProto} from "../api/render";
 import {SignalWrapper} from "../graph/signalWrapper";
 import {Game} from "../api/game";

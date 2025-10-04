@@ -1,4 +1,4 @@
-import { GraphDLC } from "../core/graphdlc";
+import { GraphDLC } from "../core/graphDLC";
 import {I18nTextProto} from "../api/i18nText";
 import {GameText} from "../api/gameText";
 
