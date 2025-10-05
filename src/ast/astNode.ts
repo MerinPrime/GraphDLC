@@ -1,6 +1,7 @@
 import {Arrow} from "../api/arrow";
 import {ASTNodeType, getASTType} from "./astNodeType";
 import {removeWithSwap} from "../utility/removeWithSwap";
+import {replaceBy} from "../utility/replaceBy";
 
 export class ASTNode {
     arrows: Arrow[] = [];
@@ -65,35 +66,26 @@ export class ASTNode {
     }
     
     replaceBy(newNode: ASTNode) {
-        const replaceInArray = (array: ASTNode[]) => {
-            const inArrayIndex = array.indexOf(this);
-            if (inArrayIndex === -1) {
-                return;
-            }
-            array.splice(inArrayIndex, 1);
-            array.push(newNode);
-        };
-
         newNode.type = this.type;
         
         for (let i = 0; i < this.backEdges.length; i++) {
             const backEdge = this.backEdges[i];
-            replaceInArray(backEdge.allEdges);
-            replaceInArray(backEdge.edges);
-            replaceInArray(backEdge.detectors);
+            replaceBy(backEdge.allEdges, this, newNode);
+            replaceBy(backEdge.edges, this, newNode);
+            replaceBy(backEdge.detectors, this, newNode);
             newNode.backEdges.push(backEdge);
         }
 
         for (let i = 0; i < this.edges.length; i++) {
             const edge = this.edges[i];
-            replaceInArray(edge.backEdges);
+            replaceBy(edge.backEdges, this, newNode);
             newNode.allEdges.push(edge);
             newNode.edges.push(edge);
         }
 
         for (let i = 0; i < this.detectors.length; i++) {
             const edge = this.detectors[i];
-            replaceInArray(edge.backEdges);
+            replaceBy(edge.backEdges, this, newNode);
             newNode.allEdges.push(edge);
             newNode.detectors.push(edge);
         }
