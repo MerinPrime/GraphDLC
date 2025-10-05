@@ -298,10 +298,6 @@ export class CycleOptimizer {
                     }
                 }
                 const oldNode = cycleHeadType === CycleHeadType.READ ? current : prev;
-                if (oldNode.skipOptimization) {
-                    isValid = false;
-                    break;
-                }
                 const newNode = new CycleHeadNode(cycleData);
                 newNode.cycleHeadType = cycleHeadType;
                 newNode.index = cycleHeadType === CycleHeadType.READ ? (cycle.length + index - 1) % cycle.length : index;

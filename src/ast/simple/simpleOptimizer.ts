@@ -16,9 +16,6 @@ export class SimpleOptimizer {
             visited.add(node);
             nodeQueue.push(...node.allEdges);
 
-            if (node.skipOptimization)
-                continue;
-            
             if ((node.type === ASTNodeType.LOGIC_AND || node.type === ASTNodeType.LATCH) && node.backEdges.length < 2 ||
                 (!node.type.isEntryPoint && node.backEdges.length === 0) ||
                 (node.type === ASTNodeType.DETECTOR && node.specialNode === undefined)) {

@@ -13,7 +13,7 @@ export class BranchOptimizer {
                 continue;
             }
             visited.add(node);
-            if (!node.skipOptimization) {
+            if (node.type != ASTNodeType.WRITE_CYCLE_HEAD && node.type != ASTNodeType.READ_CYCLE_HEAD) {
                 if (node.arrows.length !== 0) {
                     const validNodes = [];
                     const logicSet = new Set();
