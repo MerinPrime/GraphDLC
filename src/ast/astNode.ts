@@ -1,5 +1,6 @@
 import {Arrow} from "../api/arrow";
 import {ASTNodeType, getASTType} from "./astNodeType";
+import {removeWithSwap} from "../utility/removeWithSwap";
 
 export class ASTNode {
     arrows: Arrow[] = [];
@@ -38,29 +39,13 @@ export class ASTNode {
         }
         return this;
     }
-
-    removeFromArray(array: ASTNode[]) {
-        const inArrayIndex = array.indexOf(this);
-        if (inArrayIndex === -1) {
-            return;
-        }
-        array.splice(inArrayIndex, 1);
-    };
     
     remove() {
-        const removeInArray = (array: ASTNode[]) => {
-            const inArrayIndex = array.indexOf(this);
-            if (inArrayIndex === -1) {
-                return;
-            }
-            array.splice(inArrayIndex, 1);
-        };
-        
         for (let i = 0; i < this.backEdges.length; i++) {
             const backEdge = this.backEdges[i];
-            removeInArray(backEdge.allEdges);
-            removeInArray(backEdge.edges);
-            removeInArray(backEdge.detectors);
+            removeWithSwap(backEdge.allEdges, this);
+            removeWithSwap(backEdge.edges, this);
+            removeWithSwap(backEdge.detectors, this);
             if (backEdge.specialNode === this) {
                 backEdge.specialNode = undefined;
             }
@@ -68,7 +53,7 @@ export class ASTNode {
 
         for (let i = 0; i < this.allEdges.length; i++) {
             const edge = this.allEdges[i];
-            removeInArray(edge.backEdges);
+            removeWithSwap(edge.backEdges, this);
         }
 
         this.arrows.length = 0;
@@ -76,7 +61,7 @@ export class ASTNode {
         this.allEdges.length = 0;
         this.edges.length = 0;
         this.detectors.length = 0;
-        this.type = ASTNodeType.PATH;
+        this.type = ASTNodeType.UNKNOWN;
         this.specialNode = undefined;
     }
     

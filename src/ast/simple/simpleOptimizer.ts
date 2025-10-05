@@ -1,6 +1,7 @@
 import {RootNode} from "../rootNode";
 import {ASTNode} from "../astNode";
 import {ASTNodeType} from "../astNodeType";
+import {removeWithSwap} from "../../utility/removeWithSwap";
 
 export class SimpleOptimizer {
     optimizeSimple(rootNode: RootNode) {
@@ -31,7 +32,7 @@ export class SimpleOptimizer {
                 node.type = ASTNodeType.PATH;
             } else if (node.type === ASTNodeType.DETECTOR && node.specialNode!.type !== ASTNodeType.IMPULSE && node.specialNode!.type !== ASTNodeType.DELAY) {
                 const detectedNode = node.specialNode!;
-                node.removeFromArray(detectedNode.detectors);
+                removeWithSwap(detectedNode.detectors, node);
                 node.specialNode = undefined;
                 node.type = ASTNodeType.PATH;
                 detectedNode.edges.push(node);
