@@ -26,6 +26,10 @@ export class SimpleOptimizer {
                     const edge = node.allEdges[i];
                     visited.delete(edge);
                 }
+                for (let i = 0; i < node.backEdges.length; i++) {
+                    const backEdge = node.backEdges[i];
+                    visited.delete(backEdge);
+                }
                 node.remove();
             } else if ((node.type === ASTNodeType.LOGIC_XOR && node.backEdges.length < 2) ||
                 (node.type === ASTNodeType.BLOCKER && node.specialNode === undefined)) {
