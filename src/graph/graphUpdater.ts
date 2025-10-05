@@ -65,8 +65,6 @@ export class GraphUpdater {
             const isChanged = graphState.lastSignals[nodeID] !== signal;
             
             if (isChanged) {
-                // If delay blocked and is pending he is make delta -1 and overflow makes 255 signalsCount
-                // Fix that
                 const delta = isActive ? 1 : -1;
                 const isDelayed = type === DelayTypeIndex && signal === NodeSignal.PENDING || !isActive && graphState.lastSignals[nodeID] === NodeSignal.PENDING;
                 
