@@ -48,7 +48,7 @@ export class BranchOptimizer {
                             }
                         }
                         if (isValid) {
-                            const newNode = new ASTNode().combine(validNodes);
+                            const newNode = new ASTNode().combine(rootNode, validNodes);
                             newNode.isBranch = true;
                             node.allEdges.push(newNode);
                             node.edges.push(newNode);

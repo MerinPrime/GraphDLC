@@ -27,7 +27,7 @@ export class SimpleOptimizer {
                     const backEdge = node.backEdges[i];
                     visited.delete(backEdge);
                 }
-                node.remove();
+                node.remove(rootNode);
             } else if ((node.type === ASTNodeType.LOGIC_XOR && node.backEdges.length < 2) ||
                 (node.type === ASTNodeType.BLOCKER && node.specialNode === undefined)) {
                 node.type = ASTNodeType.PATH;

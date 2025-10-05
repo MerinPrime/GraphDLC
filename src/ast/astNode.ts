@@ -2,6 +2,7 @@ import {Arrow} from "../api/arrow";
 import {ASTNodeType, getASTType} from "./astNodeType";
 import {removeWithSwap} from "../utility/removeWithSwap";
 import {replaceBy} from "../utility/replaceBy";
+import {RootNode} from "./rootNode";
 
 export class ASTNode {
     arrows: Arrow[] = [];
@@ -28,19 +29,19 @@ export class ASTNode {
         return this;
     }
     
-    combine(nodes: ASTNode[]): ASTNode {
+    combine(rootNode: RootNode, nodes: ASTNode[]): ASTNode {
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
             node.replaceBy(this);
         }
         this.filterDuplicates();
         for (let i = 0; i < nodes.length; i++) {
-            nodes[i].remove();
+            nodes[i].remove(rootNode);
         }
         return this;
     }
     
-    remove() {
+    remove(rootNode: RootNode) {
         for (let i = 0; i < this.backEdges.length; i++) {
             const backEdge = this.backEdges[i];
             removeWithSwap(backEdge.allEdges, this);
@@ -55,6 +56,12 @@ export class ASTNode {
             const edge = this.allEdges[i];
             removeWithSwap(edge.backEdges, this);
         }
+
+        for (let i = 0; i < this.arrows.length; i++) {
+            const arrow = this.arrows[i];
+            rootNode.astNodes.delete(arrow);
+        }
+        removeWithSwap(rootNode.allEdges, this);
 
         this.arrows.length = 0;
         this.backEdges.length = 0;

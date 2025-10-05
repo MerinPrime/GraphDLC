@@ -307,7 +307,7 @@ export class CycleOptimizer {
             for (let j = 0; j < cycle.length; j++) {
                 const cycleArrow = cycle[j];
                 cycleData.cycle.push(...cycleArrow.arrows);
-                cycleArrow.remove();
+                cycleArrow.remove(rootNode);
             }
             for (let j = 0; j < cycleHeadNodes.length; j++) {
                 const [oldNode, newNode] = cycleHeadNodes[j];
