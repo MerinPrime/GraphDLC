@@ -20,8 +20,7 @@ export class SimpleOptimizer {
             
             if ((node.type === ASTNodeType.LOGIC_AND || node.type === ASTNodeType.LATCH) && node.backEdges.length < 2 ||
                 (!node.type.isEntryPoint && node.backEdges.length === 0) ||
-                (node.type === ASTNodeType.DETECTOR && node.specialNode === undefined) ||
-                (node.type === ASTNodeType.BLOCKER && node.allEdges.length === 0)) {
+                (node.type === ASTNodeType.DETECTOR && node.specialNode === undefined)) {
                 for (let i = 0; i < node.allEdges.length; i++) {
                     const edge = node.allEdges[i];
                     visited.delete(edge);
