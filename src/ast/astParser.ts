@@ -96,7 +96,7 @@ export class ASTParser {
                     astNode.specialNode = edgeNode;
                 }
                 
-                if (!edgeNode.linked) {
+                if (!linkedNodes.has(edgeArrow)) {
                     processingStack.push({ chunk: edgeChunk, arrow: edgeArrow, x: edgeX, y: edgeY });
                 }
             }
@@ -124,7 +124,7 @@ export class ASTParser {
                     detectorNode.backEdges.push(astNode);
                     astNode.allEdges.push(detectorNode);
                     astNode.detectors.push(detectorNode);
-                    if (!detectorNode.linked) {
+                    if (!linkedNodes.has(edgeArrow)) {
                         processingStack.push({ chunk: edgeChunk, arrow: edgeArrow, x: edgeX, y: edgeY });
                     }
                 }

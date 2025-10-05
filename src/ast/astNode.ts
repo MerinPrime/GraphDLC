@@ -7,7 +7,6 @@ export class ASTNode {
     allEdges: ASTNode[] = [];
     edges: ASTNode[] = [];
     detectors: ASTNode[] = [];
-    linked: boolean = false;
     type: ASTNodeType = ASTNodeType.PATH;
     isBranch: boolean = false;
     specialNode: ASTNode | undefined = undefined; // Detector & Blocker
@@ -77,7 +76,6 @@ export class ASTNode {
         this.allEdges.length = 0;
         this.edges.length = 0;
         this.detectors.length = 0;
-        this.linked = false;
         this.type = ASTNodeType.PATH;
         this.specialNode = undefined;
     }
