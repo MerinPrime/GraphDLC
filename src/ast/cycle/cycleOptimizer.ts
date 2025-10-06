@@ -8,7 +8,6 @@ import {RootNode} from "../rootNode";
 const ALLOWED_IN_CYCLE = new Set([
     ASTNodeType.PATH,
     ASTNodeType.DELAY,
-    ASTNodeType.LOGIC_NOT,
     ASTNodeType.LOGIC_XOR,
 ]);
 
