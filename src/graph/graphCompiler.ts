@@ -6,6 +6,7 @@ import {CycleData} from "../ast/cycle/cycleData";
 import {NodeFlags} from "./nodeFlags";
 import {CycleHeadType} from "../ast/cycle/cycleHeadType";
 import {SignalWrapper} from "./signalWrapper";
+import {RingBuffer} from "../utility/ringBuffer";
 
 export class GraphCompiler {
     compile(rootNode: RootNode): GraphState {
@@ -14,9 +15,10 @@ export class GraphCompiler {
         let totalEdgesCount = 0;
         let totalEntryPointCount = 0;
         
-        const queue = [...rootNode.allEdges];
-        while (queue.length > 0) {
-            const node = queue.shift()!;
+        const ringBuffer = new RingBuffer<ASTNode>(rootNode.allEdges.length);
+        ringBuffer.multiPush(rootNode.allEdges);
+        while (ringBuffer.size > 0) {
+            const node = ringBuffer.pop()!;
             if (!nodeToIndex.has(node)) {
                 nodeToIndex.set(node, indexToNode.length);
                 for (let i = 0; i < node.arrows.length; i++) {
@@ -24,7 +26,7 @@ export class GraphCompiler {
                     arrow.astIndex = indexToNode.length;
                 }
                 indexToNode.push(node);
-                queue.push(...node.allEdges);
+                ringBuffer.multiPush(node.allEdges);
                 totalEdgesCount += node.allEdges.length;
                 if (node.type.isEntryPoint) {
                     totalEntryPointCount += 1;
