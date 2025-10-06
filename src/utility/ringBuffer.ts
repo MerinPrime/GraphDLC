@@ -1,3 +1,5 @@
+import {toPowerOfTwo} from "./toPowerOfTwo";
+
 export class RingBuffer<T> {
     private buffer: (T | undefined)[];
     private head: number;
@@ -17,8 +19,8 @@ export class RingBuffer<T> {
         return this._size;
     }
     
-    private expand() {
-        const newCapacity = this.capacity * 2;
+    private expand(minimum: number = this.capacity + 1) {
+        const newCapacity = toPowerOfTwo(minimum);
         const newBuffer = new Array<T | undefined>(newCapacity);
 
         for (let i = 0; i < this._size; i++) {
@@ -39,6 +41,18 @@ export class RingBuffer<T> {
         this.buffer[this.tail] = value;
         this.tail = (this.tail + 1) % this.capacity;
         this._size++;
+    }
+    
+    multiPush(values: T[]) {
+        if ((this._size + values.length - 1) >= this.capacity) {
+            this.expand(this._size + values.length);
+        }
+
+        for (let i = 0; i < values.length; i++) {
+            this.buffer[this.tail] = values[i];
+            this.tail = (this.tail + 1) % this.capacity;
+        }
+        this._size += values.length;
     }
     
     pop(): T | undefined {
