@@ -18,7 +18,7 @@ export class GraphCompiler {
         const ringBuffer = new RingBuffer<ASTNode>(rootNode.allEdges.length);
         ringBuffer.multiPush(rootNode.allEdges);
         while (ringBuffer.size > 0) {
-            const node = ringBuffer.pop()!;
+            const node = ringBuffer.popTail()!;
             if (!nodeToIndex.has(node)) {
                 nodeToIndex.set(node, indexToNode.length);
                 for (let i = 0; i < node.arrows.length; i++) {
