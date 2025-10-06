@@ -22,13 +22,14 @@ export function PatchPlayerControls(graphDLC: GraphDLC) {
 
                     if (!arrow || !this.freeCursor || shiftPressed) return;
 
-                    const isTargetType = arrow.type === 21 || arrow.type === 24;
+                    const isTargetType = arrow.type === ArrowType.BUTTON || arrow.type === ArrowType.DIRECTIONAL_BUTTON;
                     if (!isTargetType) return;
-
-                    const shouldSetSignal = arrow.signal === 0 || this.game.playing;
+                    
                     const graphState = graphDLC.graphState;
                     const astIndex = arrow.astIndex;
                     const hasCompiledGraph = graphState !== undefined && astIndex !== undefined;
+                    
+                    const shouldSetSignal = (hasCompiledGraph ? graphState.signals[astIndex] === NodeSignal.NONE : arrow.signal === 0) || this.game.playing;
 
                     if (shouldSetSignal) {
                         if (arrow.type === ArrowType.BUTTON) {
