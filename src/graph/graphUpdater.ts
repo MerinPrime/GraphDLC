@@ -24,8 +24,6 @@ import {NodeFlags} from "./nodeFlags";
 
 export class GraphUpdater {
     updateState(graphState: GraphState, tick: number) {
-        graphState.tempChangedNodes.count = 0;
-        
         for (let i = 0; i < graphState.changedNodes.count; i++) {
             const nodeID = graphState.changedNodes.arr[i];
             const flags = graphState.flags[nodeID];
@@ -131,6 +129,8 @@ export class GraphUpdater {
                     graphState.signals[nodeID] = signal;
             }
         }
+
+        graphState.tempChangedNodes.count = 0;
     }
     
     resetGraph(graphState: GraphState) {

@@ -42,22 +42,18 @@ export function PatchPlayerControls(graphDLC: GraphDLC) {
                             if (hasCompiledGraph) {
                                 graphState.signals[astIndex] = NodeSignal.ACTIVE;
                                 graphState.changedNodes.add(astIndex);
-                                // const buttonEdge = arrow.graph_node.buttonEdge;
-                                // if (!buttonEdge) {
-                                //     arrow.signal = 5;
-                                //     layersDLC.graph!.changed_nodes.add(arrow.graph_node);
-                                // } else {
-                                //     buttonEdge.arrow.signal = buttonEdge.handler.active_signal;
-                                //     buttonEdge.lastSignal = 0;
-                                //     layersDLC.graph!.changed_nodes.add(buttonEdge);
-                                //     layersDLC.graph!.delayed_update.add(buttonEdge);
-                                // }
                             } else {
                                 arrow.signal = 5;
                             }
                         }
                     } else {
-                        arrow.signal = 0;
+                        if (hasCompiledGraph) {
+                            graphState.signals[astIndex] = NodeSignal.NONE;
+                            graphState.changedNodes.add(astIndex);
+                            graphState.tempChangedNodes.add(astIndex);
+                        } else {
+                            arrow.signal = 0;
+                        }
                     }
 
                     this.game.screenUpdated = true;
