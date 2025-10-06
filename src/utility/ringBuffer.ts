@@ -65,6 +65,17 @@ export class RingBuffer<T> {
 
         return value;
     }
+    
+    popTail(): T | undefined {
+        if (this._size === 0) return undefined;
+
+        this.tail = (this.tail - 1 + this.capacity) % this.capacity;
+        const value = this.buffer[this.tail];
+        this.buffer[this.tail] = undefined;
+        this._size--;
+
+        return value;
+    }
 
     toArray(): T[] {
         const result: T[] = [];
