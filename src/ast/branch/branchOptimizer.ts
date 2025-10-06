@@ -1,14 +1,16 @@
 import {ASTNode} from "../astNode";
 import {RootNode} from "../rootNode";
 import {ASTNodeType} from "../astNodeType";
+import {RingBuffer} from "../../utility/ringBuffer";
 
 export class BranchOptimizer {
     optimizeBranches(rootNode: RootNode) {
         const visited = new Set<ASTNode>();
-        const nodeQueue: ASTNode[] = [rootNode];
+        const nodeRingBuffer = new RingBuffer<ASTNode>(rootNode.allEdges.length);
+        nodeRingBuffer.multiPush(rootNode.allEdges);
 
-        while (nodeQueue.length > 0) {
-            const node = nodeQueue.shift()!;
+        while (nodeRingBuffer.size > 0) {
+            const node = nodeRingBuffer.pop()!;
             if (visited.has(node)) {
                 continue;
             }
@@ -61,7 +63,7 @@ export class BranchOptimizer {
                     }
                 }
             }
-            nodeQueue.push(...node.allEdges);
+            nodeRingBuffer.multiPush(node.allEdges);
         }
     }
 }
