@@ -99,20 +99,6 @@ export function PatchGame(graphDLC: GraphDLC) {
                             }
                         }
                         this.screenUpdated = true;
-
-                        const astIndex = arrowAtCursor.astIndex;
-                        if (settings.data.showDebugInfo && astIndex !== undefined) {
-                            // let signal = arrowAtCursor.signal;
-                            // let lastSignal = arrowAtCursor.lastSignal;
-                            // if (graphState) {
-                            //     const astIndex = arrowAtCursor.astIndex;
-                            //     if (astIndex !== undefined) {
-                            //         signal = graphState.signals[astIndex];
-                            //         lastSignal = graphState.lastSignals[astIndex];
-                            //         if (signal === NodeSignal.ACTIVE) signal = ACTIVE_SIGNALS[arrowAtCursor.type];
-                            //     }
-                            // }
-                        }
                     }
                 }
                 this.render.disableSolidColor();
