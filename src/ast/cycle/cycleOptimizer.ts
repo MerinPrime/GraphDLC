@@ -247,6 +247,10 @@ export class CycleOptimizer {
                 if (cycleArrow.allEdges.length > 1) {
                     for (let k = 0; k < cycleArrow.allEdges.length; k++) {
                         const cycleEdge = cycleArrow.allEdges[k];
+                        if (cycleEdge.type !== ASTNodeType.LOGIC_AND) {
+                            isValid = false;
+                            break;
+                        }
                         if (cycleEdge === nextArrow) continue;
                         cycleHeads.push([cycleArrow, cycleEdge, j]);
                         anyEndpoint = true;
