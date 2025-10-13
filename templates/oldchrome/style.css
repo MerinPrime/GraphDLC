@@ -4,6 +4,10 @@
     --light-red: rgb(216, 34, 34) !important;
 }
 
+.ui-panel {
+    z-index: 3 !important;
+}
+
 .custom-tps-container {
     position: inherit;
     left: 0;
