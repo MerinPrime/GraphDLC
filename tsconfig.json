@@ -1,19 +1,24 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "lib": ["DOM", "ES2022"],
-    "strictNullChecks": true,
     "strict": true,
-    "esModuleInterop": true,
+    "strictNullChecks": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
     "outDir": "./dist",
     "noEmit": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*",
+    "webpack.config.ts",
+    "webpack/**/*"
   ],
   "exclude": [
     "node_modules"
