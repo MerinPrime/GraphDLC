@@ -1,5 +1,6 @@
 import { Configuration } from 'webpack';
 import TerserPlugin from 'terser-webpack-plugin';
+import path from 'node:path';
 
 export default (isProduction: boolean): Configuration => ({
     mode: isProduction ? 'production' : 'development',
@@ -8,9 +9,10 @@ export default (isProduction: boolean): Configuration => ({
     module: {
         rules: [
             {
-                test: /\.tsx?$/,
+                test: /\.ts$/, 
                 use: 'ts-loader',
-                exclude: /node_modules/,
+                include: [path.resolve(process.cwd(), 'src')], 
+                exclude: /logic-arrows/, 
             },
         ],
     },

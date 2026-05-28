@@ -18,7 +18,8 @@
   "include": [
     "src/**/*",
     "webpack.config.ts",
-    "webpack/**/*"
+    "webpack/**/*",
+    "logicarrows/src/**/*.ts"
   ],
   "exclude": [
     "node_modules"
