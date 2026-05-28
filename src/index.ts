@@ -1,10 +1,15 @@
-import {PatchLoader} from "./core/patchLoader";
-import { GraphDLC } from "./core/graphDLC";
+import { GraphDLC } from "./core/GraphDLC";
+import { PatchLoader } from "./core/PatchLoader";
 
-// const patchLoader = new PatchLoader();
-// patchLoader.hook();
-// const graphDLC = new GraphDLC(patchLoader);
-// graphDLC.inject();
+const patchLoader = new PatchLoader();
+patchLoader.hook();
+const graphDLC = new GraphDLC(patchLoader);
+graphDLC.inject();
 
-// // @ts-ignore
-// window.graphdlc = graphDLC;
+declare global {
+    interface Window {
+        graphdlc: GraphDLC;
+    }
+}
+
+window.graphdlc = graphDLC;
