@@ -14,6 +14,7 @@
   "author": "MerinPrime",
   "license": "ISC",
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/deflate-js": "^0.2.2",
     "@types/node": "^25.9.1",
     "@types/webpack": "^5.28.5",
