@@ -1,6 +1,6 @@
-import { Configuration } from 'webpack';
-import TerserPlugin from 'terser-webpack-plugin';
 import path from 'node:path';
+import TerserPlugin from 'terser-webpack-plugin';
+import type { Configuration } from 'webpack';
 
 export default (isProduction: boolean): Configuration => ({
     mode: isProduction ? 'production' : 'development',
@@ -9,33 +9,45 @@ export default (isProduction: boolean): Configuration => ({
     module: {
         rules: [
             {
-                test: /\.ts$/, 
-                use: 'ts-loader',
-                include: [path.resolve(process.cwd(), 'src')], 
-                exclude: /logic-arrows/, 
+                test: /\.ts$/,
+                use: [
+                    {
+                        loader: 'ts-loader',
+                        options: {
+                            transpileOnly: true,
+                        },
+                    },
+                ],
+                exclude: /node_modules/,
             },
         ],
     },
     resolve: {
-        extensions: ['.tsx', '.ts', '.js'],
+        extensions: ['.ts', '.js'],
+        alias: {
+            '@logic-arrows': path.resolve(__dirname, '../logic-arrows/src'),
+        },
     },
     performance: {
         hints: false,
     },
     optimization: {
         minimize: isProduction,
-        minimizer: isProduction ? [
-            new TerserPlugin({
-                terserOptions: {
-                    format: {
-                        comments: /==UserScript==|@name|@version|@author|@description|@match|@grant|@run-at|@namespace/,
-                    },
-                    compress: {
-                        drop_console: false,
-                        unsafe: true,
-                    },
-                },
-            }),
-        ] : [],
-    }
+        minimizer: isProduction
+            ? [
+                  new TerserPlugin({
+                      terserOptions: {
+                          format: {
+                              comments:
+                                  /==UserScript==|@name|@version|@author|@description|@match|@grant|@run-at|@namespace/,
+                          },
+                          compress: {
+                              drop_console: false,
+                              unsafe: true,
+                          },
+                      },
+                  }),
+              ]
+            : [],
+    },
 });

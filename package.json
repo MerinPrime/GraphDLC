@@ -1,13 +1,13 @@
 {
   "name": "graphdlc",
-  "version": "3.0.0-dev",
+  "version": "3.0.0.1",
   "description": "GraphDLC для стрелочек...",
   "main": "index.js",
   "scripts": {
     "build": "webpack --env production",
     "dev": "concurrently \"npm run watch:game\" \"npm run watch:graphdlc\" \"npm run server\"",
-    "watch:game": "cd logic-arrows && webpack --watch --output-path=../dist/dev",
-    "watch:graphdlc": "webpack --config webpack.config.ts --env development --watch",
+    "watch:game": "cd logic-arrows && webpack --watch --mode production --devtool false --output-path=../dist/dev",
+    "watch:graphdlc": "webpack --config webpack.config.ts --env production --watch",
     "server": "webpack serve --config webpack.config.ts --env development --stats=minimal"
   },
   "keywords": [],
