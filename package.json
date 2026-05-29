@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack --env production",
     "dev": "concurrently \"npm run watch:game\" \"npm run watch:graphdlc\" \"npm run server\"",
-    "watch:game": "cd logicarrows && webpack --watch --output-path=../dist/dev",
+    "watch:game": "cd logic-arrows && webpack --watch --output-path=../dist/dev",
     "watch:graphdlc": "webpack --config webpack.config.ts --env development --watch",
     "server": "webpack serve --config webpack.config.ts --env development --stats=minimal"
   },
