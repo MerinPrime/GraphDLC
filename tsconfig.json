@@ -13,7 +13,11 @@
     "noEmit": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@logic-arrows/*": ["./logic-arrows/src/*"]
+    }
   },
   "include": [
     "src/**/*",
@@ -22,6 +26,7 @@
     "logic-arrows/src/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist"
   ]
 }
