@@ -1,5 +1,5 @@
-import { GraphDLC } from "./core/GraphDLC";
-import { PatchLoader } from "./core/PatchLoader";
+import { GraphDLC } from './core/GraphDLC';
+import { PatchLoader } from './core/PatchLoader';
 
 const patchLoader = new PatchLoader();
 patchLoader.hook();
