@@ -16,6 +16,7 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
+      "src/*": ["src/*"],
       "@logic-arrows/*": ["./logic-arrows/src/*"]
     }
   },

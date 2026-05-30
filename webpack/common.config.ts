@@ -24,6 +24,7 @@ export default (isProduction: boolean): Configuration => ({
     },
     resolve: {
         extensions: ['.ts', '.js'],
+        modules: [path.resolve(__dirname, '..'), 'node_modules'],
         alias: {
             '@logic-arrows': path.resolve(__dirname, '../logic-arrows/src'),
         },
