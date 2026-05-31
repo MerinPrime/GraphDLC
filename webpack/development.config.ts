@@ -24,7 +24,7 @@ export default (): Configuration => ({
                     from: path.join(process.cwd(), 'logic-arrows', 'public'),
                     to: path.join(process.cwd(), 'dist', 'dev'),
                     globOptions: {
-                        ignore: ['**/index.html'],
+                        ignore: ['**/index.html', '**/bundle.js'],
                     },
                 },
                 {

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import TerserPlugin from 'terser-webpack-plugin';
 import type { Configuration } from 'webpack';
+import webpack from 'webpack';
 
 export default (isProduction: boolean): Configuration => ({
     mode: isProduction ? 'production' : 'development',
@@ -20,6 +21,17 @@ export default (isProduction: boolean): Configuration => ({
                 ],
                 exclude: /node_modules/,
             },
+            {
+                test: /\.scss$/,
+                resourceQuery: /raw/,
+                type: 'asset/source',
+                use: ['sass-loader'],
+            },
+            {
+                test: /\.scss$/,
+                resourceQuery: { not: [/raw/] },
+                use: ['style-loader', 'css-loader', 'sass-loader'],
+            },
         ],
     },
     resolve: {
@@ -32,6 +44,11 @@ export default (isProduction: boolean): Configuration => ({
     performance: {
         hints: false,
     },
+    plugins: [
+        new webpack.DefinePlugin({
+            'process.env.IS_DEBUG': JSON.stringify(!isProduction),
+        }),
+    ],
     optimization: {
         minimize: isProduction,
         minimizer: isProduction
