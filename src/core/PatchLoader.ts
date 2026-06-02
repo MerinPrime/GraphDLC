@@ -41,35 +41,36 @@ export class PatchLoader {
             if (key === '__esModule') continue;
 
             const definition = exports[key];
+            if (typeof definition !== 'function') continue;
 
-            if (
-                typeof definition === 'function' &&
-                (/^class\s/.test(
-                    Function.prototype.toString.call(definition),
-                ) ||
-                    /^class\{/.test(
-                        Function.prototype.toString
-                            .call(definition)
-                            .replace(/\s/g, ''),
-                    ))
-            ) {
-                const modLoader = this;
-                const original = definition;
+            const isClass =
+                /^class\s/.test(Function.prototype.toString.call(definition)) ||
+                /^class\{/.test(
+                    Function.prototype.toString
+                        .call(definition)
+                        .replace(/\s/g, ''),
+                );
 
-                let patchedClass = class extends original {
+            const modLoader = this;
+            const original = definition;
+            let patchedTarget: any;
+
+            if (isClass) {
+                patchedTarget = class extends original {
                     constructor(...ctorArgs: any[]) {
                         super(...ctorArgs);
                         modLoader.setInstance(key, this);
                     }
                 };
-
-                Object.assign(patchedClass, original);
-
-                patchedClass = this.runPatches(key, patchedClass);
-
-                this.definitions.set(key, patchedClass);
-                exports[key] = patchedClass;
+                Object.assign(patchedTarget, original);
+            } else {
+                patchedTarget = original;
             }
+
+            patchedTarget = this.runPatches(key, patchedTarget);
+
+            this.definitions.set(key, patchedTarget);
+            exports[key] = patchedTarget;
         }
     }
 
