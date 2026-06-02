@@ -19,8 +19,6 @@ export function getRelativeArrow(
     forward: number = -1,
     sideways: number = 0,
 ): RelativeArrow {
-    if (flipped) sideways = -sideways;
-
     const { x: targetX, y: targetY } = getRelativePosition(
         localX,
         localY,
