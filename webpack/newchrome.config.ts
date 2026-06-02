@@ -1,6 +1,6 @@
 import path from 'node:path';
-import { Configuration, WebpackPluginInstance } from 'webpack';
 import CopyPlugin from 'copy-webpack-plugin';
+import type { Configuration, WebpackPluginInstance } from 'webpack';
 import ZipPlugin from 'zip-webpack-plugin';
 
 export default (packageJson: any): Configuration => ({
@@ -22,12 +22,11 @@ export default (packageJson: any): Configuration => ({
                     },
                 },
                 { from: './templates/newchrome/images', to: 'images' },
-                { from: './templates/newchrome/style.css', to: 'style.css' },
             ],
         }),
         new ZipPlugin({
             path: path.resolve(__dirname, '../dist'),
             filename: 'newchrome-dist.zip',
-        }) as unknown as WebpackPluginInstance
+        }) as unknown as WebpackPluginInstance,
     ],
 });

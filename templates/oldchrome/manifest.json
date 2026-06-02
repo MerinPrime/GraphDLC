@@ -10,7 +10,6 @@
     {
       "matches": ["https://logic-arrows.io/*"],
       "js": ["injector.js"],
-      "css": ["style.css"],
       "run_at": "document_start",
       "all_frames": true
     }

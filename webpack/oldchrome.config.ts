@@ -1,6 +1,6 @@
 import path from 'node:path';
-import webpack from 'webpack';
 import CopyPlugin from 'copy-webpack-plugin';
+import type webpack from 'webpack';
 import ZipPlugin from 'zip-webpack-plugin';
 
 export default (packageJson: any): webpack.Configuration => ({
@@ -22,14 +22,16 @@ export default (packageJson: any): webpack.Configuration => ({
                     },
                 },
                 { from: './templates/oldchrome/images', to: 'images' },
-                { from: './templates/oldchrome/style.css', to: 'style.css' },
-                { from: './templates/oldchrome/injector.js', to: 'injector.js' },
+                {
+                    from: './templates/oldchrome/injector.js',
+                    to: 'injector.js',
+                },
             ],
         }),
         // Твой фикс типов здесь:
         new ZipPlugin({
             path: path.resolve(__dirname, '../dist'),
             filename: 'oldchrome-dist.zip',
-        }) as unknown as webpack.WebpackPluginInstance
+        }) as unknown as webpack.WebpackPluginInstance,
     ],
 });
