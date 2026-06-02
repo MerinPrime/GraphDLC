@@ -28,6 +28,11 @@ export default (isProduction: boolean): Configuration => ({
                 use: ['sass-loader'],
             },
             {
+                resourceQuery: /raw/,
+                exclude: /\.scss$/,
+                type: 'asset/source',
+            },
+            {
                 test: /\.scss$/,
                 resourceQuery: { not: [/raw/] },
                 use: ['style-loader', 'css-loader', 'sass-loader'],
