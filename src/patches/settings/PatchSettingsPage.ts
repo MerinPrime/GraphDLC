@@ -25,7 +25,8 @@ export function PatchSettingsPage(
 
                     this.lastElement = lastSetting;
 
-                    const settingGroups = settingsManager.getSortedSettings();
+                    const settingGroups =
+                        settingsManager.getSortedSettings('menu-settings');
                     settingGroups.forEach((group) => this.addGroup(group));
                 }
 

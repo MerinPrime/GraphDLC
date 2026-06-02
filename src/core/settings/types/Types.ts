@@ -8,6 +8,7 @@ export interface SettingMeta {
     nameColor?: TextColor;
     descriptionColor?: TextColor;
 
+    isMapSetting: boolean;
     group: SettingGroup;
     order: number;
     spaceAfter?: number;

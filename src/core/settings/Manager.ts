@@ -28,7 +28,9 @@ export class SettingsManager {
         return this.config.data as any;
     }
 
-    public getSortedSettings(): SortedSettingGroup[] {
+    public getSortedSettings(
+        type: 'menu-settings' | 'map-settings',
+    ): SortedSettingGroup[] {
         const groupsMap = new Map<SettingGroup, BaseSetting<any>[]>();
 
         const settings: BaseSetting<any>[] = [];
@@ -41,13 +43,17 @@ export class SettingsManager {
                 continue;
             const property = (this.config.registry as any)[key];
             if (property instanceof BaseSetting) {
+                if (
+                    property.meta.isMapSetting === false &&
+                    type === 'map-settings'
+                )
+                    continue;
                 settings.push(property);
             }
         }
 
         for (const setting of settings) {
             const group = setting.meta.group;
-            if (!group) continue;
 
             if (!groupsMap.has(group)) {
                 groupsMap.set(group, []);
