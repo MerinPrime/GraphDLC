@@ -29,11 +29,36 @@ export class DesignManager {
         const styleElement = document.createElement('style');
         styleElement.textContent = style;
 
-        if (setting.value) document.head.appendChild(styleElement);
+        const appendToHead = () => {
+            if (document.head) {
+                document.head.appendChild(styleElement);
+                return true;
+            }
+
+            const observer = new MutationObserver(() => {
+                if (document.head) {
+                    document.head.appendChild(styleElement);
+                    observer.disconnect();
+                }
+            });
+
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true,
+            });
+            return false;
+        };
+
+        if (setting.value) {
+            appendToHead();
+        }
 
         setting.onChange.add((newValue) => {
-            if (newValue) document.head.appendChild(styleElement);
-            else styleElement.remove();
+            if (newValue) {
+                appendToHead();
+            } else {
+                styleElement.remove();
+            }
         });
     }
 }
