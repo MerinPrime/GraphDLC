@@ -1,0 +1,51 @@
+.setting-value {
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 28px;
+    height: 28px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    margin-top: 2px;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+
+    &:hover:not(:disabled) {
+      border-color: #0066cc;
+    }
+
+    &:checked {
+      background-color: #0066cc;
+      border-color: #0066cc;
+
+      &::before {
+        content: "";
+        width: 10px;
+        height: 6px;
+        border-left: 2px solid white;
+        border-bottom: 2px solid white;
+        transform: rotate(-45deg) translate(1px, -1px);
+      }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      background-color: #f1f5f9;
+      border-color: #cbd5e1;
+
+      &:checked {
+        background-color: #e2e8f0;
+        border-color: #cbd5e1;
+
+        &::before {
+          border-left-color: #94a3b8;
+          border-bottom-color: #94a3b8;
+        }
+      }
+    }
+  }
+}

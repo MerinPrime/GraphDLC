@@ -1,0 +1,486 @@
+/* ==========================================================================
+   1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И ЦВЕТОВАЯ СХЕМА
+   ========================================================================== */
+:root {
+  /* Ваши переменные */
+  --light-blue: rgb(55, 95, 187) !important;
+  --light-green: rgb(40, 220, 70) !important;
+  --light-red: rgb(216, 34, 34) !important;
+
+  /* Обновленная палитра для более современного вида */
+  --accent-color: #3b82f6 !important;
+  /* Приятный глазу современный синий */
+  --blue: #1e293b !important;
+  /* Благородный темный сланец для боковой панели */
+  --dark-blue: #0f172a !important;
+  /* Глубокий темный оттенок */
+  --background: #f8fafc !important;
+  /* Мягкий белый фон с легким серым оттенком */
+}
+
+/* Базовые стили */
+
+/* ==========================================================================
+   2. БОКОВАЯ ПАНЕЛЬ И ОБЩАЯ СЕТКА МЕНЮ
+   ========================================================================== */
+#menu-page-side-bar {
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.side-menu-element {
+  position: relative;
+  padding: 1.5vh 0;
+  transition: background-color 0.2s ease;
+}
+
+/* Вертикальный индикатор у активной вкладки */
+.side-menu-element::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background-color: var(--accent-color);
+  border-radius: 0 4px 4px 0;
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.side-menu-element:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.side-menu-element-selected {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.side-menu-element-selected::before {
+  transform: scaleX(1);
+}
+
+.side-menu-icon {
+  transition: transform 0.2s ease;
+}
+
+.side-menu-element:hover .side-menu-icon {
+  transform: translateY(-2px);
+}
+
+#menu-page-content {
+  background-color: #f1f5f9;
+  /* Мягкий фон подложки контента */
+}
+
+/* ==========================================================================
+   3. ИНВЕНТАРЬ И ОКНА МОДАЛЬНЫХ МЕНЮ
+   ========================================================================== */
+.ui-inventory-items {
+  background-color: var(--accent-color) !important;
+  border-radius: 2vmin !important;
+}
+
+.ui-menu-panel {
+  border-radius: 3vmin !important;
+  left: 20vw !important;
+  width: 60vw !important;
+}
+
+/* ==========================================================================
+   4. СТРАНИЦА СПИСКА КАРТ (MAPS PAGE)
+   ========================================================================== */
+.maps-page {
+  padding: 4vh 3vw !important;
+  gap: 24px;
+}
+
+.ui-saved-item,
+.ui-new-item {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.02),
+    0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.25s ease,
+    background-color 0.25s ease !important;
+  height: 8.5em !important;
+}
+
+.ui-saved-item:hover,
+.ui-new-item:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    0 10px 20px -3px rgba(0, 0, 0, 0.08),
+    0 4px 8px -2px rgba(0, 0, 0, 0.03) !important;
+  border-color: #cbd5e1 !important;
+}
+
+.ui-new-item {
+  border: 2px dashed #cbd5e1 !important;
+  background-color: #f8fafc !important;
+}
+
+.ui-new-item:hover {
+  border-color: var(--accent-color) !important;
+  background-color: #eff6ff !important;
+}
+
+.ui-maps-menu-item-name {
+  font-size: 1.5em !important;
+  color: var(--accent-color) !important;
+  transition: color 0.2s ease;
+}
+
+.ui-new-item:hover .ui-maps-menu-item-name {
+  color: #1d4ed8 !important;
+}
+
+.ui-saved-item-name {
+  color: #1e293b !important;
+  font-size: 1.4em !important;
+  font-weight: 700 !important;
+}
+
+.ui-saved-item-tags {
+  color: #64748b !important;
+  font-weight: 500;
+}
+
+/* Иконки удаления и публикации */
+.ui-saved-item .ui-saved-item-delete,
+.ui-saved-item .ui-saved-item-public-checkbox-unchecked {
+  display: block !important;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.85);
+  transition:
+    opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.2s ease !important;
+}
+
+.ui-saved-item:hover .ui-saved-item-delete,
+.ui-saved-item:hover .ui-saved-item-public-checkbox-unchecked {
+  opacity: 0.7;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.ui-saved-item-delete:hover,
+.ui-saved-item-public-checkbox:hover {
+  opacity: 1 !important;
+}
+
+.ui-saved-item-delete:hover {
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.3)) !important;
+}
+
+.ui-saved-item-public-checkbox:hover {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.3)) !important;
+}
+
+/* ==========================================================================
+   5. СТРАНИЦА СПРАВОЧНИКА (GUIDE PAGE)
+   ========================================================================== */
+.guide-page {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)) !important;
+  gap: 20px !important;
+  padding: 4vh 3vw !important;
+  max-width: 1400px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  align-content: start;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* Плитка описания стрелок/блоков */
+.ui-arrow-info {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  padding: 20px !important;
+  width: auto !important;
+  /* Убираем жесткий 50vw */
+  margin-bottom: 0px !important;
+  /* Отступы теперь контролируются сеткой grid */
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.02),
+    0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 16px !important;
+  align-items: flex-start !important;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease !important;
+  box-sizing: border-box;
+}
+
+.ui-arrow-info:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.05),
+    0 4px 6px -2px rgba(0, 0, 0, 0.03) !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Рамочка под саму картинку блока */
+.ui-arrow-left-div {
+  background-color: #f1f5f9 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  width: 4.5rem !important;
+  height: 4.5rem !important;
+  box-sizing: border-box !important;
+}
+
+.ui-arrow-info-image {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Описание внутри блоков справочника */
+.ui-arrow-info-div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  flex-grow: 1;
+}
+
+.ui-arrow-info-name {
+  font-size: 1.25rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  /* Slate-900 */
+  margin-bottom: 2px;
+}
+
+.ui-arrow-info-text-title {
+  font-size: 0.72rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: #64748b !important;
+  /* Slate-500 */
+  font-weight: 700 !important;
+  margin-top: 4px;
+}
+
+.ui-arrow-info-text {
+  font-size: 0.88rem !important;
+  line-height: 1.4 !important;
+  color: #334155 !important;
+  /* Slate-700 */
+  padding-left: 0px !important;
+  /* Убираем лишний отступ */
+  margin-bottom: 0px !important;
+}
+
+/* Сглаживаем слишком контрастные цвета "Blue" и "Red" из разметки */
+.ui-arrow-info-text span[style*="color:#00f"],
+.ui-arrow-info-text span[style*="color: rgb(0, 0, 255)"],
+.ui-arrow-info-text span[style*="color: #00f"] {
+  color: #3b82f6 !important;
+  /* Современный синий */
+  font-weight: 700;
+}
+
+.ui-arrow-info-text span[style*="color:#f00"],
+.ui-arrow-info-text span[style*="color: rgb(255, 0, 0)"],
+.ui-arrow-info-text span[style*="color: #f00"] {
+  color: #ef4444 !important;
+  /* Современный красный */
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   6. СТРАНИЦА НАСТРОЕК (SETTINGS PAGE)
+   ========================================================================== */
+.settings-page {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: start !important;
+  padding: 5vh 2vw !important;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Форматируем таблицу как аккуратную карточку по центру экрана */
+.settings-table {
+  background: #ffffff !important;
+  padding: 2rem !important;
+  border-radius: 16px !important;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid #e2e8f0 !important;
+  max-width: 650px !important;
+  width: 100% !important;
+  margin-left: 0px !important;
+  /* Сбрасываем дефолтный отступ */
+  border-collapse: collapse !important;
+}
+
+.settings-table tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.settings-table tr:last-child {
+  border-bottom: none;
+}
+
+.setting-name {
+  color: #334155 !important;
+  /* Slate-700 */
+  font-weight: 600 !important;
+  padding: 1.25rem 1rem 1.25rem 0px !important;
+  font-size: 0.95rem !important;
+}
+
+.setting-value {
+  padding: 1.25rem 0px 1.25rem 1rem !important;
+  text-align: right !important;
+  /* Выравнивание элементов по правому краю */
+}
+
+/* Контейнеры внутри настроек для отображения ползунков и цифр */
+.setting-value div {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.setting-value span {
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.9rem;
+  min-width: 50px;
+  text-align: left;
+}
+
+/* Выпадающие списки (select) */
+
+/* Кастомные ползунки (Range inputs) */
+.settings-table input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 160px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  outline: none;
+  vertical-align: middle;
+}
+
+/* Бегунок для Webkit (Chrome, Safari, Opera) */
+.settings-table input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  border: none;
+}
+
+.settings-table input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+/* Бегунок для Firefox */
+.settings-table input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  border: none;
+}
+
+.settings-table input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.25);
+}
+
+/* Гостевое имя аккаунта */
+.account-user-name-title {
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  font-size: 1.1rem;
+}
+
+/* Разделительные линии в таблице */
+.setting-divider hr {
+  border: 0;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 1rem 0;
+}
+
+/* Невалидные блоки, которые игра вставляет прямо в таблицу */
+.settings-table div[style*="color: rgb(0, 0, 0)"] {
+  color: #475569 !important;
+  /* Цвет для подзаголовков типа 'Other' */
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-top: 1rem;
+  margin-bottom: -0.5rem;
+}
+
+/* Описание под опциями */
+.setting-description {
+  font-size: 0.78rem !important;
+  color: #64748b !important;
+  font-weight: normal !important;
+  margin-top: 4px !important;
+}
+
+/* --- Кнопка логаута (Выйти) --- */
+.logout-button {
+  display: inline-block !important;
+  background-color: #ef4444 !important;
+  /* Аккуратный красный */
+  color: #ffffff !important;
+  padding: 0.8rem 1.5rem !important;
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition:
+    background-color 0.2s,
+    transform 0.1s,
+    box-shadow 0.2s !important;
+  border: none !important;
+  box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1) !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.logout-button:hover {
+  background-color: #dc2626 !important;
+  /* Более глубокий красный при ховере */
+  box-shadow: 0 6px 12px -2px rgba(239, 68, 68, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+.logout-button:active {
+  transform: translateY(1px);
+}

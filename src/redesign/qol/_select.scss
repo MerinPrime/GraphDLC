@@ -1,0 +1,21 @@
+.settings-table {
+  select {
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.4rem 1.5rem 0.4rem 0.8rem;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    color: #1e293b;
+    outline: none;
+    cursor: pointer;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+
+    &:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+  }
+}

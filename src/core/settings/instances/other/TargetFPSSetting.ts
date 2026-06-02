@@ -1,5 +1,5 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
-import { NumberSetting } from '../types/NumberSetting';
+import { NumberSetting } from '../../types/NumberSetting';
 import { OtherSettingGroup } from './OtherGroup';
 
 const NameLocale = new I18nText(

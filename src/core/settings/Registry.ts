@@ -1,6 +1,7 @@
-import { EnableBreakpointSetting } from './instances/EnableBreakpointSetting';
-import { QoLReDesignSetting } from './instances/QoLReDesignSetting';
-import { TargetFPSSetting } from './instances/TargetFPSSetting';
+import { EnableBreakpointSetting } from './instances/other/EnableBreakpointSetting';
+import { TargetFPSSetting } from './instances/other/TargetFPSSetting';
+import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
+import { QoLReDesignSetting } from './instances/redesign/QoLReDesignSetting';
 import type { BaseSetting } from './types/BaseSetting';
 
 const settings: BaseSetting<any>[] = [
@@ -8,6 +9,7 @@ const settings: BaseSetting<any>[] = [
     EnableBreakpointSetting,
 
     QoLReDesignSetting,
+    GraphDLCDesignSetting,
 ];
 
 export const SettingsRegistry = settings.reduce<

@@ -1,5 +1,5 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
-import { BoolSetting } from '../types/BoolSetting';
+import { BoolSetting } from '../../types/BoolSetting';
 import { ReDesignSettingGroup } from './ReDesignGroup';
 
 const NameLocale = new I18nText(
@@ -23,5 +23,5 @@ export const QoLReDesignSetting = new BoolSetting('QoLReDesign', true, {
     description: DescriptionLocale,
     isMapSetting: false,
     group: ReDesignSettingGroup,
-    order: 0,
+    order: 1,
 });
