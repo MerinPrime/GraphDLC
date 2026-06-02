@@ -1,4 +1,4 @@
-export const enum ArrowType {
+export enum ArrowType {
     EMPTY = 0,
     ARROW = 1,
     SOURCE = 2,
@@ -27,3 +27,11 @@ export const enum ArrowType {
 }
 
 export const ArrowTypeCount = 24;
+
+export function IsArrowEntryPoint(type: ArrowType): boolean {
+    return (
+        type === ArrowType.SOURCE ||
+        type === ArrowType.IMPULSE ||
+        type === ArrowType.LOGIC_NOT
+    );
+}

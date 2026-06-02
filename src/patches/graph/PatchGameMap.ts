@@ -41,6 +41,7 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     chunk,
                     globalX,
                     globalY,
+                    oldType,
                     newType,
                 );
             }

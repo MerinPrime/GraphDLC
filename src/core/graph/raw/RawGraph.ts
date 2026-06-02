@@ -2,10 +2,11 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import { ArrowTypeCount } from 'src/core/utils/ArrowType';
+import { ArrowTypeCount, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
+import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { RawNode } from './RawNode';
 
 interface PrivateGameMap {
@@ -15,10 +16,12 @@ interface PrivateGameMap {
 export class RawGraph {
     private gameMap: GameMap;
     public readonly nodes: RawNode[];
+    public readonly entryPoints: RawNode[];
 
     constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
         this.nodes = [];
+        this.entryPoints = [];
     }
 
     getNode(astIndex: number): RawNode {
@@ -116,12 +119,21 @@ export class RawGraph {
         chunk: Chunk,
         globalX: number,
         globalY: number,
+        oldType: number,
         newType: number,
     ) {
         if (process.env.IS_DEBUG)
             console.log('[Graph] Change arrow type to', newType);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node);
+
+        const oldEntryPoint = IsArrowEntryPoint(oldType);
+        const newEntryPoint = IsArrowEntryPoint(newType);
+
+        if (oldEntryPoint === newEntryPoint) return;
+
+        if (newEntryPoint) this.entryPoints.push(node);
+        else removeWithSwap(this.entryPoints, node);
     }
 
     updateArrowRotation(
