@@ -1,13 +1,17 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
+import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
+import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
+import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 
 interface PrivateGame {
+    readonly gameMap: GameMap;
     render: GameRender;
 }
 
@@ -26,6 +30,8 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 super.draw();
 
                 const render = (this as any as PrivateGame).render;
+                const gameMap = (this as any as PrivateGame).gameMap;
+
                 render.setShowBorder(false);
 
                 const offsetX =
@@ -50,84 +56,68 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     if (copiedArrows.length === 1) {
                         render.setSolidColor(0.2, 0.8, 0.2, 0.25);
                         const arrow = copiedArrows[0];
-                        getArrowRelations(arrow.type).forEach(([x, y]) => {
-                            if (arrow.flipped) y = -y;
-                            let bx = this.mousePosition[0];
-                            let by = this.mousePosition[1];
-                            switch (arrow.rotation) {
-                                case 0:
-                                    by += x;
-                                    bx += y;
-                                    break;
-                                case 1:
-                                    bx -= x;
-                                    by += y;
-                                    break;
-                                case 2:
-                                    by -= x;
-                                    bx -= y;
-                                    break;
-                                case 3:
-                                    bx += x;
-                                    by -= y;
-                                    break;
-                            }
+                        getArrowRelations(arrow.type).forEach(
+                            ([relX, relY]) => {
+                                const { x, y } = getRelativePosition(
+                                    this.mousePosition[0],
+                                    this.mousePosition[1],
+                                    arrow.rotation,
+                                    arrow.flipped,
+                                    relX,
+                                    relY,
+                                );
+                                render.drawSolidColorRect(
+                                    x * this.scale + offsetX,
+                                    y * this.scale + offsetY,
+                                    scale,
+                                    scale,
+                                );
+                            },
+                        );
+                        selectedArrowDrawn = true;
+                    }
+                }
+                if (
+                    ShowArrowConnectionsSetting.value &&
+                    arrowAtCursor &&
+                    arrowAtCursor.graphAstIndex
+                ) {
+                    const astNode = gameMap.rawGraph.getNode(
+                        arrowAtCursor.graphAstIndex,
+                    );
+                    const isEmpty = arrowAtCursor.type === 0;
+                    render.setSolidColor(0.8, 0.2, 0.2, 0.25);
+                    astNode.previous.forEach((previousNode) => {
+                        render.drawSolidColorRect(
+                            previousNode.globalX * scale + offsetX,
+                            previousNode.globalY * scale + offsetY,
+                            scale,
+                            scale,
+                        );
+                    });
+                    if (!isEmpty) {
+                        if (selectedArrowDrawn)
+                            render.setSolidColor(0.8, 0.8, 0.2, 0.25);
+                        else render.setSolidColor(0.2, 0.8, 0.2, 0.25);
+                        astNode.next.forEach((previousNode) => {
                             render.drawSolidColorRect(
-                                bx * this.scale + offsetX,
-                                by * this.scale + offsetY,
+                                previousNode.globalX * scale + offsetX,
+                                previousNode.globalY * scale + offsetY,
                                 scale,
                                 scale,
                             );
                         });
-                        selectedArrowDrawn = true;
+                        render.setSolidColor(0.2, 0.2, 0.8, 0.25);
+                        render.drawSolidColorRect(
+                            astNode.globalX * scale + offsetX,
+                            astNode.globalY * scale + offsetY,
+                            scale,
+                            scale,
+                        );
                     }
-
-                    render.setShowBorder(true);
                 }
-                // if (!selectedArrowDrawn && settings.data.showArrowConnections && graphDLC.rootNode) {
-                //     if (arrowAtCursor) {
-                //         const astNode = graphDLC.rootNode.astNodes.get(arrowAtCursor);
-                //         if (astNode) {
-                //             this.render.setSolidColor(0.0, 1.0, 0.0, 0.25);
-                //             astNode.allEdges.forEach((edge: ASTNode) => {
-                //                 edge.arrows.forEach((ar) => {
-                //                     if (ar.x === undefined || ar.y === undefined) return;
-                //                     this.render.drawSolidColor(ar.x * scale + offsetX, ar.y * scale + offsetY, scale, scale);
-                //                 });
-                //             })
-                //             this.render.setSolidColor(1.0, 0.0, 0.0, 0.25);
-                //             astNode.backEdges.forEach((edge: ASTNode) => {
-                //                 edge.arrows.forEach((ar) => {
-                //                     if (ar.x === undefined || ar.y === undefined) return;
-                //                     this.render.drawSolidColor(ar.x * scale + offsetX, ar.y * scale + offsetY, scale, scale);
-                //                 });
-                //             });
-                //             this.render.setSolidColor(0.0, 0.0, 1.0, 0.25);
-                //             astNode.arrows.forEach((ar: Arrow) => {
-                //                 if (ar.x === undefined || ar.y === undefined) return;
-                //                 this.render.drawSolidColor(ar.x * scale + offsetX, ar.y * scale + offsetY, scale, scale);
-                //             });
-                //         } else if (arrowAtCursor.type !== ArrowType.EMPTY) {
-                //             const cycleID = arrowAtCursor.cycleID;
-                //             if (cycleID !== undefined) {
-                //                 const cycle = graphDLC.rootNode.cycles[cycleID];
-                //                 if (cycle !== undefined) {
-                //                     this.render.setSolidColor(0.0, 0.5, 0.5, 0.25);
-                //                     for (let i = 0; i < cycle.length; i++) {
-                //                         const arrow = cycle.cycle[i];
-                //                         this.render.drawSolidColor(arrow.x! * scale + offsetX, arrow.y! * scale + offsetY, scale, scale);
-                //                     }
-                //                 }
-                //             } else {
-                //                 this.render.setSolidColor(0.0, 0.0, 0.0, 0.25);
-                //                 if (arrowAtCursor.x === undefined || arrowAtCursor.y === undefined) return;
-                //                 this.render.drawSolidColor(arrowAtCursor.x * scale + offsetX, arrowAtCursor.y * scale + offsetY, scale, scale);
-                //             }
-                //         }
-                //         this.screenUpdated = true;
-                //     }
-                // }
-                // this.render.disableSolidColor();
+
+                render.setShowBorder(true);
             }
         };
     });

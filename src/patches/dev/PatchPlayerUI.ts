@@ -32,12 +32,20 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     return;
                 }
                 const info: string[] = [];
-                const arrowAtCursor = (
-                    this as any as PrivatePlayerUI
-                ).game.getArrowAtCursor();
-                if (arrowAtCursor !== null) {
+                const game = (this as any as PrivatePlayerUI).game;
+                const arrowAtCursor = game.getArrowAtCursor();
+                if (arrowAtCursor) {
                     const astIndex = arrowAtCursor?.graphAstIndex ?? 'null';
                     info.push(`ASTIndex: ${astIndex}`);
+                    const astNode = arrowAtCursor.graphAstIndex
+                        ? game.gameMap.rawGraph.getNode(
+                              arrowAtCursor.graphAstIndex,
+                          )
+                        : null;
+                    if (astNode) {
+                        info.push(`NextLen: ${astNode.next.length}`);
+                        info.push(`PrevLen: ${astNode.previous.length}`);
+                    }
                 }
                 this.devDebugInfo.innerText = info.join('\n');
             }
