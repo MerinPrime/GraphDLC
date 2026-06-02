@@ -2,6 +2,8 @@ import { PatchPlayerControls } from 'src/patches/dev/PatchPlayerControls';
 import { PatchPlayerUI } from 'src/patches/dev/PatchPlayerUI';
 import { PatchArrow } from 'src/patches/graph/PatchArrow';
 import { PatchGame } from 'src/patches/graph/PatchGame';
+import { PatchGameRender } from 'src/patches/render/PatchGameRender';
+import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
@@ -26,5 +28,7 @@ export class GraphDLC {
         PatchGame(this.patchLoader, this);
         PatchPlayerControls(this.patchLoader, this);
         PatchUIMenu(this.patchLoader, this);
+        PatchLoadShader(this.patchLoader, this);
+        PatchGameRender(this.patchLoader, this);
     }
 }
