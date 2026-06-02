@@ -31,7 +31,7 @@ export function PatchSettingsPage(
                 }
 
                 private addGroup(group: SortedSettingGroup) {
-                    this.addSpace(0.5);
+                    this.addSpace(2);
                     this.addText(group.group.text.get(), group.group.color);
                     group.settings.forEach((setting) => {
                         this.addSpace(0.5);

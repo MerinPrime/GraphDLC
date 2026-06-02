@@ -3,7 +3,7 @@ import type { SettingGroup } from '../types/SettingGroup';
 
 export const ReDesignSettingGroup: SettingGroup = {
     text: new I18nText(
-        'ReDesign',
+        'Redesign',
         'Редизайн',
         'Редизайн',
         'Рэдызайн',

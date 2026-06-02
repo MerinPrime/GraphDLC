@@ -21,7 +21,7 @@ const DescriptionLocale = new I18nText(
 export const QoLReDesignSetting = new BoolSetting('QoLReDesign', true, {
     name: NameLocale,
     description: DescriptionLocale,
-    isMapSetting: true,
+    isMapSetting: false,
     group: ReDesignSettingGroup,
     order: 0,
 });
