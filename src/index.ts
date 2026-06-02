@@ -6,10 +6,4 @@ patchLoader.hook();
 const graphDLC = new GraphDLC(patchLoader);
 graphDLC.inject();
 
-declare global {
-    interface Window {
-        graphdlc: GraphDLC;
-    }
-}
-
 window.graphdlc = graphDLC;

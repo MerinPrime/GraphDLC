@@ -1,9 +1,3 @@
-declare global {
-    interface Window {
-        patchWebpackModules: (modules: Record<string | number, Function>) => {};
-    }
-}
-
 export class PatchLoader {
     private definitions: Map<string, any>;
     private instances: Map<string, any>;
@@ -21,7 +15,9 @@ export class PatchLoader {
         window.patchWebpackModules = (
             modules: Record<string | number, Function>,
         ) => {
-            console.log(modules);
+            console.log(
+                `[PatchLoader] Found ${Object.keys(modules).length} modules`,
+            );
             for (const id of Object.keys(modules)) {
                 const originalFn = modules[id];
 
