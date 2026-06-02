@@ -1,4 +1,5 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
+import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 
@@ -14,13 +15,19 @@ export class RawNode {
     next: RawNode[];
     previous: RawNode[];
 
-    constructor(arrow: Arrow, index: number, globalX: number, globalY: number) {
+    constructor(
+        arrow: Arrow,
+        index: number,
+        chunk: Chunk,
+        globalX: number,
+        globalY: number,
+    ) {
         this.arrow = arrow;
         this.index = index;
         this.globalX = globalX;
         this.globalY = globalY;
-        this.localX = globalX % CHUNK_SIZE;
-        this.localY = globalY % CHUNK_SIZE;
+        this.localX = globalX - chunk.x * CHUNK_SIZE;
+        this.localY = globalY - chunk.y * CHUNK_SIZE;
         this.valid = false;
         this.next = [];
         this.previous = [];

@@ -35,15 +35,13 @@ export function PatchLoad(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         const rotation: number = buffer[index++];
                         const x = position & 0xf;
                         const y = position >> 4;
-                        const arrow: Arrow = chunk.getArrow(
-                            position & 0xf,
-                            position >> 4,
-                        );
+                        const arrow: Arrow = chunk.getArrow(x, y);
                         arrow.type = type;
                         arrow.rotation = rotation & 0x3;
                         arrow.flipped = (rotation & 0x4) !== 0;
                         map.rawGraph.updateArrowType(
                             arrow,
+                            chunk,
                             chunkX * CHUNK_SIZE + x,
                             chunkY * CHUNK_SIZE + y,
                             type,

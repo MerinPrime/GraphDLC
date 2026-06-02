@@ -36,7 +36,13 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 super.setArrowType(globalX, globalY, type, player);
                 if (oldType === arrow.type) return;
                 const newType = arrow.type;
-                this.rawGraph.updateArrowType(arrow, globalX, globalY, newType);
+                this.rawGraph.updateArrowType(
+                    arrow,
+                    chunk,
+                    globalX,
+                    globalY,
+                    newType,
+                );
             }
 
             public setArrowRotation(
@@ -58,6 +64,7 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 const newRotation = arrow.rotation;
                 this.rawGraph.updateArrowRotation(
                     arrow,
+                    chunk,
                     globalX,
                     globalY,
                     newRotation,
@@ -83,6 +90,7 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 const newFlipped = arrow.flipped;
                 this.rawGraph.updateArrowFlipped(
                     arrow,
+                    chunk,
                     globalX,
                     globalY,
                     newFlipped,
@@ -94,13 +102,24 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 globalY: number,
                 player?: boolean,
             ): void {
-                const arrow = this.getArrow(globalX, globalY);
+                const chunk = this.getChunkByArrowCoordinates(globalX, globalY);
+                if (!chunk) return;
+                const arrow = chunk.getArrow(
+                    globalX - chunk.x * CHUNK_SIZE,
+                    globalY - chunk.y * CHUNK_SIZE,
+                );
                 if (!arrow) return;
                 const oldType = arrow.type;
                 super.removeArrow(globalX, globalY, player);
                 if (oldType === arrow.type) return;
                 const newType = arrow.type;
-                this.rawGraph.updateArrowType(arrow, globalX, globalY, newType);
+                this.rawGraph.updateArrowType(
+                    arrow,
+                    chunk,
+                    globalX,
+                    globalY,
+                    newType,
+                );
             }
 
             public clearChunkIfEmpty(chunk: Chunk): void {

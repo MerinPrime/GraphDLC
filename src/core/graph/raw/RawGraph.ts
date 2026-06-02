@@ -56,9 +56,10 @@ export class RawGraph {
                 relY,
             );
             const relNode =
-                relativeArrow?.arrow != null
+                relativeArrow.arrow && relativeArrow.chunk
                     ? this.getOrCreateNode(
                           relativeArrow.arrow,
+                          relativeArrow.chunk,
                           globalRelX,
                           globalRelY,
                       )
@@ -67,9 +68,20 @@ export class RawGraph {
         });
     }
 
-    getOrCreateNode(arrow: Arrow, globalX: number, globalY: number): RawNode {
+    getOrCreateNode(
+        arrow: Arrow,
+        chunk: Chunk,
+        globalX: number,
+        globalY: number,
+    ): RawNode {
         if (arrow.graphAstIndex) return this.getNode(arrow.graphAstIndex);
-        const node = new RawNode(arrow, this.nodes.length, globalX, globalY);
+        const node = new RawNode(
+            arrow,
+            this.nodes.length,
+            chunk,
+            globalX,
+            globalY,
+        );
         arrow.graphAstIndex = this.nodes.length;
         this.nodes.push(node);
         if (arrow.type > ArrowTypeCount) {
@@ -91,7 +103,7 @@ export class RawGraph {
         );
 
         if (arrow.graphAstIndex) return this.getNode(arrow.graphAstIndex);
-        return this.getOrCreateNode(arrow, globalX, globalY);
+        return this.getOrCreateNode(arrow, chunk, globalX, globalY);
     }
 
     clear() {
@@ -101,37 +113,40 @@ export class RawGraph {
 
     updateArrowType(
         arrow: Arrow,
+        chunk: Chunk,
         globalX: number,
         globalY: number,
         newType: number,
     ) {
         if (process.env.IS_DEBUG)
             console.log('[Graph] Change arrow type to', newType);
-        const node = this.getOrCreateNode(arrow, globalX, globalY);
+        const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node);
     }
 
     updateArrowRotation(
         arrow: Arrow,
+        chunk: Chunk,
         globalX: number,
         globalY: number,
         newRotation: number,
     ) {
         if (process.env.IS_DEBUG)
             console.log('[Graph] Change arrow rotation to', newRotation);
-        const node = this.getOrCreateNode(arrow, globalX, globalY);
+        const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node);
     }
 
     updateArrowFlipped(
         arrow: Arrow,
+        chunk: Chunk,
         globalX: number,
         globalY: number,
         newFlipped: boolean,
     ) {
         if (process.env.IS_DEBUG)
             console.log('[Graph] Change arrow flipped to', newFlipped);
-        const node = this.getOrCreateNode(arrow, globalX, globalY);
+        const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node);
     }
 }
