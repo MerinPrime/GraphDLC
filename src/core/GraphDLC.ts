@@ -10,17 +10,20 @@ import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
 import type { PatchLoader } from './PatchLoader';
+import { PathFinder } from './path_finder/PathFinder';
 import { SettingsManager } from './settings/Manager';
 
 export class GraphDLC {
     patchLoader: PatchLoader;
     settingsManager: SettingsManager;
     designManager: DesignManager;
+    pathFinder: PathFinder;
 
     constructor(patchLoader: PatchLoader) {
         this.patchLoader = patchLoader;
         this.settingsManager = new SettingsManager();
         this.designManager = new DesignManager();
+        this.pathFinder = new PathFinder();
     }
 
     inject() {

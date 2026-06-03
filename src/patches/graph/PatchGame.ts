@@ -5,6 +5,7 @@ import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
@@ -18,6 +19,8 @@ interface PrivateGame {
 export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
+            public path: PathStep[] | null = null;
+
             public getArrowAtCursor(): Arrow | undefined {
                 const arrowAtCursor = this.gameMap.getArrow(
                     this.mousePosition[0],
@@ -116,6 +119,29 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         );
                     }
                 }
+
+                render.startTransparentArrowsRendering();
+                render.setArrowSize(this.scale);
+                render.setArrowAlpha(0.5);
+                this.path?.forEach(({ x, y, type, rotation, flipped }) => {
+                    render.drawArrow(
+                        x * scale + offsetX,
+                        y * scale + offsetY,
+                        type,
+                        0,
+                        rotation,
+                        flipped,
+                    );
+                });
+                this.path?.forEach(({ x, y }) => {
+                    render.setSolidColor(0.2, 0.2, 0.8, 0.25);
+                    render.drawSolidColorRect(
+                        x * scale + offsetX,
+                        y * scale + offsetY,
+                        scale,
+                        scale,
+                    );
+                });
 
                 render.setShowBorder(true);
             }

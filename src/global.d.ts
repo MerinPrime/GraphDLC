@@ -11,6 +11,12 @@ declare global {
     }
 }
 
+declare module '@logic-arrows/player/game' {
+    export interface Game {
+        path: PathStep[] | null = null;
+    }
+}
+
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
         setShowBorder(show: boolean): void;
