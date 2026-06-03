@@ -119,11 +119,12 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     chunk,
                     globalX,
                     globalY,
+                    oldType,
                     newType,
                 );
             }
 
-            public clearChunkIfEmpty(chunk: Chunk): void {
+            public clearChunkIfEmpty(_chunk: Chunk): void {
                 // TIP: Graph stores all connections include empty arrows
             }
 
