@@ -44,6 +44,7 @@ export function PatchLoad(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                             chunk,
                             chunkX * CHUNK_SIZE + x,
                             chunkY * CHUNK_SIZE + y,
+                            0,
                             type,
                         );
                     }
