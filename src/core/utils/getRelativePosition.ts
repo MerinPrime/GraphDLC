@@ -3,6 +3,13 @@ export interface RelativePosition {
     y: number;
 }
 
+const ROTATION_MATRICES = [
+    { fx: 0, fy: 1, sx: 1, sy: 0 },
+    { fx: -1, fy: 0, sx: 0, sy: 1 },
+    { fx: 0, fy: -1, sx: -1, sy: 0 },
+    { fx: 1, fy: 0, sx: 0, sy: -1 },
+];
+
 export function getRelativePosition(
     x: number,
     y: number,
@@ -11,29 +18,11 @@ export function getRelativePosition(
     forward: number = -1,
     sideways: number = 0,
 ): RelativePosition {
-    if (flipped) sideways = -sideways;
-
-    switch (rotation) {
-        case 0:
-            y += forward;
-            x += sideways;
-            break;
-        case 1:
-            x -= forward;
-            y += sideways;
-            break;
-        case 2:
-            y -= forward;
-            x -= sideways;
-            break;
-        case 3:
-            x += forward;
-            y -= sideways;
-            break;
-    }
+    const matrix = ROTATION_MATRICES[rotation];
+    const sidewaysDist = flipped ? -sideways : sideways;
 
     return {
-        x,
-        y,
+        x: x + (forward * matrix.fx + sidewaysDist * matrix.sx),
+        y: y + (forward * matrix.fy + sidewaysDist * matrix.sy),
     };
 }
