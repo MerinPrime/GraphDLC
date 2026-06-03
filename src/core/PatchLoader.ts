@@ -1,5 +1,9 @@
+export interface DefinitionPtr<T> {
+    def: T;
+}
+
 export class PatchLoader {
-    private definitions: Map<string, any>;
+    private definitions: Map<string, DefinitionPtr<any>>;
     private instances: Map<string, any>;
     private patches: Array<
         (name: string, definition: any) => boolean | Function
@@ -69,7 +73,7 @@ export class PatchLoader {
 
             patchedTarget = this.runPatches(key, patchedTarget);
 
-            this.definitions.set(key, patchedTarget);
+            this.setDefinition(key, patchedTarget);
             exports[key] = patchedTarget;
         }
     }
@@ -96,8 +100,18 @@ export class PatchLoader {
         return currentDefinition;
     }
 
-    public getDefinition<T = any>(name: string): T | undefined {
-        return this.definitions.get(name) as T | undefined;
+    public getDefinition<T = any>(name: string): DefinitionPtr<T> {
+        if (!this.hasDefinition(name)) {
+            this.definitions.set(name, { def: null });
+        }
+        return this.definitions.get(name) as DefinitionPtr<T>;
+    }
+
+    public setDefinition<T = any>(name: string, value: T) {
+        if (!this.hasDefinition(name)) {
+            this.definitions.set(name, { def: null });
+        }
+        this.definitions.get(name)!.def = value;
     }
 
     public hasDefinition(name: string): boolean {
