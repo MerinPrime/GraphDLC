@@ -24,8 +24,8 @@ type ALLOWED_ARROW =
 
 const ARROW_CONFIGS: Record<ALLOWED_ARROW, ArrowConfig> = {
     [ArrowType.ARROW]: { forward: -1, sideways: 0, weight: 1.0 },
-    [ArrowType.BLUE_ARROW]: { forward: -2, sideways: 0, weight: 1.8 },
-    [ArrowType.DIAGONAL_ARROW]: { forward: -1, sideways: 1, weight: 1.41 },
+    [ArrowType.BLUE_ARROW]: { forward: -2, sideways: 0, weight: 2.0 },
+    [ArrowType.DIAGONAL_ARROW]: { forward: -1, sideways: 1, weight: 1.5 },
 };
 
 const ARROW_TYPES_LIST: ALLOWED_ARROW[] = [
@@ -107,6 +107,10 @@ class MinHeap {
 
     public get size(): number {
         return this.data.length;
+    }
+
+    public get minScore(): number {
+        return this.scores.length > 0 ? this.scores[0] : Infinity;
     }
 
     public push(element: number, score: number): void {
@@ -209,31 +213,55 @@ export class PathFinder {
         const startTime = performance.now();
         let loopCounter = 0;
 
+        let bestPathCost = Infinity;
+        let bestIntersectionPacked = -1;
+
         while (heapForward.size > 0 && heapBackward.size > 0) {
             if (
                 (++loopCounter & 63) === 0 &&
                 performance.now() - startTime > PATHFINDING_TIMEOUT_MS
             ) {
-                return null;
+                break;
             }
 
-            const pathFromForward = this.expandFront(
+            if (
+                heapForward.minScore >= bestPathCost &&
+                heapBackward.minScore >= bestPathCost
+            ) {
+                break;
+            }
+
+            this.expandFront(
                 gameMap,
                 heapForward,
                 Direction.FORWARD,
                 endX,
                 endY,
+                (cost, packed) => {
+                    if (cost < bestPathCost) {
+                        bestPathCost = cost;
+                        bestIntersectionPacked = packed;
+                    }
+                },
             );
-            if (pathFromForward) return pathFromForward;
 
-            const pathFromBackward = this.expandFront(
+            this.expandFront(
                 gameMap,
                 heapBackward,
                 Direction.BACKWARD,
                 startX,
                 startY,
+                (cost, packed) => {
+                    if (cost < bestPathCost) {
+                        bestPathCost = cost;
+                        bestIntersectionPacked = packed;
+                    }
+                },
             );
-            if (pathFromBackward) return pathFromBackward;
+        }
+
+        if (bestIntersectionPacked !== -1) {
+            return this.reconstructPath(bestIntersectionPacked);
         }
 
         return null;
@@ -245,11 +273,13 @@ export class PathFinder {
         dir: Direction,
         targetX: number,
         targetY: number,
-    ): PathStep[] | null {
-        const currentPacked = heap.pop()!;
+        onIntersection: (cost: number, packed: number) => void,
+    ): void {
+        const currentPacked = heap.pop();
+        if (currentPacked === undefined) return;
         const currNode = this.grid.getNode(currentPacked);
 
-        if (currNode.status[dir] === NodeStatus.CLOSED) return null;
+        if (currNode.status[dir] === NodeStatus.CLOSED) return;
         currNode.status[dir] = NodeStatus.CLOSED;
 
         const { x: currentX, y: currentY } = this.grid.unpack(currentPacked);
@@ -292,18 +322,6 @@ export class PathFinder {
                             ? Direction.BACKWARD
                             : Direction.FORWARD;
 
-                    if (targetNode.status[oppDir] !== NodeStatus.UNVISITED) {
-                        this.recordStep(
-                            targetNode,
-                            currentPacked,
-                            arrowType,
-                            rotation,
-                            flipped,
-                            dir,
-                        );
-                        return this.reconstructPath(targetPacked);
-                    }
-
                     let stepWeight = config.weight;
                     const parentPacked = currNode.parent[dir];
 
@@ -333,11 +351,17 @@ export class PathFinder {
                                 Math.abs(nextY - targetY)) *
                                 HEURISTIC_TIEBREAKER;
                         heap.push(targetPacked, fScore);
+
+                        if (
+                            targetNode.status[oppDir] !== NodeStatus.UNVISITED
+                        ) {
+                            const cost = tentativeG + targetNode.gScore[oppDir];
+                            onIntersection(cost, targetPacked);
+                        }
                     }
                 }
             }
         }
-        return null;
     }
 
     private recordStep(
