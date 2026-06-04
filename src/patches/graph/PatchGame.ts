@@ -7,6 +7,7 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
+import { EnableBreakpointSetting } from 'src/core/settings/instances/other/EnableBreakpointSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
@@ -153,6 +154,19 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         scale,
                     );
                 });
+                // TODO: Another setting or debug mode
+                if (EnableBreakpointSetting.value) {
+                    gameMap.rawGraph.nodes.forEach((node) => {
+                        if (!node.isCycle) return;
+                        render.setSolidColor(0.8, 0.2, 0.8, 0.25);
+                        render.drawSolidColorRect(
+                            node.globalX * scale + offsetX,
+                            node.globalY * scale + offsetY,
+                            scale,
+                            scale,
+                        );
+                    });
+                }
 
                 render.setShowBorder(true);
             }
