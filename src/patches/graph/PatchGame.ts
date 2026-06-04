@@ -8,6 +8,7 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
+import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 
@@ -91,6 +92,11 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     const isEmpty = arrowAtCursor.type === 0;
                     render.setSolidColor(0.8, 0.2, 0.2, 0.25);
                     astNode.previous.forEach((previousNode) => {
+                        if (
+                            astNode.arrow.type === ArrowType.DETECTOR &&
+                            astNode.detectedNode !== previousNode
+                        )
+                            return;
                         render.drawSolidColorRect(
                             previousNode.globalX * scale + offsetX,
                             previousNode.globalY * scale + offsetY,
@@ -98,18 +104,23 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                             scale,
                         );
                     });
+                    if (selectedArrowDrawn)
+                        render.setSolidColor(0.8, 0.8, 0.2, 0.25);
+                    else render.setSolidColor(0.2, 0.8, 0.2, 0.25);
+                    astNode.next.forEach((nextNode) => {
+                        if (
+                            nextNode.arrow.type === ArrowType.DETECTOR &&
+                            nextNode.detectedNode !== astNode
+                        )
+                            return;
+                        render.drawSolidColorRect(
+                            nextNode.globalX * scale + offsetX,
+                            nextNode.globalY * scale + offsetY,
+                            scale,
+                            scale,
+                        );
+                    });
                     if (!isEmpty) {
-                        if (selectedArrowDrawn)
-                            render.setSolidColor(0.8, 0.8, 0.2, 0.25);
-                        else render.setSolidColor(0.2, 0.8, 0.2, 0.25);
-                        astNode.next.forEach((previousNode) => {
-                            render.drawSolidColorRect(
-                                previousNode.globalX * scale + offsetX,
-                                previousNode.globalY * scale + offsetY,
-                                scale,
-                                scale,
-                            );
-                        });
                         render.setSolidColor(0.2, 0.2, 0.8, 0.25);
                         render.drawSolidColorRect(
                             astNode.globalX * scale + offsetX,
