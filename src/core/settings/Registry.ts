@@ -1,5 +1,6 @@
 import { EnableArrowRelationsSetting } from './instances/other/EnableArrowRelationsSetting';
 import { EnableBreakpointSetting } from './instances/other/EnableBreakpointSetting';
+import { MapProtectionSetting } from './instances/other/MapProtectionSetting';
 import { ShowArrowConnectionsSetting } from './instances/other/ShowArrowConnectionsSetting';
 import { TargetFPSSetting } from './instances/other/TargetFPSSetting';
 import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
@@ -11,6 +12,7 @@ const settings: BaseSetting<any>[] = [
     EnableBreakpointSetting,
     EnableArrowRelationsSetting,
     ShowArrowConnectionsSetting,
+    MapProtectionSetting,
 
     QoLReDesignSetting,
     GraphDLCDesignSetting,
