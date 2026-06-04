@@ -46,6 +46,16 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         info.push(`NextLen: ${astNode.next.length}`);
                         info.push(`PrevLen: ${astNode.previous.length}`);
                     }
+                    const nodeState =
+                        astNode?.index != null
+                            ? game.gameMap.rawGraph.graphState.nodes[
+                                  astNode.index
+                              ]
+                            : null;
+                    if (nodeState) {
+                        info.push(`Signal: ${nodeState.signal}`);
+                        info.push(`SignalsCount: ${nodeState.signalsCount}`);
+                    }
                 }
                 this.devDebugInfo.innerText = info.join('\n');
             }

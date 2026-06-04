@@ -1,6 +1,7 @@
 import { PatchPlayerControls } from 'src/patches/dev/PatchPlayerControls';
 import { PatchPlayerUI } from 'src/patches/dev/PatchPlayerUI';
 import { PatchArrow } from 'src/patches/graph/PatchArrow';
+import { PatchChunkUpdates } from 'src/patches/graph/PatchChunkUpdates';
 import { PatchGame } from 'src/patches/graph/PatchGame';
 import { PatchGameMap } from 'src/patches/graph/PatchGameMap';
 import { PatchLoad } from 'src/patches/graph/PatchLoad';
@@ -40,5 +41,6 @@ export class GraphDLC {
         PatchGameRender(this.patchLoader, this);
         PatchLoad(this.patchLoader, this);
         PatchSave(this.patchLoader, this);
+        PatchChunkUpdates(this.patchLoader, this);
     }
 }

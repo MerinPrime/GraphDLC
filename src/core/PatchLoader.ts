@@ -45,28 +45,34 @@ export class PatchLoader {
             if (key === '__esModule') continue;
 
             const definition = exports[key];
-            if (typeof definition !== 'function') continue;
-
-            const isClass =
-                /^class\s/.test(Function.prototype.toString.call(definition)) ||
-                /^class\{/.test(
-                    Function.prototype.toString
-                        .call(definition)
-                        .replace(/\s/g, ''),
-                );
+            const isObject = typeof definition !== 'function';
 
             const modLoader = this;
             const original = definition;
             let patchedTarget: any;
 
-            if (isClass) {
-                patchedTarget = class extends original {
-                    constructor(...ctorArgs: any[]) {
-                        super(...ctorArgs);
-                        modLoader.setInstance(key, this);
-                    }
-                };
-                Object.assign(patchedTarget, original);
+            if (!isObject) {
+                const isClass =
+                    /^class\s/.test(
+                        Function.prototype.toString.call(definition),
+                    ) ||
+                    /^class\{/.test(
+                        Function.prototype.toString
+                            .call(definition)
+                            .replace(/\s/g, ''),
+                    );
+
+                if (isClass) {
+                    patchedTarget = class extends original {
+                        constructor(...ctorArgs: any[]) {
+                            super(...ctorArgs);
+                            modLoader.setInstance(key, this);
+                        }
+                    };
+                    Object.assign(patchedTarget, original);
+                } else {
+                    patchedTarget = original;
+                }
             } else {
                 patchedTarget = original;
             }

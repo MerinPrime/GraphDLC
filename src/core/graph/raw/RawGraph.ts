@@ -2,12 +2,19 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import { ArrowTypeCount, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
+import {
+    ArrowType,
+    ArrowTypeCount,
+    IsAdditionalUpdate,
+    IsArrowEntryPoint,
+} from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { RawNode } from './RawNode';
+import { RawGraphState } from './updater/RawState';
+import { RawGraphUpdater } from './updater/RawUpdater';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -15,21 +22,28 @@ interface PrivateGameMap {
 
 export class RawGraph {
     private gameMap: GameMap;
-    public readonly nodes: RawNode[];
-    public readonly entryPoints: RawNode[];
+    public nodes: RawNode[];
+    public entryPoints: RawNode[];
+
+    public graphState: RawGraphState;
+    public graphUpdater: RawGraphUpdater;
 
     constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
         this.nodes = [];
         this.entryPoints = [];
+
+        this.graphState = new RawGraphState();
+        this.graphUpdater = new RawGraphUpdater();
     }
 
     getNode(astIndex: number): RawNode {
         return this.nodes[astIndex];
     }
 
-    updateNodeRelations(node: RawNode) {
+    updateNodeRelations(node: RawNode, oldType: number, newType: number) {
         const nodeArrow = node.arrow;
+        const oldNext = node.next.slice();
         node.clearNext();
         if (node.arrow.type > ArrowTypeCount) {
             node.valid = false;
@@ -69,6 +83,32 @@ export class RawGraph {
                     : this.getOrCreateNodeByCoords(globalRelX, globalRelY);
             node.addNext(relNode);
         });
+        const newNext = node.next;
+
+        if (oldType === ArrowType.DETECTOR && node.detectedNode) {
+            node.detectedNode.removeNext(node);
+            node.detectedNode = null;
+        }
+        if (newType === ArrowType.DETECTOR) {
+            const { x: backX, y: backY } = getRelativePosition(
+                node.globalX,
+                node.globalY,
+                node.arrow.rotation,
+                node.arrow.flipped,
+                1,
+                0,
+            );
+            const backNode = this.getOrCreateNodeByCoords(backX, backY);
+            backNode.addNext(node);
+            node.detectedNode = backNode;
+        }
+
+        this.graphUpdater.updateNodeChange(
+            this.graphState,
+            node,
+            oldNext,
+            newNext,
+        );
     }
 
     getOrCreateNode(
@@ -87,12 +127,13 @@ export class RawGraph {
         );
         arrow.graphAstIndex = this.nodes.length;
         this.nodes.push(node);
+        this.graphState.update(this);
         if (arrow.type > ArrowTypeCount) {
             node.valid = false;
             return node;
         }
         node.valid = true;
-        this.updateNodeRelations(node);
+        this.updateNodeRelations(node, 0, arrow.type);
         return node;
     }
 
@@ -122,13 +163,19 @@ export class RawGraph {
         oldType: number,
         newType: number,
     ) {
-        if (process.env.IS_DEBUG)
-            console.log('[Graph] Change arrow type to', newType);
+        // if (process.env.IS_DEBUG)
+        //     console.log('[Graph] Change arrow type to', newType);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
-        this.updateNodeRelations(node);
 
         const oldEntryPoint = IsArrowEntryPoint(oldType);
         const newEntryPoint = IsArrowEntryPoint(newType);
+        const isAdditionalUpdate = IsAdditionalUpdate(newType);
+
+        const nodeState = this.graphState.nodes[node.index];
+        nodeState.isEntryPoint = newEntryPoint;
+        nodeState.isAdditionalUpdate = isAdditionalUpdate;
+        this.updateNodeRelations(node, oldType, newType);
+        nodeState.signal = 0;
 
         if (oldEntryPoint === newEntryPoint) return;
 
@@ -143,10 +190,10 @@ export class RawGraph {
         globalY: number,
         newRotation: number,
     ) {
-        if (process.env.IS_DEBUG)
-            console.log('[Graph] Change arrow rotation to', newRotation);
+        // if (process.env.IS_DEBUG)
+        //     console.log('[Graph] Change arrow rotation to', newRotation);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
-        this.updateNodeRelations(node);
+        this.updateNodeRelations(node, arrow.type, arrow.type);
     }
 
     updateArrowFlipped(
@@ -156,9 +203,9 @@ export class RawGraph {
         globalY: number,
         newFlipped: boolean,
     ) {
-        if (process.env.IS_DEBUG)
-            console.log('[Graph] Change arrow flipped to', newFlipped);
+        // if (process.env.IS_DEBUG)
+        //     console.log('[Graph] Change arrow flipped to', newFlipped);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
-        this.updateNodeRelations(node);
+        this.updateNodeRelations(node, arrow.type, arrow.type);
     }
 }

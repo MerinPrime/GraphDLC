@@ -28,6 +28,15 @@ export enum ArrowType {
 
 export const ArrowTypeCount = 24;
 
+export function IsAdditionalUpdate(type: ArrowType): boolean {
+    return (
+        type === ArrowType.DELAY ||
+        type === ArrowType.IMPULSE ||
+        type === ArrowType.FLIP_FLOP ||
+        type === ArrowType.RANDOM
+    );
+}
+
 export function IsArrowEntryPoint(type: ArrowType): boolean {
     return (
         type === ArrowType.SOURCE ||

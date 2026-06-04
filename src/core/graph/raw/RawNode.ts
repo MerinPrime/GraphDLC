@@ -5,6 +5,7 @@ import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 
 export class RawNode {
     arrow: Arrow;
+    chunk: Chunk;
     index: number;
     globalX: number;
     globalY: number;
@@ -14,6 +15,7 @@ export class RawNode {
 
     next: RawNode[];
     previous: RawNode[];
+    detectedNode: RawNode | null;
 
     constructor(
         arrow: Arrow,
@@ -23,6 +25,7 @@ export class RawNode {
         globalY: number,
     ) {
         this.arrow = arrow;
+        this.chunk = chunk;
         this.index = index;
         this.globalX = globalX;
         this.globalY = globalY;
@@ -31,13 +34,17 @@ export class RawNode {
         this.valid = false;
         this.next = [];
         this.previous = [];
+        this.detectedNode = null;
     }
 
     clearNext() {
-        this.next.forEach((nextNode) =>
-            removeWithSwap(nextNode.previous, this),
-        );
+        const detectors: RawNode[] = [];
+        this.next.forEach((nextNode) => {
+            removeWithSwap(nextNode.previous, this);
+            if (nextNode.detectedNode === this) detectors.push(nextNode);
+        });
         this.next.length = 0;
+        detectors.forEach((detector) => this.addNext(detector));
     }
 
     removeNext(node: RawNode) {
