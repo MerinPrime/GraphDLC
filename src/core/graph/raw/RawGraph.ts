@@ -117,7 +117,8 @@ export class RawGraph {
         globalX: number,
         globalY: number,
     ): RawNode {
-        if (arrow.graphAstIndex) return this.getNode(arrow.graphAstIndex);
+        if (arrow.graphAstIndex != null)
+            return this.getNode(arrow.graphAstIndex);
         const node = new RawNode(
             arrow,
             this.nodes.length,
@@ -146,7 +147,8 @@ export class RawGraph {
             globalY - chunk.y * CHUNK_SIZE,
         );
 
-        if (arrow.graphAstIndex) return this.getNode(arrow.graphAstIndex);
+        if (arrow.graphAstIndex != null)
+            return this.getNode(arrow.graphAstIndex);
         return this.getOrCreateNode(arrow, chunk, globalX, globalY);
     }
 

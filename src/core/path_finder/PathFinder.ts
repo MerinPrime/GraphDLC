@@ -303,7 +303,7 @@ export class PathFinder {
                     );
 
                     const arrow = gameMap.getArrow(nextX, nextY);
-                    if (arrow?.graphAstIndex) {
+                    if (arrow?.graphAstIndex != null) {
                         const node = gameMap.rawGraph.getNode(
                             arrow.graphAstIndex,
                         );
