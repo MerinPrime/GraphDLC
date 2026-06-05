@@ -45,6 +45,7 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     if (astNode) {
                         info.push(`NextLen: ${astNode.next.length}`);
                         info.push(`PrevLen: ${astNode.previous.length}`);
+                        info.push(`IsCycle: ${astNode.isCycle}`);
                     }
                     const nodeState =
                         astNode?.index != null

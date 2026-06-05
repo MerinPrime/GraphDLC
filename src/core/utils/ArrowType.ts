@@ -37,6 +37,20 @@ export function IsAdditionalUpdate(type: ArrowType): boolean {
     );
 }
 
+export function IsArrowPath(type: ArrowType): boolean {
+    return (
+        type === ArrowType.ARROW ||
+        type === ArrowType.SPLITTER_UP_DOWN ||
+        type === ArrowType.SPLITTER_UP_RIGHT ||
+        type === ArrowType.SPLITTER_UP_RIGHT_LEFT ||
+        type === ArrowType.BLUE_ARROW ||
+        type === ArrowType.DIAGONAL_ARROW ||
+        type === ArrowType.SPLITTER_UP_UP ||
+        type === ArrowType.SPLITTER_RIGHT_UP ||
+        type === ArrowType.SPLITTER_UP_DIAGONAL
+    );
+}
+
 export function IsArrowEntryPoint(type: ArrowType): boolean {
     return (
         type === ArrowType.SOURCE ||

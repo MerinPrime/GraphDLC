@@ -1,7 +1,7 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
-import { ArrowType } from 'src/core/utils/ArrowType';
+import { ArrowType, IsArrowPath } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 
 const ALLOWED_IN_CYCLE = new Set([
@@ -21,6 +21,14 @@ function canBeInCycle(node: RawNode): boolean {
     return ALLOWED_IN_CYCLE.has(node.arrow.type);
 }
 
+export interface RawCycle {
+    nodes: RawNode[];
+    read: RawNode[];
+    clear: RawNode[];
+    write: RawNode[];
+    xor_write: RawNode[];
+}
+
 export class RawNode {
     arrow: Arrow;
     chunk: Chunk;
@@ -36,7 +44,7 @@ export class RawNode {
     detectedNode: RawNode | null;
 
     isCycle: boolean;
-    cycleRef: RawNode[] | null;
+    cycleRef: RawCycle | null;
 
     constructor(
         arrow: Arrow,
@@ -61,10 +69,86 @@ export class RawNode {
         this.cycleRef = null;
     }
 
-    private dismantleCycle(cyclePath: RawNode[]) {
-        for (let i = 0; i < cyclePath.length; i++) {
-            cyclePath[i].isCycle = false;
-            cyclePath[i].cycleRef = null;
+    private dismantleCycle(cyclePath: RawCycle) {
+        for (const node of cyclePath.nodes) {
+            node.isCycle = false;
+            node.cycleRef = null;
+        }
+    }
+
+    private refreshCycleIO(cycle: RawCycle) {
+        cycle.read.length = 0;
+        cycle.clear.length = 0;
+        cycle.write.length = 0;
+        cycle.xor_write.length = 0;
+
+        const cycleSet = new Set(cycle.nodes);
+
+        for (const node of cycle.nodes) {
+            for (const nextNode of node.next) {
+                if (
+                    nextNode.arrow.type === ArrowType.LOGIC_AND &&
+                    !cycleSet.has(nextNode)
+                )
+                    cycle.read.push(nextNode);
+            }
+            for (const prevNode of node.previous) {
+                if (!cycleSet.has(prevNode)) {
+                    if (prevNode.arrow.type === ArrowType.BLOCKER) {
+                        cycle.clear.push(prevNode);
+                    } else if (node.arrow.type === ArrowType.LOGIC_XOR) {
+                        cycle.xor_write.push(prevNode);
+                    } else {
+                        cycle.write.push(prevNode);
+                    }
+                }
+            }
+        }
+    }
+
+    private buildAndAssignCycle(cyclePath: RawNode[]): RawCycle {
+        const rawCycle: RawCycle = {
+            nodes: cyclePath,
+            read: [],
+            clear: [],
+            write: [],
+            xor_write: [],
+        };
+
+        for (const n of cyclePath) {
+            n.isCycle = true;
+            n.cycleRef = rawCycle;
+        }
+
+        this.refreshCycleIO(rawCycle);
+        return rawCycle;
+    }
+
+    private tryRebuildCycle(startNode: RawNode) {
+        if (startNode.cycleRef !== null || !canBeInCycle(startNode)) {
+            return;
+        }
+
+        const cyclePath = this.findCyclePath(startNode, startNode);
+        if (cyclePath !== null && this.isValidCycle(cyclePath)) {
+            this.buildAndAssignCycle(cyclePath);
+        }
+    }
+
+    private reevaluateParentCycles() {
+        for (const parent of this.previous) {
+            if (
+                parent.cycleRef !== null &&
+                !this.isValidCycle(parent.cycleRef.nodes)
+            ) {
+                this.dismantleCycle(parent.cycleRef);
+            }
+
+            if (parent.cycleRef !== null) {
+                this.refreshCycleIO(parent.cycleRef);
+            } else {
+                this.tryRebuildCycle(parent);
+            }
         }
     }
 
@@ -76,41 +160,41 @@ export class RawNode {
             this.dismantleCycle(this.cycleRef);
         }
 
-        this.next.forEach((nextNode) => {
-            if (this.cycleRef !== null && nextNode.cycleRef === this.cycleRef) {
-                this.dismantleCycle(this.cycleRef);
-            }
-
+        for (const nextNode of oldNext) {
             removeWithSwap(nextNode.previous, this);
             if (nextNode.detectedNode === this) detectors.push(nextNode);
-        });
+        }
         this.next.length = 0;
 
-        this.previous.forEach((parent) => {
-            if (parent.cycleRef !== null) {
-                if (!this.isValidCycle(parent.cycleRef)) {
-                    this.dismantleCycle(parent.cycleRef);
-                }
-            }
-            const cyclePath = this.findCyclePath(parent, parent);
-            if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                cyclePath.forEach((n) => {
-                    n.isCycle = true;
-                    n.cycleRef = cyclePath;
-                });
-            }
-        });
+        this.reevaluateParentCycles();
+
+        this.tryRebuildCycle(this);
+        for (const oldNode of oldNext) {
+            this.tryRebuildCycle(oldNode);
+        }
 
         if (this.isCycle) {
             this.updateCycleStatusAfterRemoval(this);
         }
-        for (let i = 0; i < oldNext.length; i++) {
-            if (oldNext[i].isCycle) {
-                this.updateCycleStatusAfterRemoval(oldNext[i]);
+        for (const oldNode of oldNext) {
+            if (oldNode.isCycle) {
+                this.updateCycleStatusAfterRemoval(oldNode);
+            }
+            if (
+                oldNode.cycleRef !== null &&
+                oldNode.cycleRef !== this.cycleRef
+            ) {
+                this.refreshCycleIO(oldNode.cycleRef);
             }
         }
 
-        detectors.forEach((detector) => this.addNext(detector));
+        if (this.cycleRef !== null) {
+            this.refreshCycleIO(this.cycleRef);
+        }
+
+        for (const detector of detectors) {
+            this.addNext(detector);
+        }
     }
 
     removeNext(node: RawNode) {
@@ -121,20 +205,10 @@ export class RawNode {
         removeWithSwap(this.next, node);
         removeWithSwap(node.previous, this);
 
-        this.previous.forEach((parent) => {
-            if (parent.cycleRef !== null) {
-                if (!this.isValidCycle(parent.cycleRef)) {
-                    this.dismantleCycle(parent.cycleRef);
-                }
-            }
-            const cyclePath = this.findCyclePath(parent, parent);
-            if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                cyclePath.forEach((n) => {
-                    n.isCycle = true;
-                    n.cycleRef = cyclePath;
-                });
-            }
-        });
+        this.reevaluateParentCycles();
+
+        this.tryRebuildCycle(this);
+        this.tryRebuildCycle(node);
 
         if (this.isCycle) {
             this.updateCycleStatusAfterRemoval(this);
@@ -142,24 +216,25 @@ export class RawNode {
         if (node.isCycle) {
             this.updateCycleStatusAfterRemoval(node);
         }
+
+        if (this.cycleRef !== null) {
+            this.refreshCycleIO(this.cycleRef);
+        }
+        if (node.cycleRef !== null && node.cycleRef !== this.cycleRef) {
+            this.refreshCycleIO(node.cycleRef);
+        }
     }
 
     addNext(node: RawNode): RawNode[] | null {
         if (canBeInCycle(this) && canBeInCycle(node)) {
             const cyclePath = this.findCyclePath(node, this);
 
-            if (cyclePath !== null) {
-                if (this.isValidCycle(cyclePath)) {
-                    this.next.push(node);
-                    node.previous.push(this);
+            if (cyclePath !== null && this.isValidCycle(cyclePath)) {
+                this.next.push(node);
+                node.previous.push(this);
 
-                    cyclePath.forEach((n) => {
-                        n.isCycle = true;
-                        n.cycleRef = cyclePath;
-                    });
-
-                    return cyclePath;
-                }
+                this.buildAndAssignCycle(cyclePath);
+                return cyclePath;
             }
         }
 
@@ -167,10 +242,23 @@ export class RawNode {
         node.previous.push(this);
 
         if (this.cycleRef !== null) {
-            if (!this.isValidCycle(this.cycleRef)) {
+            if (!this.isValidCycle(this.cycleRef.nodes)) {
                 this.dismantleCycle(this.cycleRef);
+            } else {
+                this.refreshCycleIO(this.cycleRef);
             }
         }
+
+        if (node.cycleRef !== null && node.cycleRef !== this.cycleRef) {
+            if (!this.isValidCycle(node.cycleRef.nodes)) {
+                this.dismantleCycle(node.cycleRef);
+            } else {
+                this.refreshCycleIO(node.cycleRef);
+            }
+        }
+
+        this.tryRebuildCycle(this);
+        this.tryRebuildCycle(node);
 
         return null;
     }
@@ -178,12 +266,9 @@ export class RawNode {
     private isValidCycle(cyclePath: RawNode[]): boolean {
         const cycleSet = new Set<RawNode>(cyclePath);
 
-        for (let i = 0; i < cyclePath.length; i++) {
-            const cycleNode = cyclePath[i];
-
-            for (let j = 0; j < cycleNode.next.length; j++) {
-                const neighbor = cycleNode.next[j];
-
+        for (const cycleNode of cyclePath) {
+            let moreThanOneNext = false;
+            for (const neighbor of cycleNode.next) {
                 if (!cycleSet.has(neighbor)) {
                     if (
                         neighbor.arrow.type !== ArrowType.EMPTY &&
@@ -191,12 +276,22 @@ export class RawNode {
                     ) {
                         return false;
                     }
-
-                    for (let k = 0; k < neighbor.next.length; k++) {
-                        if (cycleSet.has(neighbor.next[k])) {
-                            return false;
-                        }
-                    }
+                } else {
+                    if (moreThanOneNext) return false;
+                    moreThanOneNext = true;
+                }
+            }
+            let moreThanOneWrite = false;
+            for (const neighbor of cycleNode.previous) {
+                if (!cycleSet.has(neighbor)) {
+                    if (
+                        !IsArrowPath(neighbor.arrow.type) &&
+                        neighbor.arrow.type !== ArrowType.LOGIC_AND && // TODO: check XOR/NOT etc
+                        neighbor.arrow.type !== ArrowType.BLOCKER
+                    )
+                        return false;
+                    if (moreThanOneWrite) return false;
+                    moreThanOneWrite = true;
                 }
             }
         }
@@ -209,12 +304,12 @@ export class RawNode {
         targetNode: RawNode,
     ): RawNode[] | null {
         const queue: RawNode[] = [];
+        let head = 0;
         const visited = new Set<RawNode>();
         const parentMap = new Map<RawNode, RawNode>();
 
         if (startNode === targetNode) {
-            for (let i = 0; i < startNode.next.length; i++) {
-                const child = startNode.next[i];
+            for (const child of startNode.next) {
                 if (canBeInCycle(child)) {
                     queue.push(child);
                     visited.add(child);
@@ -226,12 +321,10 @@ export class RawNode {
             visited.add(startNode);
         }
 
-        while (queue.length > 0) {
-            const current = queue.shift()!;
+        while (head < queue.length) {
+            const current = queue[head++];
 
-            for (let i = 0; i < current.next.length; i++) {
-                const child = current.next[i];
-
+            for (const child of current.next) {
                 if (child === targetNode) {
                     const path: RawNode[] = [targetNode];
                     let curr: RawNode | undefined = current;
@@ -246,9 +339,7 @@ export class RawNode {
                     return path.reverse();
                 }
 
-                if (!canBeInCycle(child)) {
-                    continue;
-                }
+                if (!canBeInCycle(child)) continue;
 
                 if (!visited.has(child)) {
                     visited.add(child);
@@ -264,21 +355,23 @@ export class RawNode {
     private updateCycleStatusAfterRemoval(startNode: RawNode) {
         const isStillInCycle =
             this.findCyclePath(startNode, startNode) !== null;
+
         if (!isStillInCycle) {
             const queue: RawNode[] = [startNode];
+            let head = 0;
             const visited = new Set<RawNode>([startNode]);
             startNode.isCycle = false;
 
-            while (queue.length > 0) {
-                const current = queue.shift()!;
+            while (head < queue.length) {
+                const current = queue[head++];
                 const neighbors = [...current.next, ...current.previous];
 
-                for (let i = 0; i < neighbors.length; i++) {
-                    const neighbor = neighbors[i];
+                for (const neighbor of neighbors) {
                     if (neighbor.isCycle && !visited.has(neighbor)) {
                         visited.add(neighbor);
                         const neighborStillInCycle =
                             this.findCyclePath(neighbor, neighbor) !== null;
+
                         if (!neighborStillInCycle) {
                             neighbor.isCycle = false;
                             neighbor.cycleRef = null;
