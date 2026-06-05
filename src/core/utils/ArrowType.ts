@@ -24,6 +24,7 @@ export enum ArrowType {
     LEVEL_SOURCE = 22,
     LEVEL_TARGET = 23,
     DIRECTIONAL_BUTTON = 24,
+    WALL = 25,
 }
 
 export const ArrowTypeCount = 24;
@@ -55,6 +56,8 @@ export function IsArrowEntryPoint(type: ArrowType): boolean {
     return (
         type === ArrowType.SOURCE ||
         type === ArrowType.IMPULSE ||
-        type === ArrowType.LOGIC_NOT
+        type === ArrowType.LOGIC_NOT ||
+        type === ArrowType.BUTTON ||
+        type === ArrowType.DIRECTIONAL_BUTTON
     );
 }
