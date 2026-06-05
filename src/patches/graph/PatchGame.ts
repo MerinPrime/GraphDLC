@@ -147,6 +147,15 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     }
                 }
 
+                this.path?.forEach(({ x, y }) => {
+                    render.setSolidColor(0.2, 0.2, 0.8, 0.25);
+                    render.drawSolidColorRect(
+                        x * scale + offsetX,
+                        y * scale + offsetY,
+                        scale,
+                        scale,
+                    );
+                });
                 render.startTransparentArrowsRendering();
                 render.setArrowSize(this.scale);
                 render.setArrowAlpha(0.5);
@@ -158,15 +167,6 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         0,
                         rotation,
                         flipped,
-                    );
-                });
-                this.path?.forEach(({ x, y }) => {
-                    render.setSolidColor(0.2, 0.2, 0.8, 0.25);
-                    render.drawSolidColorRect(
-                        x * scale + offsetX,
-                        y * scale + offsetY,
-                        scale,
-                        scale,
                     );
                 });
 
