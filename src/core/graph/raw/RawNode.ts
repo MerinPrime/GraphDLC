@@ -21,12 +21,16 @@ function canBeInCycle(node: RawNode): boolean {
     return ALLOWED_IN_CYCLE.has(node.arrow.type);
 }
 
+export const enum CycleHeadType {
+    READ = 0,
+    WRITE = 1,
+    CLEAR = 2,
+    XOR_WRITE = 3,
+}
+
 export interface RawCycle {
     nodes: RawNode[];
-    read: RawNode[];
-    clear: RawNode[];
-    write: RawNode[];
-    xor_write: RawNode[];
+    heads: RawNode[];
 }
 
 export class RawNode {
@@ -45,6 +49,8 @@ export class RawNode {
 
     isCycle: boolean;
     cycleRef: RawCycle | null;
+    ioCycle: RawCycle | null;
+    headType: CycleHeadType;
 
     constructor(
         arrow: Arrow,
@@ -67,6 +73,8 @@ export class RawNode {
 
         this.isCycle = false;
         this.cycleRef = null;
+        this.ioCycle = null;
+        this.headType = CycleHeadType.READ;
     }
 
     private dismantleCycle(cyclePath: RawCycle) {
@@ -77,10 +85,8 @@ export class RawNode {
     }
 
     private refreshCycleIO(cycle: RawCycle) {
-        cycle.read.length = 0;
-        cycle.clear.length = 0;
-        cycle.write.length = 0;
-        cycle.xor_write.length = 0;
+        cycle.heads.forEach((head) => (head.ioCycle = null));
+        cycle.heads.length = 0;
 
         const cycleSet = new Set(cycle.nodes);
 
@@ -89,17 +95,22 @@ export class RawNode {
                 if (
                     nextNode.arrow.type === ArrowType.LOGIC_AND &&
                     !cycleSet.has(nextNode)
-                )
-                    cycle.read.push(nextNode);
+                ) {
+                    nextNode.headType = CycleHeadType.READ;
+                    cycle.heads.push(nextNode);
+                }
             }
             for (const prevNode of node.previous) {
                 if (!cycleSet.has(prevNode)) {
                     if (prevNode.arrow.type === ArrowType.BLOCKER) {
-                        cycle.clear.push(prevNode);
+                        prevNode.headType = CycleHeadType.CLEAR;
+                        cycle.heads.push(prevNode);
                     } else if (node.arrow.type === ArrowType.LOGIC_XOR) {
-                        cycle.xor_write.push(prevNode);
+                        prevNode.headType = CycleHeadType.XOR_WRITE;
+                        cycle.heads.push(prevNode);
                     } else {
-                        cycle.write.push(prevNode);
+                        prevNode.headType = CycleHeadType.WRITE;
+                        cycle.heads.push(prevNode);
                     }
                 }
             }
@@ -109,10 +120,7 @@ export class RawNode {
     private buildAndAssignCycle(cyclePath: RawNode[]): RawCycle {
         const rawCycle: RawCycle = {
             nodes: cyclePath,
-            read: [],
-            clear: [],
-            write: [],
-            xor_write: [],
+            heads: [],
         };
 
         for (const n of cyclePath) {

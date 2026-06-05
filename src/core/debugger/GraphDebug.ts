@@ -1,6 +1,10 @@
 import { type Bounds, InBounds } from 'src/patches/graph/PatchGame';
 import type { RawGraph } from '../graph/raw/RawGraph';
-import type { RawCycle, RawNode } from '../graph/raw/RawNode';
+import {
+    CycleHeadType,
+    type RawCycle,
+    type RawNode,
+} from '../graph/raw/RawNode';
 import {
     DebugMode,
     DebugModeSetting,
@@ -57,20 +61,15 @@ export class GraphDebug {
                 if (InBounds(bounds, node.globalX, node.globalY))
                     renderColor(node, 0.8, 0.2, 0.8, 0.25);
             });
-            cycle.read.forEach((node) => {
-                if (InBounds(bounds, node.globalX, node.globalY))
+            cycle.heads.forEach((node) => {
+                if (!InBounds(bounds, node.globalX, node.globalY)) return;
+                if (node.headType === CycleHeadType.READ)
                     renderColor(node, 0.2, 0.2, 0.8, 0.25);
-            });
-            cycle.clear.forEach((node) => {
-                if (InBounds(bounds, node.globalX, node.globalY))
-                    renderColor(node, 0.8, 0.2, 0.2, 0.25);
-            });
-            cycle.write.forEach((node) => {
-                if (InBounds(bounds, node.globalX, node.globalY))
+                if (node.headType === CycleHeadType.WRITE)
                     renderColor(node, 0.2, 0.8, 0.2, 0.25);
-            });
-            cycle.xor_write.forEach((node) => {
-                if (InBounds(bounds, node.globalX, node.globalY))
+                if (node.headType === CycleHeadType.CLEAR)
+                    renderColor(node, 0.8, 0.2, 0.2, 0.25);
+                if (node.headType === CycleHeadType.XOR_WRITE)
                     renderColor(node, 0.8, 0.8, 0.2, 0.25);
             });
         });
