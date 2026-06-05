@@ -12,6 +12,7 @@ import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
 import { PatchBackend } from 'src/patches/utility/PatchBackend';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
+import { GraphDebug } from './debugger/GraphDebug';
 import type { PatchLoader } from './PatchLoader';
 import { PathFinder } from './path_finder/PathFinder';
 import { SettingsManager } from './settings/Manager';
@@ -21,12 +22,14 @@ export class GraphDLC {
     settingsManager: SettingsManager;
     designManager: DesignManager;
     pathFinder: PathFinder;
+    debugger: GraphDebug;
 
     constructor(patchLoader: PatchLoader) {
         this.patchLoader = patchLoader;
         this.settingsManager = new SettingsManager();
         this.designManager = new DesignManager();
         this.pathFinder = new PathFinder();
+        this.debugger = new GraphDebug();
     }
 
     inject() {

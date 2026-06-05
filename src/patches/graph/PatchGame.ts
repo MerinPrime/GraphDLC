@@ -4,11 +4,9 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import type { RawCycle } from 'src/core/graph/raw/RawNode';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
-import { EnableBreakpointSetting } from 'src/core/settings/instances/other/EnableBreakpointSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
@@ -17,6 +15,22 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 interface PrivateGame {
     readonly gameMap: GameMap;
     render: GameRender;
+}
+
+export interface Bounds {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+}
+
+export function InBounds(bounds: Bounds, x: number, y: number): boolean {
+    return (
+        x >= bounds.minX &&
+        y >= bounds.minY &&
+        x <= bounds.maxX &&
+        y <= bounds.maxY
+    );
 }
 
 export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
@@ -155,61 +169,36 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         scale,
                     );
                 });
-                // TODO: Another setting or debug mode
-                if (EnableBreakpointSetting.value) {
-                    const cycles = new Set<RawCycle>();
-                    gameMap.rawGraph.nodes.forEach((node) => {
-                        if (!node.cycleRef) return;
-                        cycles.add(node.cycleRef);
-                    });
-                    cycles.forEach((cycle) => {
-                        cycle.nodes.forEach((node) => {
-                            render.setSolidColor(0.8, 0.2, 0.8, 0.25);
-                            render.drawSolidColorRect(
-                                node.globalX * scale + offsetX,
-                                node.globalY * scale + offsetY,
-                                scale,
-                                scale,
-                            );
-                        });
-                        cycle.read.forEach((node) => {
-                            render.setSolidColor(0.2, 0.2, 0.8, 0.25);
-                            render.drawSolidColorRect(
-                                node.globalX * scale + offsetX,
-                                node.globalY * scale + offsetY,
-                                scale,
-                                scale,
-                            );
-                        });
-                        cycle.clear.forEach((node) => {
-                            render.setSolidColor(0.8, 0.2, 0.2, 0.25);
-                            render.drawSolidColorRect(
-                                node.globalX * scale + offsetX,
-                                node.globalY * scale + offsetY,
-                                scale,
-                                scale,
-                            );
-                        });
-                        cycle.write.forEach((node) => {
-                            render.setSolidColor(0.2, 0.8, 0.2, 0.25);
-                            render.drawSolidColorRect(
-                                node.globalX * scale + offsetX,
-                                node.globalY * scale + offsetY,
-                                scale,
-                                scale,
-                            );
-                        });
-                        cycle.xor_write.forEach((node) => {
-                            render.setSolidColor(0.8, 0.8, 0.2, 0.25);
-                            render.drawSolidColorRect(
-                                node.globalX * scale + offsetX,
-                                node.globalY * scale + offsetY,
-                                scale,
-                                scale,
-                            );
-                        });
-                    });
-                }
+
+                const minX: number =
+                    Math.floor(-this.offset[0] / CELL_SIZE) - 1;
+                const minY: number =
+                    Math.floor(-this.offset[1] / CELL_SIZE) - 1;
+                const maxX: number = Math.floor(
+                    -this.offset[0] / CELL_SIZE + this.width / this.scale,
+                );
+                const maxY: number = Math.floor(
+                    -this.offset[1] / CELL_SIZE + this.height / this.scale,
+                );
+                const bounds = {
+                    minX,
+                    minY,
+                    maxX,
+                    maxY,
+                };
+                graphDLC.debugger.colorizeDebug(
+                    gameMap.rawGraph,
+                    bounds,
+                    (node, r, g, b, a) => {
+                        render.setSolidColor(r, g, b, a);
+                        render.drawSolidColorRect(
+                            node.globalX * scale + offsetX,
+                            node.globalY * scale + offsetY,
+                            scale,
+                            scale,
+                        );
+                    },
+                );
 
                 render.setShowBorder(true);
             }

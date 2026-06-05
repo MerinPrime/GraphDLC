@@ -1,3 +1,4 @@
+import { DebugModeSetting } from './instances/other/DebugModeSetting';
 import { EnableArrowRelationsSetting } from './instances/other/EnableArrowRelationsSetting';
 import { EnableBreakpointSetting } from './instances/other/EnableBreakpointSetting';
 import { MapProtectionSetting } from './instances/other/MapProtectionSetting';
@@ -13,6 +14,7 @@ const settings: BaseSetting<any>[] = [
     EnableArrowRelationsSetting,
     ShowArrowConnectionsSetting,
     MapProtectionSetting,
+    DebugModeSetting,
 
     QoLReDesignSetting,
     GraphDLCDesignSetting,
