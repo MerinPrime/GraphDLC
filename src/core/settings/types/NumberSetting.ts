@@ -1,10 +1,11 @@
-import { BaseSetting } from "./BaseSetting";
-import { SettingMeta } from "./Types";
+import { BaseSetting } from './BaseSetting';
+import type { SettingMeta } from './Types';
 
 export interface NumberSettingOptions {
     min: number;
     max: number;
-    step?: number; formatLabel?: (value: number) => string;
+    step?: number;
+    formatLabel?: (value: number) => string;
 }
 
 export class NumberSetting extends BaseSetting<number> {
@@ -13,9 +14,22 @@ export class NumberSetting extends BaseSetting<number> {
     readonly step: number;
     private readonly formatLabel: (value: number) => string;
 
-    constructor(key: string, defaultValue: boolean | number, meta: SettingMeta, options: NumberSettingOptions) {
-        super(key, typeof defaultValue === "boolean" ? (defaultValue ? 1 : 0) : defaultValue, meta);
-        
+    constructor(
+        key: string,
+        defaultValue: boolean | number,
+        meta: SettingMeta,
+        options: NumberSettingOptions,
+    ) {
+        super(
+            key,
+            typeof defaultValue === 'boolean'
+                ? defaultValue
+                    ? 1
+                    : 0
+                : defaultValue,
+            meta,
+        );
+
         this.min = options.min;
         this.max = options.max;
         this.step = options.step ?? 1;
@@ -27,18 +41,18 @@ export class NumberSetting extends BaseSetting<number> {
     }
 
     buildUIComponent(): HTMLDivElement {
-        const container = document.createElement("div");
-        const slider = document.createElement("input");
-        const label = document.createElement("span");
+        const container = document.createElement('div');
+        const slider = document.createElement('input');
+        const label = document.createElement('span');
 
-        slider.type = "range";
+        slider.type = 'range';
         slider.min = this.min.toString();
         slider.max = this.max.toString();
         slider.step = this.step.toString();
         slider.value = this.value.toString();
-        slider.style.display = "inline";
+        slider.style.display = 'inline';
 
-        slider.addEventListener("input", () => {
+        slider.addEventListener('input', () => {
             const val = parseInt(slider.value, 10);
             this.value = val;
             label.innerText = this.formatLabel(this.value);

@@ -1,10 +1,7 @@
 import { type Bounds, InBounds } from 'src/patches/graph/PatchGame';
+import { CycleHeadType } from '../graph/raw/CycleTypes';
 import type { RawGraph } from '../graph/raw/RawGraph';
-import {
-    CycleHeadType,
-    type RawCycle,
-    type RawNode,
-} from '../graph/raw/RawNode';
+import type { RawCycle, RawNode } from '../graph/raw/RawNode';
 import {
     DebugMode,
     DebugModeSetting,

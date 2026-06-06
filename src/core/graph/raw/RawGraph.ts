@@ -12,6 +12,7 @@ import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
+import { CycleManager } from './CycleManager';
 import { RawNode } from './RawNode';
 import { RawGraphState } from './updater/RawState';
 import { RawGraphUpdater } from './updater/RawUpdater';
@@ -27,6 +28,7 @@ export class RawGraph {
 
     public graphState: RawGraphState;
     public graphUpdater: RawGraphUpdater;
+    public cycleManager: CycleManager;
 
     constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
@@ -35,6 +37,7 @@ export class RawGraph {
 
         this.graphState = new RawGraphState();
         this.graphUpdater = new RawGraphUpdater();
+        this.cycleManager = new CycleManager();
     }
 
     getNode(astIndex: number): RawNode {
@@ -43,52 +46,81 @@ export class RawGraph {
 
     updateNodeRelations(node: RawNode, oldType: number, newType: number) {
         const nodeArrow = node.arrow;
-        const oldNext = node.next.slice();
-        node.clearNext();
-        if (node.arrow.type > ArrowTypeCount) {
-            node.valid = false;
-            return;
-        }
-        node.valid = true;
-        const relations = getArrowRelations(nodeArrow.type);
-        const chunk = (
-            this.gameMap as any as PrivateGameMap
-        ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
-        relations.forEach(([relX, relY]) => {
-            const relativeArrow = getRelativeArrow(
-                chunk,
-                node.localX,
-                node.localY,
-                nodeArrow.rotation,
-                nodeArrow.flipped,
-                relX,
-                relY,
-            );
-            const { x: globalRelX, y: globalRelY } = getRelativePosition(
-                node.globalX,
-                node.globalY,
-                nodeArrow.rotation,
-                nodeArrow.flipped,
-                relX,
-                relY,
-            );
-            const relNode =
-                relativeArrow.arrow && relativeArrow.chunk
-                    ? this.getOrCreateNode(
-                          relativeArrow.arrow,
-                          relativeArrow.chunk,
-                          globalRelX,
-                          globalRelY,
-                      )
-                    : this.getOrCreateNodeByCoords(globalRelX, globalRelY);
-            node.addNext(relNode);
-        });
-        const newNext = node.next;
+        const oldNextFull = node.next.slice();
 
-        if (oldType === ArrowType.DETECTOR && node.detectedNode) {
-            node.detectedNode.removeNext(node);
-            node.detectedNode = null;
+        const oldTargets: RawNode[] = [];
+        for (const n of node.next) {
+            if (n.detectedNode !== node) oldTargets.push(n);
         }
+
+        const newTargets: RawNode[] = [];
+        if (node.arrow.type <= ArrowTypeCount) {
+            node.valid = true;
+            const relations = getArrowRelations(nodeArrow.type);
+            const chunk = (
+                this.gameMap as any as PrivateGameMap
+            ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
+            relations.forEach(([relX, relY]) => {
+                const relativeArrow = getRelativeArrow(
+                    chunk,
+                    node.localX,
+                    node.localY,
+                    nodeArrow.rotation,
+                    nodeArrow.flipped,
+                    relX,
+                    relY,
+                );
+                const { x: globalRelX, y: globalRelY } = getRelativePosition(
+                    node.globalX,
+                    node.globalY,
+                    nodeArrow.rotation,
+                    nodeArrow.flipped,
+                    relX,
+                    relY,
+                );
+                const relNode =
+                    relativeArrow.arrow && relativeArrow.chunk
+                        ? this.getOrCreateNode(
+                              relativeArrow.arrow,
+                              relativeArrow.chunk,
+                              globalRelX,
+                              globalRelY,
+                          )
+                        : this.getOrCreateNodeByCoords(globalRelX, globalRelY);
+                newTargets.push(relNode);
+            });
+        } else {
+            node.valid = false;
+        }
+
+        const oldTargetCounts = new Map<RawNode, number>();
+        for (const n of oldTargets)
+            oldTargetCounts.set(n, (oldTargetCounts.get(n) || 0) + 1);
+
+        const newTargetCounts = new Map<RawNode, number>();
+        for (const n of newTargets)
+            newTargetCounts.set(n, (newTargetCounts.get(n) || 0) + 1);
+
+        for (const [n, oldCount] of oldTargetCounts) {
+            const newCount = newTargetCounts.get(n) || 0;
+            if (oldCount > newCount) {
+                for (let i = 0; i < oldCount - newCount; i++) {
+                    node.removeNext(n);
+                    this.cycleManager.onRemoveNext(node, n);
+                }
+            }
+        }
+        for (const [n, newCount] of newTargetCounts) {
+            const oldCount = oldTargetCounts.get(n) || 0;
+            if (newCount > oldCount) {
+                for (let i = 0; i < newCount - oldCount; i++) {
+                    node.addNext(n);
+                    this.cycleManager.onAddNext(node, n);
+                }
+            }
+        }
+
+        let newDetectedNode: RawNode | null = null;
         if (newType === ArrowType.DETECTOR) {
             const { x: backX, y: backY } = getRelativePosition(
                 node.globalX,
@@ -98,16 +130,29 @@ export class RawGraph {
                 1,
                 0,
             );
-            const backNode = this.getOrCreateNodeByCoords(backX, backY);
-            backNode.addNext(node);
-            node.detectedNode = backNode;
+            newDetectedNode = this.getOrCreateNodeByCoords(backX, backY);
+        }
+
+        if (node.detectedNode !== newDetectedNode) {
+            if (node.detectedNode) {
+                const oldDetected = node.detectedNode;
+                oldDetected.removeNext(node);
+                this.cycleManager.onRemoveNext(oldDetected, node);
+            }
+            node.detectedNode = newDetectedNode;
+            if (newDetectedNode) {
+                newDetectedNode.addNext(node);
+                this.cycleManager.onAddNext(newDetectedNode, node);
+            }
         }
 
         this.graphUpdater.updateNodeChange(
             this.graphState,
             node,
-            oldNext,
-            newNext,
+            oldNextFull,
+            node.next,
+            oldType,
+            newType,
         );
     }
 

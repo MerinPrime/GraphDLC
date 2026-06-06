@@ -1,4 +1,4 @@
-import { Arrow } from '@logic-arrows/game-logic/arrow';
+import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 

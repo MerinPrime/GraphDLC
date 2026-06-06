@@ -23,11 +23,11 @@
                     "fix": "safe"
                 }
             },
-			"style": {
-				"noEnum": "error"
-			},
+            "style": {
+                "noEnum": "error"
+            },
             "suspicious": {
-                "noConstEnum": "off" 
+                "noConstEnum": "off"
             }
         }
     },

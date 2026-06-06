@@ -6,6 +6,7 @@ import { PatchGame } from 'src/patches/graph/PatchGame';
 import { PatchGameMap } from 'src/patches/graph/PatchGameMap';
 import { PatchLoad } from 'src/patches/graph/PatchLoad';
 import { PatchSave } from 'src/patches/graph/PatchSave';
+import { PathBuilding_PlayerControls } from 'src/patches/path_building/PlayerControls';
 import { PatchGameRender } from 'src/patches/render/PatchGameRender';
 import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
@@ -47,5 +48,6 @@ export class GraphDLC {
         PatchSave(this.patchLoader, this);
         PatchChunkUpdates(this.patchLoader, this);
         PatchBackend(this.patchLoader, this);
+        PathBuilding_PlayerControls(this.patchLoader, this);
     }
 }

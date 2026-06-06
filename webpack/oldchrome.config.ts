@@ -28,7 +28,6 @@ export default (packageJson: any): webpack.Configuration => ({
                 },
             ],
         }),
-        // Твой фикс типов здесь:
         new ZipPlugin({
             path: path.resolve(__dirname, '../dist'),
             filename: 'oldchrome-dist.zip',

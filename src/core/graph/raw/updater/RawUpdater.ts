@@ -11,29 +11,45 @@ export class RawGraphUpdater {
         node: RawNode,
         oldNext: RawNode[],
         newNext: RawNode[],
+        oldType: number,
+        newType: number,
     ) {
         const nodeState = graphState.nodes[node.index];
         this.markNodeAsChanged(graphState, nodeState);
         nodeState.isUpdated = true;
         if (nodeState.lastSignal !== NodeSignal.ACTIVE) return;
 
-        oldNext.forEach((edgeNode) => {
-            const edgeState = graphState.nodes[edgeNode.index];
-            if (node.arrow.type === ArrowType.BLOCKER)
-                edgeState.blockedCount -= 1;
-            else edgeState.signalsCount -= 1;
-            this.markNodeAsChanged(graphState, edgeState);
-            edgeState.isUpdated = true;
-        });
+        const oldCounts = new Map<RawNode, number>();
+        for (const n of oldNext) oldCounts.set(n, (oldCounts.get(n) || 0) + 1);
 
-        newNext.forEach((edgeNode) => {
+        const newCounts = new Map<RawNode, number>();
+        for (const n of newNext) newCounts.set(n, (newCounts.get(n) || 0) + 1);
+
+        const allNodes = new Set([...oldNext, ...newNext]);
+
+        for (const edgeNode of allNodes) {
+            const oldCount = oldCounts.get(edgeNode) || 0;
+            const newCount = newCounts.get(edgeNode) || 0;
+
+            if (oldCount === newCount && oldType === newType) continue;
+
             const edgeState = graphState.nodes[edgeNode.index];
-            if (node.arrow.type === ArrowType.BLOCKER)
-                edgeState.blockedCount += 1;
-            else edgeState.signalsCount += 1;
+
+            if (oldCount > 0) {
+                if (oldType === ArrowType.BLOCKER)
+                    edgeState.blockedCount -= oldCount;
+                else edgeState.signalsCount -= oldCount;
+            }
+
+            if (newCount > 0) {
+                if (newType === ArrowType.BLOCKER)
+                    edgeState.blockedCount += newCount;
+                else edgeState.signalsCount += newCount;
+            }
+
             this.markNodeAsChanged(graphState, edgeState);
             edgeState.isUpdated = true;
-        });
+        }
     }
 
     updateState(graphState: RawGraphState, tick: number) {

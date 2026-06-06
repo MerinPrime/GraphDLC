@@ -62,7 +62,7 @@ export default (isProduction: boolean): Configuration => ({
                       terserOptions: {
                           format: {
                               comments:
-                                  /==UserScript==|@name|@version|@author|@description|@match|@grant|@run-at|@namespace/,
+                                  /==UserScript==|==\/UserScript==|@name|@version|@author|@description|@match|@grant|@run-at|@namespace/i,
                           },
                           compress: {
                               drop_console: false,

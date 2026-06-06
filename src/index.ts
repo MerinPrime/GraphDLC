@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
 
