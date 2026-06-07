@@ -46,7 +46,7 @@ export class RawNode {
         this.isCycle = false;
         this.cycleRef = null;
         this.ioCycle = null;
-        this.headType = CycleHeadType.READ;
+        this.headType = CycleHeadType.NONE;
     }
 
     addNext(node: RawNode) {

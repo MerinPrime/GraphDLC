@@ -1,10 +1,11 @@
 import type { RawNode } from './RawNode';
 
 export const enum CycleHeadType {
-    READ = 0,
-    WRITE = 1,
-    CLEAR = 2,
-    XOR_WRITE = 3,
+    NONE = 0,
+    READ = 1,
+    WRITE = 2,
+    CLEAR = 3,
+    XOR_WRITE = 4,
 }
 
 export interface RawCycle {

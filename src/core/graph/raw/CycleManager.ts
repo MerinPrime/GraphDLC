@@ -24,6 +24,7 @@ export class CycleManager {
         for (const node of cyclePath.nodes) {
             node.isCycle = false;
             node.cycleRef = null;
+            node.headType = CycleHeadType.NONE;
         }
     }
 
