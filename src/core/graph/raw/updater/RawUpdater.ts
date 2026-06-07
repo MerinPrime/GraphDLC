@@ -15,6 +15,7 @@ export class RawGraphUpdater {
         newType: number,
     ) {
         const nodeState = graphState.nodes[node.index];
+        this.markNodeAsChangedNonTemp(graphState, nodeState);
         this.markNodeAsChanged(graphState, nodeState);
         nodeState.isUpdated = true;
         if (nodeState.lastSignal !== NodeSignal.ACTIVE) return;
@@ -47,6 +48,7 @@ export class RawGraphUpdater {
                 else edgeState.signalsCount += newCount;
             }
 
+            this.markNodeAsChangedNonTemp(graphState, edgeState);
             this.markNodeAsChanged(graphState, edgeState);
             edgeState.isUpdated = true;
         }
@@ -142,6 +144,13 @@ export class RawGraphUpdater {
         }
 
         graphState.tempChangedNodes.length = 0;
+    }
+
+    markNodeAsChangedNonTemp(
+        graphState: RawGraphState,
+        nodeState: RawNodeState,
+    ) {
+        graphState.changedNodes.push(nodeState);
     }
 
     markNodeAsChanged(graphState: RawGraphState, nodeState: RawNodeState) {

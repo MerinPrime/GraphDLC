@@ -4,10 +4,12 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
+import { NodeSignal } from 'src/core/graph/raw/updater/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
+import { TargetFPSSetting } from 'src/core/settings/instances/other/TargetFPSSetting';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
@@ -15,6 +17,10 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 interface PrivateGame {
     readonly gameMap: GameMap;
     render: GameRender;
+
+    updateTime: number;
+    tps: number;
+    updatesPerSecond: number;
 }
 
 export interface Bounds {
@@ -34,6 +40,11 @@ export function InBounds(bounds: Bounds, x: number, y: number): boolean {
 }
 
 export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+    let renderDelta = 0;
+    let lastUpdateTime = -1;
+    let accumulator = 0;
+    let previousSpeed = 0;
+
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public path: PathStep[] | null = null;
@@ -213,6 +224,8 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             }
 
             draw() {
+                const renderStart = performance.now();
+
                 super.draw();
 
                 const { render, gameMap } = this as any as PrivateGame;
@@ -256,6 +269,92 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 );
 
                 render.setShowBorder(true);
+
+                const renderEnd = performance.now();
+                renderDelta = renderEnd - renderStart;
+            }
+
+            updateFrame(e = () => {}) {
+                const _this = this as any as PrivateGame;
+
+                if (!this.playing) {
+                    lastUpdateTime = -1;
+                    return;
+                }
+
+                if (lastUpdateTime === -1) {
+                    lastUpdateTime = performance.now();
+                }
+
+                const now = performance.now();
+                const delta = now - lastUpdateTime;
+                lastUpdateTime = now;
+                accumulator += delta;
+
+                const isMaxTPS = this.updateSpeedLevel === 8;
+                // const isCustomTPS = this.updateSpeedLevel === 9;
+
+                if (previousSpeed !== this.updateSpeedLevel) {
+                    accumulator = 0;
+                    previousSpeed = this.updateSpeedLevel;
+                }
+
+                const skip = [
+                    1000 / 3,
+                    1000 / 12,
+                    1000 / 60,
+                    1000 / 60,
+                    1000 / 60,
+                    1000 / 60,
+                    1000 / 60,
+                    1000 / 60,
+                    1000 / 60,
+                    1000 / 60,
+                ][this.updateSpeedLevel];
+                // const ticks = !isCustomTPS
+                //     ? [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][updateSpeedLevel]
+                //     : graphDLC.customUI.customTPSField!.getTicksPerFrame();
+                const ticks = [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][
+                    this.updateSpeedLevel
+                ];
+
+                if (accumulator > skip * 3) {
+                    accumulator = skip;
+                }
+
+                if (
+                    this.gameMap.rawGraph.graphState.changedNodes.length !== 0
+                ) {
+                    if (isMaxTPS) {
+                        const timeLimit =
+                            performance.now() +
+                            1000 / TargetFPSSetting.value -
+                            Math.min(
+                                renderDelta,
+                                1000 / TargetFPSSetting.value / 2,
+                            );
+                        do {
+                            this.updateTick(e);
+                            _this.updatesPerSecond++;
+                        } while (performance.now() < timeLimit);
+                        accumulator = 0;
+                    } else {
+                        while (accumulator >= skip) {
+                            for (let i = 0; i < ticks; i++) {
+                                this.updateTick(e);
+                                _this.updatesPerSecond++;
+                            }
+                            accumulator -= skip;
+                        }
+                    }
+                }
+
+                if (performance.now() - _this.updateTime > 1000) {
+                    _this.updateTime = performance.now();
+                    _this.tps = _this.updatesPerSecond;
+                    _this.updatesPerSecond = 0;
+                    this.onFPSUpdate();
+                }
             }
         };
     });

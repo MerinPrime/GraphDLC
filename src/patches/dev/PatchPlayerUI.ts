@@ -1,6 +1,8 @@
 import type { MapInfo } from '@logic-arrows/game-logic/map-info';
 import type { Game } from '@logic-arrows/player/game';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
+import type { UISpeedController } from '@logic-arrows/ui/components/ui-speed-controller';
+import { PLATFORM } from '@logic-arrows/utils/platform';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 
@@ -9,6 +11,11 @@ interface PrivatePlayerUI {
 }
 
 export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+    const _UISpeedController =
+        patchLoader.getDefinition<typeof UISpeedController>(
+            'UISpeedController',
+        );
+
     patchLoader.addDefinitionPatch('PlayerUI', (_module: typeof PlayerUI) => {
         return class PlayerUI extends _module {
             private devDebugInfo: HTMLDivElement | null = null;
@@ -60,6 +67,29 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     }
                 }
                 this.devDebugInfo.innerText = info.join('\n');
+            }
+
+            addSpeedController() {
+                this.speedController = new _UISpeedController.def(
+                    document.body,
+                    9,
+                    PLATFORM === 'mobile',
+                    (e: number) => {
+                        return (
+                            [
+                                '3',
+                                '12',
+                                '60',
+                                '300',
+                                '1200',
+                                '6000',
+                                '30000',
+                                '120000',
+                                'MAX',
+                            ][e] + ' TPS'
+                        );
+                    },
+                );
             }
 
             public dispose(): void {
