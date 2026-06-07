@@ -68,14 +68,6 @@ export class RawGraphUpdater {
                     (!isActive && nodeState.lastSignal === NodeSignal.PENDING);
 
                 const nextNodes = nodeState.node.next
-                    .filter(
-                        (node) =>
-                            isBlocker ||
-                            (node.arrow.type !== ArrowType.SOURCE &&
-                                node.arrow.type !== ArrowType.DETECTOR &&
-                                node.arrow.type !== ArrowType.IMPULSE &&
-                                node.arrow.type !== ArrowType.BUTTON),
-                    )
                     .filter((node) => node.arrow.type !== ArrowType.DETECTOR)
                     .map((node) => graphState.nodes[node.index]);
                 const detectorNodes = nodeState.node.next
