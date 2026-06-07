@@ -41,6 +41,8 @@ export class RawGraphState {
             node.lastSignal = 0;
             node.signalsCount = 0;
             node.blockedCount = 0;
+            node.isUpdated = false;
+            node.isChanged = false;
         });
     }
 

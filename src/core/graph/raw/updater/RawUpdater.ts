@@ -13,6 +13,7 @@ export class RawGraphUpdater {
         newNext: RawNode[],
         oldType: number,
         newType: number,
+        restore: boolean,
     ) {
         const nodeState = graphState.nodes[node.index];
         this.markNodeAsChangedNonTemp(graphState, nodeState);
@@ -20,32 +21,24 @@ export class RawGraphUpdater {
         nodeState.isUpdated = true;
         if (nodeState.lastSignal !== NodeSignal.ACTIVE) return;
 
-        const oldCounts = new Map<RawNode, number>();
-        for (const n of oldNext) oldCounts.set(n, (oldCounts.get(n) || 0) + 1);
-
-        const newCounts = new Map<RawNode, number>();
-        for (const n of newNext) newCounts.set(n, (newCounts.get(n) || 0) + 1);
-
         const allNodes = new Set([...oldNext, ...newNext]);
 
         for (const edgeNode of allNodes) {
-            const oldCount = oldCounts.get(edgeNode) || 0;
-            const newCount = newCounts.get(edgeNode) || 0;
+            const isOld = oldNext.includes(edgeNode);
+            const isNew = oldNext.includes(edgeNode);
 
-            if (oldCount === newCount && oldType === newType) continue;
+            if (oldType === newType) continue;
 
             const edgeState = graphState.nodes[edgeNode.index];
 
-            if (oldCount > 0) {
-                if (oldType === ArrowType.BLOCKER)
-                    edgeState.blockedCount -= oldCount;
-                else edgeState.signalsCount -= oldCount;
+            if (isOld) {
+                if (oldType === ArrowType.BLOCKER) edgeState.blockedCount -= 1;
+                else edgeState.signalsCount -= 1;
             }
 
-            if (newCount > 0) {
-                if (newType === ArrowType.BLOCKER)
-                    edgeState.blockedCount += newCount;
-                else edgeState.signalsCount += newCount;
+            if (restore && isNew) {
+                if (newType === ArrowType.BLOCKER) edgeState.blockedCount += 1;
+                else edgeState.signalsCount += 1;
             }
 
             this.markNodeAsChangedNonTemp(graphState, edgeState);

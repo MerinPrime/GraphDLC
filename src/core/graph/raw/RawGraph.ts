@@ -154,6 +154,7 @@ export class RawGraph {
             node.next,
             oldType,
             newType,
+            newType === oldType,
         );
     }
 
@@ -224,6 +225,7 @@ export class RawGraph {
         nodeState.isEntryPoint = newEntryPoint;
         nodeState.isAdditionalUpdate = isAdditionalUpdate;
         this.updateNodeRelations(node, oldType, newType);
+        nodeState.lastSignal = 0;
         nodeState.signal = 0;
 
         if (oldEntryPoint === newEntryPoint) return;
