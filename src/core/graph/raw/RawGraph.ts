@@ -28,6 +28,7 @@ export class RawGraph {
 
     public graphState: RawGraphState;
     public graphUpdater: RawGraphUpdater;
+    // TODO: Incapsulate graph updater to game engine for ast engine, soa engine, rust engine
     public cycleManager: CycleManager;
 
     constructor(gameMap: GameMap) {
@@ -202,6 +203,9 @@ export class RawGraph {
         this.nodes.length = 0;
     }
 
+    // Optimize update calls
+    // Also store chunks for future
+
     updateArrowType(
         arrow: Arrow,
         chunk: Chunk,
@@ -210,8 +214,6 @@ export class RawGraph {
         oldType: number,
         newType: number,
     ) {
-        // if (process.env.IS_DEBUG)
-        //     console.log('[Graph] Change arrow type to', newType);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
 
         const oldEntryPoint = IsArrowEntryPoint(oldType);
@@ -237,8 +239,6 @@ export class RawGraph {
         globalY: number,
         newRotation: number,
     ) {
-        // if (process.env.IS_DEBUG)
-        //     console.log('[Graph] Change arrow rotation to', newRotation);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node, arrow.type, arrow.type);
     }
@@ -250,8 +250,6 @@ export class RawGraph {
         globalY: number,
         newFlipped: boolean,
     ) {
-        // if (process.env.IS_DEBUG)
-        //     console.log('[Graph] Change arrow flipped to', newFlipped);
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node, arrow.type, arrow.type);
     }

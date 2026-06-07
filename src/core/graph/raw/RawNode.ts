@@ -7,6 +7,7 @@ import { CycleHeadType, type RawCycle } from './CycleTypes';
 export class RawNode {
     arrow: Arrow;
     chunk: Chunk;
+    // Add chunkidx ( in future that will help with markRenderDirty )
     index: number;
     globalX: number;
     globalY: number;
