@@ -107,7 +107,7 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             ) {
                 if (
                     !ShowArrowConnectionsSetting.value ||
-                    !arrowAtCursor.graphAstIndex
+                    arrowAtCursor.graphAstIndex == null
                 )
                     return;
 

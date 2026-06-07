@@ -37,11 +37,12 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 if (arrowAtCursor) {
                     const astIndex = arrowAtCursor?.graphAstIndex ?? 'null';
                     info.push(`ASTIndex: ${astIndex}`);
-                    const astNode = arrowAtCursor.graphAstIndex
-                        ? game.gameMap.rawGraph.getNode(
-                              arrowAtCursor.graphAstIndex,
-                          )
-                        : null;
+                    const astNode =
+                        arrowAtCursor.graphAstIndex != null
+                            ? game.gameMap.rawGraph.getNode(
+                                  arrowAtCursor.graphAstIndex,
+                              )
+                            : null;
                     if (astNode) {
                         info.push(`NextLen: ${astNode.next.length}`);
                         info.push(`PrevLen: ${astNode.previous.length}`);
