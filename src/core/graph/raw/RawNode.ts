@@ -23,6 +23,8 @@ export class RawNode {
     cycleRef: RawCycle | null;
     ioCycle: RawCycle | null;
     headType: CycleHeadType;
+    cycleOffset: number;
+    origCycleOffset: number;
 
     constructor(
         arrow: Arrow,
@@ -47,7 +49,12 @@ export class RawNode {
         this.cycleRef = null;
         this.ioCycle = null;
         this.headType = CycleHeadType.NONE;
+        this.cycleOffset = 0;
+        this.origCycleOffset = 0;
     }
+
+    // TODO: add setType, setRotation, setFlipped, setState(type, rotation, flipped)
+    // Recalculate cycle only if changed edges or type
 
     addNext(node: RawNode) {
         this.next.push(node);

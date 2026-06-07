@@ -13,6 +13,7 @@ export function PatchChunkUpdates(
             let tick = 0;
 
             _module.update = function GraphUpdate(gameMap: GameMap) {
+                gameMap.rawGraph.graphState.tick = tick;
                 gameMap.rawGraph.graphUpdater.updateState(
                     gameMap.rawGraph.graphState,
                     tick++,

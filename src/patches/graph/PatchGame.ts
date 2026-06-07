@@ -4,7 +4,7 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { NodeSignal } from 'src/core/graph/raw/updater/NodeSignal';
+import { ACTIVE_SIGNALS } from 'src/core/graph/raw/updater/ArrowSignals';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
@@ -225,6 +225,28 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
 
             draw() {
                 const renderStart = performance.now();
+
+                // TODO: idk remove this from here
+                const rawGraph = this.gameMap.rawGraph;
+                const graphState = rawGraph.graphState;
+                rawGraph.cycles.forEach((cycle) => {
+                    if (cycle === null) return;
+                    const cycleState = graphState.cycles[cycle.index]!;
+                    cycle.nodes.forEach((node) => {
+                        const position =
+                            (graphState.tick + node.origCycleOffset) %
+                            cycleState.length;
+                        const bitIndex = position % 32;
+                        const wordIndex = (position / 32) | 0;
+                        const isActive =
+                            (cycleState.state[wordIndex] & (1 << bitIndex)) !==
+                            0;
+                        if (isActive)
+                            node.arrow.signal = ACTIVE_SIGNALS[node.arrow.type];
+                        else node.arrow.signal = 0;
+                        node.chunk.markRenderDirty();
+                    });
+                });
 
                 super.draw();
 

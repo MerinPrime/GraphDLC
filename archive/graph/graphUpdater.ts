@@ -45,7 +45,7 @@ export class GraphUpdater {
                 const cycleHeadType: CycleHeadType = graphState.cycleHeadTypes[nodeID];
                 switch (cycleHeadType) {
                     case CycleHeadType.WRITE:
-                        graphState.cycleStates[wordIndex] |= mask;
+                       graphState.cycleStates[wordIndex] |= mask;
                         break;
                     case CycleHeadType.XOR_WRITE:
                         graphState.cycleStates[wordIndex] ^= mask;

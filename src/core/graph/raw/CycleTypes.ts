@@ -9,6 +9,7 @@ export const enum CycleHeadType {
 }
 
 export interface RawCycle {
+    index: number;
     nodes: RawNode[];
     heads: RawNode[];
 }

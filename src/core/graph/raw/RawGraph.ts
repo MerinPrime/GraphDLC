@@ -13,6 +13,7 @@ import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleManager } from './CycleManager';
+import type { RawCycle } from './CycleTypes';
 import { RawNode } from './RawNode';
 import { RawGraphState } from './updater/RawState';
 import { RawGraphUpdater } from './updater/RawUpdater';
@@ -25,6 +26,8 @@ export class RawGraph {
     private gameMap: GameMap;
     public nodes: RawNode[];
     public entryPoints: RawNode[];
+    public cycles: (RawCycle | null)[];
+    private freeCycleIndices: number[];
 
     public graphState: RawGraphState;
     public graphUpdater: RawGraphUpdater;
@@ -35,10 +38,38 @@ export class RawGraph {
         this.gameMap = gameMap;
         this.nodes = [];
         this.entryPoints = [];
+        this.cycles = [];
+        this.freeCycleIndices = [];
 
         this.graphState = new RawGraphState();
         this.graphUpdater = new RawGraphUpdater();
-        this.cycleManager = new CycleManager();
+        this.cycleManager = new CycleManager(this);
+    }
+
+    addCycle(nodes: RawNode[]): RawCycle {
+        let index: number;
+        const freeIndex = this.freeCycleIndices.pop();
+        if (freeIndex !== undefined) {
+            index = freeIndex;
+        } else {
+            index = this.cycles.length;
+        }
+
+        const cycle: RawCycle = {
+            index,
+            nodes,
+            heads: [],
+        };
+        this.cycles[index] = cycle;
+        return cycle;
+    }
+
+    removeCycle(cycle: RawCycle) {
+        if (this.cycles[cycle.index] === cycle) {
+            this.cycles[cycle.index] = null;
+            this.graphState.cycles[cycle.index] = null;
+            this.freeCycleIndices.push(cycle.index);
+        }
     }
 
     getNode(astIndex: number): RawNode {
@@ -152,9 +183,6 @@ export class RawGraph {
             node,
             oldNextFull,
             node.next,
-            oldType,
-            newType,
-            newType === oldType,
         );
     }
 
@@ -200,11 +228,15 @@ export class RawGraph {
     }
 
     clear() {
-        this.nodes.forEach((node) => (node.arrow.graphAstIndex = undefined));
+        this.nodes.forEach((node) => {
+            node.arrow.graphAstIndex = undefined;
+        });
         this.nodes.length = 0;
+        this.cycles.length = 0;
+        this.freeCycleIndices.length = 0;
     }
 
-    // Optimize update calls
+    // TODO: Optimize update calls
     // Also store chunks for future
 
     updateArrowType(

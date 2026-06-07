@@ -54,6 +54,10 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                         info.push(`NextLen: ${astNode.next.length}`);
                         info.push(`PrevLen: ${astNode.previous.length}`);
                         info.push(`IsCycle: ${astNode.isCycle}`);
+                        info.push(`CycleOffset: ${astNode.cycleOffset}`);
+                        info.push(
+                            `OrigCycleOffset: ${astNode.origCycleOffset}`,
+                        );
                     }
                     const nodeState =
                         astNode?.index != null
@@ -63,7 +67,9 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                             : null;
                     if (nodeState) {
                         info.push(`Signal: ${nodeState.signal}`);
+                        info.push(`LastSignal: ${nodeState.lastSignal}`);
                         info.push(`SignalsCount: ${nodeState.signalsCount}`);
+                        info.push(`BlockedCount: ${nodeState.blockedCount}`);
                     }
                 }
                 this.devDebugInfo.innerText = info.join('\n');
