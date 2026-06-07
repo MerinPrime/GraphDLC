@@ -19,8 +19,6 @@ function canBeInCycle(node: RawNode): boolean {
     return ALLOWED_IN_CYCLE.has(node.arrow.type);
 }
 
-// TODO: Need to check, cuz i think cycle head is not outside the cycle
-
 export class CycleManager {
     public dismantleCycle(cyclePath: RawCycle) {
         for (const node of cyclePath.nodes) {
@@ -48,14 +46,14 @@ export class CycleManager {
             for (const prevNode of node.previous) {
                 if (!cycleSet.has(prevNode)) {
                     if (prevNode.arrow.type === ArrowType.BLOCKER) {
-                        prevNode.headType = CycleHeadType.CLEAR;
-                        cycle.heads.push(prevNode);
+                        node.headType = CycleHeadType.CLEAR;
+                        cycle.heads.push(node);
                     } else if (node.arrow.type === ArrowType.LOGIC_XOR) {
-                        prevNode.headType = CycleHeadType.XOR_WRITE;
-                        cycle.heads.push(prevNode);
-                    } else {
-                        prevNode.headType = CycleHeadType.WRITE;
-                        cycle.heads.push(prevNode);
+                        node.headType = CycleHeadType.XOR_WRITE;
+                        cycle.heads.push(node);
+                    } else if (IsArrowPath(node.arrow.type)) {
+                        node.headType = CycleHeadType.WRITE;
+                        cycle.heads.push(node);
                     }
                 }
             }
