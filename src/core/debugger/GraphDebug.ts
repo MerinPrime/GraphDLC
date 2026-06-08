@@ -6,7 +6,7 @@ import {
     DebugMode,
     DebugModeSetting,
 } from '../settings/instances/other/DebugModeSetting';
-import { ArrowType, IsArrowEntryPoint } from '../utils/ArrowType';
+import { ArrowType } from '../utils/ArrowType';
 
 export class GraphDebug {
     public colorizeDebug(
@@ -97,11 +97,7 @@ export class GraphDebug {
             if (!InBounds(bounds, node.globalX, node.globalY)) return;
             let hash = 0;
             node.previous.forEach((prevNode) => {
-                if (
-                    prevNode.arrow.type === ArrowType.EMPTY ||
-                    !prevNode.valid ||
-                    IsArrowEntryPoint(prevNode.arrow.type)
-                )
+                if (prevNode.arrow.type === ArrowType.EMPTY || !prevNode.valid)
                     return;
                 hash += prevNode.arrow.type + 1;
             });
