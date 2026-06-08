@@ -33,7 +33,7 @@ export const TargetFPSSetting = new NumberSetting(
         order: 0,
     },
     {
-        min: 20,
+        min: 10,
         max: 240,
         step: 5,
         formatLabel: FPSFormatFunc,
