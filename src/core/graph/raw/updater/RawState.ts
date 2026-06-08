@@ -1,19 +1,8 @@
 import type { RawGraph } from '../RawGraph';
 import type { RawNode } from '../RawNode';
-import { ACTIVE_SIGNALS } from './ArrowSignals';
-import { NodeSignal } from './NodeSignal';
 
 export class RawNodeState {
-    private _signal: number = 0;
-    public get signal(): number {
-        return this._signal;
-    }
-    public set signal(value: number) {
-        if (value === NodeSignal.ACTIVE)
-            this.node.arrow.signal = ACTIVE_SIGNALS[this.node.arrow.type];
-        else this.node.arrow.signal = 0;
-        this._signal = value;
-    }
+    signal: number = 0;
     lastSignal: number = 0;
     signalsCount: number = 0;
     prevCycleActive: boolean = false;
@@ -39,11 +28,19 @@ export class RawCycleState {
     }
 }
 
+export class RawChunkState {
+    isDirty: boolean = false;
+
+    constructor(readonly chunkIdx: number = 0) {}
+}
+
 export class RawGraphState {
     changedNodes: RawNodeState[];
     tempChangedNodes: RawNodeState[];
 
     nodes: RawNodeState[];
+    chunks: RawChunkState[];
+
     cycles: (RawCycleState | null)[];
     tick: number;
 
@@ -52,11 +49,15 @@ export class RawGraphState {
         this.tempChangedNodes = [];
 
         this.nodes = [];
+        this.chunks = [];
+
         this.cycles = [];
         this.tick = 0;
     }
 
     reset(graph: RawGraph) {
+        this.update(graph);
+
         this.tick = 0;
         this.changedNodes.length = 0;
         graph.entryPoints.forEach((entryPoint) => {
@@ -65,18 +66,34 @@ export class RawGraphState {
         this.tempChangedNodes.length = 0;
         this.nodes.forEach((node) => {
             node.signal = 0;
-            node.node.arrow.signal = 0;
-            node.node.chunk.markRenderDirty();
             node.lastSignal = 0;
             node.signalsCount = 0;
             node.blockedCount = 0;
             node.isUpdated = false;
             node.isChanged = false;
         });
+        this.chunks.forEach((chunk) => {
+            chunk.isDirty = true;
+        });
 
         this.cycles.forEach((cycle) => {
             if (cycle) cycle.state.fill(0);
         });
+    }
+
+    makeDirtyNodeChunk(node: RawNode) {
+        this.chunks[node.chunkIdx].isDirty = true;
+    }
+
+    getDirtyChunks(): [...chunkIdx: number[]] {
+        const dirtyChunks: number[] = [];
+        this.chunks.forEach((chunk) => {
+            if (chunk.isDirty) {
+                chunk.isDirty = false;
+                dirtyChunks.push(chunk.chunkIdx);
+            }
+        });
+        return dirtyChunks;
     }
 
     update(graph: RawGraph) {
@@ -86,12 +103,17 @@ export class RawGraphState {
             this.nodes.push(nodeState);
         }
 
+        const chunks = graph.getAllChunks();
+        for (let i = this.chunks.length; i < chunks.length; i++) {
+            const chunkState = new RawChunkState(i);
+            this.chunks.push(chunkState);
+        }
+
         for (let i = 0; i < graph.cycles.length; i++) {
             const cycle = graph.cycles[i];
             if (cycle) {
                 if (!this.cycles[i]) {
                     this.cycles[i] = new RawCycleState(cycle.nodes.length);
-                    // Sync cycleOffset for all nodes and heads in the new cycle
                     for (const node of cycle.nodes) {
                         this.nodes[node.index].nodeInCycleOffset =
                             node.cycleOffset;

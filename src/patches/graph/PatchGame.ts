@@ -4,7 +4,9 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
+import { ArrowSignal } from 'src/core/graph/raw/updater/ArrowSignal';
 import { ACTIVE_SIGNALS } from 'src/core/graph/raw/updater/ArrowSignals';
+import { NodeSignal } from 'src/core/graph/raw/updater/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/PathFinder';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
@@ -226,26 +228,53 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             draw() {
                 const renderStart = performance.now();
 
-                // TODO: idk remove this from here
                 const rawGraph = this.gameMap.rawGraph;
                 const graphState = rawGraph.graphState;
+
                 rawGraph.cycles.forEach((cycle) => {
                     if (cycle === null) return;
-                    const cycleState = graphState.cycles[cycle.index]!;
                     cycle.nodes.forEach((node) => {
-                        const position =
-                            (graphState.tick + node.origCycleOffset) %
-                            cycleState.length;
-                        const bitIndex = position % 32;
-                        const wordIndex = (position / 32) | 0;
-                        const isActive =
-                            (cycleState.state[wordIndex] & (1 << bitIndex)) !==
-                            0;
-                        if (isActive)
-                            node.arrow.signal = ACTIVE_SIGNALS[node.arrow.type];
-                        else node.arrow.signal = 0;
-                        node.chunk.markRenderDirty();
+                        graphState.chunks[node.chunkIdx].isDirty = true;
                     });
+                });
+
+                const dirtyChunksIdx = graphState.getDirtyChunks();
+                dirtyChunksIdx.forEach((dirtyChunkIdx) => {
+                    const chunk = rawGraph.getChunkByIdx(dirtyChunkIdx);
+                    chunk.getArrows().forEach((arrow) => {
+                        if (
+                            arrow.graphAstIndex == null ||
+                            arrow.type === ArrowType.EMPTY
+                        ) {
+                            arrow.signal = ArrowSignal.NONE;
+                            return;
+                        }
+                        const node = rawGraph.getNode(arrow.graphAstIndex);
+                        const cycle = node.cycleRef;
+                        if (cycle) {
+                            const cycleState = graphState.cycles[cycle.index]!;
+                            const position =
+                                (graphState.tick + node.origCycleOffset) %
+                                cycleState.length;
+                            const bitIndex = position % 32;
+                            const wordIndex = (position / 32) | 0;
+                            const isActive =
+                                (cycleState.state[wordIndex] &
+                                    (1 << bitIndex)) !==
+                                0;
+                            if (isActive)
+                                arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                            else arrow.signal = ArrowSignal.NONE;
+                            return;
+                        }
+                        const nodeState = graphState.nodes[node.index];
+                        if (nodeState.signal === NodeSignal.NONE)
+                            arrow.signal = ArrowSignal.NONE;
+                        else if (nodeState.signal === NodeSignal.PENDING)
+                            arrow.signal = ArrowSignal.BLUE;
+                        else arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                    });
+                    chunk.markRenderDirty();
                 });
 
                 super.draw();

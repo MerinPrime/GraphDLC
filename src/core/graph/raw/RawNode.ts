@@ -1,13 +1,11 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
-import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type RawCycle } from './CycleTypes';
 
 export class RawNode {
-    arrow: Arrow;
-    chunk: Chunk;
-    // Add chunkidx ( in future that will help with markRenderDirty )
+    arrow: Arrow; // Remove arrow, change to type, rotation, flipped
+    chunkIdx: number;
+
     index: number;
     globalX: number;
     globalY: number;
@@ -29,17 +27,20 @@ export class RawNode {
     constructor(
         arrow: Arrow,
         index: number,
-        chunk: Chunk,
+        chunkIdx: number,
         globalX: number,
         globalY: number,
+        localX: number,
+        localY: number,
     ) {
         this.arrow = arrow;
-        this.chunk = chunk;
+        this.chunkIdx = chunkIdx;
+
         this.index = index;
         this.globalX = globalX;
         this.globalY = globalY;
-        this.localX = globalX - chunk.x * CHUNK_SIZE;
-        this.localY = globalY - chunk.y * CHUNK_SIZE;
+        this.localX = localX;
+        this.localY = localY;
         this.valid = false;
         this.next = [];
         this.previous = [];

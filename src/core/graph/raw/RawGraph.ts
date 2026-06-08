@@ -25,6 +25,7 @@ interface PrivateGameMap {
 export class RawGraph {
     private gameMap: GameMap;
     public nodes: RawNode[];
+    private chunks: Chunk[];
     public entryPoints: RawNode[];
     public cycles: (RawCycle | null)[];
     private freeCycleIndices: number[];
@@ -37,6 +38,7 @@ export class RawGraph {
     constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
         this.nodes = [];
+        this.chunks = [];
         this.entryPoints = [];
         this.cycles = [];
         this.freeCycleIndices = [];
@@ -44,6 +46,14 @@ export class RawGraph {
         this.graphState = new RawGraphState();
         this.graphUpdater = new RawGraphUpdater();
         this.cycleManager = new CycleManager(this);
+    }
+
+    getChunkByIdx(chunkIdx: number): Chunk {
+        return this.chunks[chunkIdx]!;
+    }
+
+    getAllChunks(): readonly Chunk[] {
+        return this.chunks;
     }
 
     addCycle(nodes: RawNode[]): RawCycle {
@@ -194,15 +204,29 @@ export class RawGraph {
     ): RawNode {
         if (arrow.graphAstIndex != null)
             return this.getNode(arrow.graphAstIndex);
+
+        if (chunk.graphAstIndex == null) {
+            chunk.graphAstIndex = this.chunks.length;
+            this.chunks.push(chunk);
+        }
+
+        const chunkIdx = chunk.graphAstIndex!;
+        const nodeIdx = this.nodes.length;
+        const localX = globalX - chunk.x * CHUNK_SIZE;
+        const localY = globalY - chunk.y * CHUNK_SIZE;
+
         const node = new RawNode(
             arrow,
-            this.nodes.length,
-            chunk,
+            nodeIdx,
+            chunkIdx,
             globalX,
             globalY,
+            localX,
+            localY,
         );
-        arrow.graphAstIndex = this.nodes.length;
         this.nodes.push(node);
+        arrow.graphAstIndex = nodeIdx;
+
         this.graphState.update(this);
         if (arrow.type > ArrowTypeCount) {
             node.valid = false;

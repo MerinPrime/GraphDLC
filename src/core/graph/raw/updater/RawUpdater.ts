@@ -2,8 +2,6 @@ import { ArrowType } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type RawCycle } from '../CycleTypes';
 import type { RawNode } from '../RawNode';
-import { ArrowSignal } from './ArrowSignal';
-import { ACTIVE_SIGNALS } from './ArrowSignals';
 import { NodeSignal } from './NodeSignal';
 import type { RawGraphState, RawNodeState } from './RawState';
 
@@ -26,6 +24,7 @@ export class RawGraphUpdater {
 
             nodeState.signal = NodeSignal.NONE;
             nodeState.lastSignal = NodeSignal.NONE;
+            graphState.makeDirtyNodeChunk(node);
         }
 
         for (const node of cycle.nodes) {
@@ -106,10 +105,12 @@ export class RawGraphUpdater {
                 if (isActive) {
                     nodeState.signal = NodeSignal.ACTIVE;
                     nodeState.lastSignal = nodeState.signal;
+                    graphState.makeDirtyNodeChunk(node);
                 } else {
                     if (nodeState.signal !== NodeSignal.ACTIVE)
                         nodeState.signal = NodeSignal.NONE;
                     nodeState.lastSignal = nodeState.signal;
+                    graphState.makeDirtyNodeChunk(node);
                 }
             }
 
@@ -348,19 +349,18 @@ export class RawGraphUpdater {
             const nodeState = graphState.changedNodes[i];
             nodeState.isChanged = false;
 
-            if (nodeState.blockedCount > 0) nodeState.signal = NodeSignal.NONE;
-            else {
+            if (nodeState.blockedCount > 0) {
+                if (nodeState.signal !== NodeSignal.NONE) {
+                    nodeState.signal = NodeSignal.NONE;
+                    graphState.makeDirtyNodeChunk(nodeState.node);
+                }
+            } else {
                 const signal = this.updateNode(nodeState);
-                if (signal !== NodeSignal.KEEP_SIGNAL)
+                if (signal !== NodeSignal.KEEP_SIGNAL) {
                     nodeState.signal = signal;
+                    graphState.makeDirtyNodeChunk(nodeState.node);
+                }
             }
-            nodeState.node.arrow.signal =
-                nodeState.signal === NodeSignal.NONE
-                    ? 0
-                    : nodeState.signal === NodeSignal.PENDING
-                      ? ArrowSignal.BLUE
-                      : ACTIVE_SIGNALS[nodeState.node.arrow.type];
-            nodeState.node.chunk.markRenderDirty();
         }
 
         graphState.tempChangedNodes.length = 0;

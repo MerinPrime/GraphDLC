@@ -23,6 +23,14 @@ declare module '@logic-arrows/game-render/game-render' {
     }
 }
 
+declare module '@logic-arrows/game-logic/chunk' {
+    export interface Chunk {
+        graphAstIndex?: number | null;
+
+        getArrows(): readonly Arrow[];
+    }
+}
+
 declare module '@logic-arrows/game-logic/arrow' {
     export interface Arrow {
         graphAstIndex?: number | null;
