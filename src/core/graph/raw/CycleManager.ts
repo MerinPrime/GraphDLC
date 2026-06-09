@@ -77,8 +77,7 @@ export class CycleManager {
                 ) {
                     nextNode.ioCycle = cycle;
                     nextNode.headType = CycleHeadType.READ;
-                    nextNode.cycleOffset =
-                        (cycle.nodes.length + i) % cycle.nodes.length;
+                    nextNode.cycleOffset = (i + 1) % cycle.nodes.length;
                     if (this.graph.graphState.nodes[nextNode.index]) {
                         this.graph.graphState.nodes[
                             nextNode.index
@@ -92,8 +91,7 @@ export class CycleManager {
                     if (prevNode.arrow.type === ArrowType.BLOCKER) {
                         prevNode.ioCycle = cycle;
                         prevNode.headType = CycleHeadType.CLEAR;
-                        prevNode.cycleOffset =
-                            (cycle.nodes.length + i) % cycle.nodes.length;
+                        prevNode.cycleOffset = (i + 1) % cycle.nodes.length;
                         if (this.graph.graphState.nodes[prevNode.index]) {
                             this.graph.graphState.nodes[
                                 prevNode.index
@@ -103,8 +101,7 @@ export class CycleManager {
                     } else if (node.arrow.type === ArrowType.LOGIC_XOR) {
                         prevNode.ioCycle = cycle;
                         prevNode.headType = CycleHeadType.XOR_WRITE;
-                        prevNode.cycleOffset =
-                            (cycle.nodes.length + i) % cycle.nodes.length;
+                        prevNode.cycleOffset = (i + 1) % cycle.nodes.length;
                         if (this.graph.graphState.nodes[prevNode.index]) {
                             this.graph.graphState.nodes[
                                 prevNode.index
@@ -114,8 +111,7 @@ export class CycleManager {
                     } else if (IsArrowPath(prevNode.arrow.type)) {
                         prevNode.ioCycle = cycle;
                         prevNode.headType = CycleHeadType.WRITE;
-                        prevNode.cycleOffset =
-                            (cycle.nodes.length + i) % cycle.nodes.length;
+                        prevNode.cycleOffset = (i + 1) % cycle.nodes.length;
                         if (this.graph.graphState.nodes[prevNode.index]) {
                             this.graph.graphState.nodes[
                                 prevNode.index
