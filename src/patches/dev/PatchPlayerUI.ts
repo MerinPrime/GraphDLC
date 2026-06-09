@@ -5,12 +5,16 @@ import type { UISpeedController } from '@logic-arrows/ui/components/ui-speed-con
 import { PLATFORM } from '@logic-arrows/utils/platform';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerUI {
-    game: Game;
+    readonly game: Game;
 }
 
-export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchPlayerUI: IPatcher = (
+    patchLoader: PatchLoader,
+    _graphDLC: GraphDLC,
+) => {
     const _UISpeedController =
         patchLoader.getDefinition<typeof UISpeedController>(
             'UISpeedController',
@@ -20,7 +24,7 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
         return class PlayerUI extends _module {
             private devDebugInfo: HTMLDivElement | null = null;
 
-            constructor(game: Game, mapInfo?: MapInfo) {
+            public constructor(game: Game, mapInfo?: MapInfo) {
                 super(game, mapInfo);
                 this.addDevDebugInfo();
             }
@@ -42,12 +46,12 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 const game = (this as any as PrivatePlayerUI).game;
                 const arrowAtCursor = game.getArrowAtCursor();
                 if (arrowAtCursor) {
-                    const astIndex = arrowAtCursor?.graphAstIndex ?? 'null';
+                    const astIndex = arrowAtCursor?.astIndex ?? 'null';
                     info.push(`ASTIndex: ${astIndex}`);
                     const astNode =
-                        arrowAtCursor.graphAstIndex != null
+                        arrowAtCursor.astIndex != null
                             ? game.gameMap.rawGraph.getNode(
-                                  arrowAtCursor.graphAstIndex,
+                                  arrowAtCursor.astIndex,
                               )
                             : null;
                     if (astNode) {
@@ -75,25 +79,24 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 this.devDebugInfo.innerText = info.join('\n');
             }
 
-            addSpeedController() {
+            public addSpeedController() {
                 this.speedController = new _UISpeedController.def(
                     document.body,
                     9,
                     PLATFORM === 'mobile',
                     (e: number) => {
-                        return (
-                            [
-                                '3',
-                                '12',
-                                '60',
-                                '300',
-                                '1200',
-                                '6000',
-                                '30000',
-                                '120000',
-                                'MAX',
-                            ][e] + ' TPS'
-                        );
+                        const TPS_LIMITS = [
+                            '3',
+                            '12',
+                            '60',
+                            '300',
+                            '1200',
+                            '6000',
+                            '30000',
+                            '120000',
+                            'MAX',
+                        ];
+                        return `${TPS_LIMITS[e]} TPS`;
                     },
                 );
             }
@@ -104,4 +107,4 @@ export function PatchPlayerUI(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             }
         };
     });
-}
+};

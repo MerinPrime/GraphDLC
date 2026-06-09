@@ -1,182 +1,17 @@
-import { CHUNK_AREA } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import { ArrowType } from '../utils/ArrowType';
 import { getRelativePosition } from '../utils/getRelativePosition';
-
-export interface PathStep {
-    x: number;
-    y: number;
-    type: ArrowType;
-    rotation: number;
-    flipped: boolean;
-}
-
-interface ArrowConfig {
-    forward: number;
-    sideways: number;
-    weight: number;
-}
-
-type ALLOWED_ARROW =
-    | ArrowType.ARROW
-    | ArrowType.BLUE_ARROW
-    | ArrowType.DIAGONAL_ARROW;
-
-const ARROW_CONFIGS: Record<ALLOWED_ARROW, ArrowConfig> = {
-    [ArrowType.ARROW]: { forward: -1, sideways: 0, weight: 1.0 },
-    [ArrowType.BLUE_ARROW]: { forward: -2, sideways: 0, weight: 2.0 },
-    [ArrowType.DIAGONAL_ARROW]: { forward: -1, sideways: 1, weight: 1.5 },
-};
-
-const ARROW_TYPES_LIST: ALLOWED_ARROW[] = [
-    ArrowType.ARROW,
-    ArrowType.BLUE_ARROW,
-    ArrowType.DIAGONAL_ARROW,
-];
-
-const PATHFINDING_TIMEOUT_MS = 200;
-const HEURISTIC_TIEBREAKER = 1.0001;
-
-const enum Direction {
-    FORWARD = 0,
-    BACKWARD = 1,
-}
-
-const enum NodeStatus {
-    UNVISITED = 0,
-    OPEN = 1,
-    CLOSED = 2,
-}
-
-class BiSearchNode {
-    gScore = [Infinity, Infinity];
-    status = [NodeStatus.UNVISITED, NodeStatus.UNVISITED];
-    parent = [-1, -1];
-    arrowType = [ArrowType.ARROW, ArrowType.ARROW];
-    arrowRotation = [0, 0];
-    arrowFlipped = [false, false];
-}
-
-class BiSearchChunk {
-    nodes: BiSearchNode[] = Array.from(
-        { length: CHUNK_AREA },
-        () => new BiSearchNode(),
-    );
-}
-
-class SearchGridManager {
-    private chunks = new Map<number, BiSearchChunk>();
-
-    public clear(): void {
-        this.chunks.clear();
-    }
-
-    public pack(x: number, y: number): number {
-        return (x << 16) | (y & 0xffff);
-    }
-
-    public unpack(packed: number) {
-        return {
-            x: packed >> 16,
-            y: (packed << 16) >> 16,
-        };
-    }
-
-    public getNode(packed: number): BiSearchNode {
-        const x = packed >> 16;
-        const y = (packed << 16) >> 16;
-
-        const cx = x >> 4;
-        const cy = y >> 4;
-        const chunkKey = (cx << 16) | (cy & 0xffff);
-
-        let chunk = this.chunks.get(chunkKey);
-        if (!chunk) {
-            chunk = new BiSearchChunk();
-            this.chunks.set(chunkKey, chunk);
-        }
-
-        const cellIdx = (x & 15) | ((y & 15) << 4);
-        return chunk.nodes[cellIdx];
-    }
-}
-
-class MinHeap {
-    private data: number[] = [];
-    private scores: number[] = [];
-
-    public get size(): number {
-        return this.data.length;
-    }
-
-    public get minScore(): number {
-        return this.scores.length > 0 ? this.scores[0] : Infinity;
-    }
-
-    public push(element: number, score: number): void {
-        this.data.push(element);
-        this.scores.push(score);
-        this.up(this.data.length - 1);
-    }
-
-    public pop(): number | undefined {
-        if (this.data.length === 0) return undefined;
-        const result = this.data[0];
-        const endElement = this.data.pop()!;
-        const endScore = this.scores.pop()!;
-
-        if (this.data.length > 0) {
-            this.data[0] = endElement;
-            this.scores[0] = endScore;
-            this.down(0);
-        }
-        return result;
-    }
-
-    private up(n: number): void {
-        const element = this.data[n];
-        const score = this.scores[n];
-        while (n > 0) {
-            const parentN = (n - 1) >> 1;
-            const parentScore = this.scores[parentN];
-            if (score >= parentScore) break;
-            this.data[n] = this.data[parentN];
-            this.scores[n] = parentScore;
-            n = parentN;
-        }
-        this.data[n] = element;
-        this.scores[n] = score;
-    }
-
-    private down(n: number): void {
-        const length = this.data.length;
-        const element = this.data[n];
-        const score = this.scores[n];
-
-        while (true) {
-            const child1N = (n << 1) + 1;
-            const child2N = child1N + 1;
-            let swap = -1;
-            let minScore = score;
-
-            if (child1N < length && this.scores[child1N] < minScore) {
-                swap = child1N;
-                minScore = this.scores[child1N];
-            }
-            if (child2N < length && this.scores[child2N] < minScore) {
-                swap = child2N;
-            }
-
-            if (swap === -1) break;
-
-            this.data[n] = this.data[swap];
-            this.scores[n] = this.scores[swap];
-            n = swap;
-        }
-        this.data[n] = element;
-        this.scores[n] = score;
-    }
-}
+import { type BiSearchNode, SearchGridManager } from './BiSearchNode';
+import { MinHeap } from './MinHeap';
+import {
+    ARROW_CONFIGS,
+    ARROW_TYPES_LIST,
+    Direction,
+    HEURISTIC_TIEBREAKER,
+    NodeStatus,
+    PATHFINDING_TIMEOUT_MS,
+    type PathStep,
+} from './types';
 
 export class PathFinder {
     private grid = new SearchGridManager();
@@ -204,7 +39,12 @@ export class PathFinder {
         const heapForward = new MinHeap();
         const heapBackward = new MinHeap();
 
-        const getHeuristic = (x1: number, y1: number, x2: number, y2: number) =>
+        const getHeuristic = (
+            x1: number,
+            y1: number,
+            x2: number,
+            y2: number,
+        ): number =>
             (Math.abs(x1 - x2) + Math.abs(y1 - y2)) * HEURISTIC_TIEBREAKER;
 
         heapForward.push(startPacked, getHeuristic(startX, startY, endX, endY));
@@ -217,8 +57,9 @@ export class PathFinder {
         let bestIntersectionPacked = -1;
 
         while (heapForward.size > 0 && heapBackward.size > 0) {
+            loopCounter += 1;
             if (
-                (++loopCounter & 63) === 0 &&
+                (loopCounter & 63) === 0 &&
                 performance.now() - startTime > PATHFINDING_TIMEOUT_MS
             ) {
                 break;
@@ -276,10 +117,14 @@ export class PathFinder {
         onIntersection: (cost: number, packed: number) => void,
     ): void {
         const currentPacked = heap.pop();
-        if (currentPacked === undefined) return;
+        if (currentPacked === undefined) {
+            return;
+        }
         const currNode = this.grid.getNode(currentPacked);
 
-        if (currNode.status[dir] === NodeStatus.CLOSED) return;
+        if (currNode.status[dir] === NodeStatus.CLOSED) {
+            return;
+        }
         currNode.status[dir] = NodeStatus.CLOSED;
 
         const { x: currentX, y: currentY } = this.grid.unpack(currentPacked);
@@ -287,10 +132,11 @@ export class PathFinder {
         for (const arrowType of ARROW_TYPES_LIST) {
             const config = ARROW_CONFIGS[arrowType];
 
-            for (let rotation = 0; rotation < 4; rotation++) {
+            for (let rotation = 0; rotation < 4; rotation += 1) {
                 for (const flipped of [false, true]) {
-                    if (arrowType !== ArrowType.DIAGONAL_ARROW && flipped)
+                    if (arrowType !== ArrowType.DIAGONAL_ARROW && flipped) {
                         continue;
+                    }
 
                     const modifier = dir === Direction.FORWARD ? 1 : -1;
                     const { x: nextX, y: nextY } = getRelativePosition(
@@ -303,19 +149,27 @@ export class PathFinder {
                     );
 
                     const arrow = gameMap.getArrow(nextX, nextY);
-                    if (arrow?.graphAstIndex != null) {
-                        const node = gameMap.rawGraph.getNode(
-                            arrow.graphAstIndex,
-                        );
-                        if (node.previous.length !== 0) continue;
+                    if (
+                        arrow &&
+                        arrow.astIndex !== undefined &&
+                        arrow.astIndex !== null
+                    ) {
+                        const node = gameMap.rawGraph.getNode(arrow.astIndex);
+                        if (node.previous.length !== 0) {
+                            continue;
+                        }
                     }
 
-                    if (arrow && arrow.type !== 0) continue;
+                    if (arrow && arrow.type !== 0) {
+                        continue;
+                    }
 
                     const targetPacked = this.grid.pack(nextX, nextY);
                     const targetNode = this.grid.getNode(targetPacked);
 
-                    if (targetNode.status[dir] === NodeStatus.CLOSED) continue;
+                    if (targetNode.status[dir] === NodeStatus.CLOSED) {
+                        continue;
+                    }
 
                     const oppDir =
                         dir === Direction.FORWARD
@@ -327,8 +181,9 @@ export class PathFinder {
 
                     if (parentPacked !== -1) {
                         const prevNode = this.grid.getNode(parentPacked);
-                        if (prevNode.arrowRotation[dir] !== rotation)
+                        if (prevNode.arrowRotation[dir] !== rotation) {
                             stepWeight += 0.05;
+                        }
                     }
 
                     const tentativeG = currNode.gScore[dir] + stepWeight;
@@ -371,7 +226,7 @@ export class PathFinder {
         rotation: number,
         flipped: boolean,
         dir: Direction,
-    ) {
+    ): void {
         node.parent[dir] = parentPacked;
         node.arrowType[dir] = type;
         node.arrowRotation[dir] = rotation;
@@ -389,7 +244,7 @@ export class PathFinder {
         }
         forwardChain.reverse();
 
-        for (let i = 0; i < forwardChain.length - 1; i++) {
+        for (let i = 0; i < forwardChain.length - 1; i += 1) {
             const packedPos = forwardChain[i];
             const targetNode = this.grid.getNode(forwardChain[i + 1]);
             const pos = this.grid.unpack(packedPos);

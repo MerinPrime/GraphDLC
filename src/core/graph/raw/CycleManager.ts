@@ -23,7 +23,7 @@ function canBeInCycle(node: RawNode): boolean {
 export class CycleManager {
     private graph: RawGraph;
 
-    constructor(graph: RawGraph) {
+    public constructor(graph: RawGraph) {
         this.graph = graph;
     }
 

@@ -5,8 +5,12 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { save } from '@logic-arrows/utils/save';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
-export function PatchSave(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchSave: IPatcher = (
+    patchLoader: PatchLoader,
+    _graphDLC: GraphDLC,
+) => {
     patchLoader.addDefinitionPatch('save', (_module: typeof save) => {
         return function save(map: GameMap): number[] {
             const buffer: number[] = [];
@@ -55,4 +59,4 @@ export function PatchSave(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             return buffer;
         };
     });
-}
+};

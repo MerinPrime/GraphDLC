@@ -3,13 +3,17 @@ import type { Render } from '@logic-arrows/render-engine/render';
 import type { Shader } from '@logic-arrows/render-engine/shader';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
 interface PrivateGameRender {
     readonly render: Render;
     solidColorShader: Shader | null;
 }
 
-export function PatchGameRender(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchGameRender: IPatcher = (
+    patchLoader: PatchLoader,
+    _graphDLC: GraphDLC,
+) => {
     patchLoader.addDefinitionPatch(
         'GameRender',
         (_module: typeof GameRender) => {
@@ -26,4 +30,4 @@ export function PatchGameRender(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             };
         },
     );
-}
+};

@@ -6,19 +6,27 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { SortedSettingGroup } from 'src/core/settings/Manager';
 import { TextColor } from 'src/core/utils/TextColor';
+import type { IPatcher } from '../Patcher';
 
 interface PrivateUIMenu {
     messagePanelDiv: HTMLDivElement;
 }
 
-export function PatchUIMenu(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchUIMenu: IPatcher = (
+    patchLoader: PatchLoader,
+    graphDLC: GraphDLC,
+) => {
     const settingsManager = graphDLC.settingsManager;
 
     patchLoader.addDefinitionPatch('UIMenu', (_module: typeof UIMenu) => {
         return class UIMenu extends _module {
-            mapSettingsContainer: HTMLDivElement;
+            private mapSettingsContainer: HTMLDivElement;
 
-            constructor(parent: HTMLElement, mapInfo: MapInfo, game: Game) {
+            public constructor(
+                parent: HTMLElement,
+                mapInfo: MapInfo,
+                game: Game,
+            ) {
                 super(parent, mapInfo, game);
 
                 this.mapSettingsContainer = document.createElement('table');
@@ -29,7 +37,9 @@ export function PatchUIMenu(patchLoader: PatchLoader, graphDLC: GraphDLC) {
 
                 const settingGroups =
                     settingsManager.getSortedSettings('map-settings');
-                settingGroups.forEach((group) => this.addGroup(group));
+                settingGroups.forEach((group) => {
+                    this.addGroup(group);
+                });
             }
 
             private addGroup(group: SortedSettingGroup) {
@@ -98,4 +108,4 @@ export function PatchUIMenu(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             }
         };
     });
-}
+};

@@ -5,8 +5,12 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { load } from '@logic-arrows/utils/load';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
-export function PatchLoad(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchLoad: IPatcher = (
+    patchLoader: PatchLoader,
+    _graphDLC: GraphDLC,
+) => {
     patchLoader.addDefinitionPatch('load', (_module: typeof load) => {
         return function load(map: GameMap, buffer: number[]): void {
             if (buffer.length < 4) return;
@@ -53,4 +57,4 @@ export function PatchLoad(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             }
         };
     });
-}
+};

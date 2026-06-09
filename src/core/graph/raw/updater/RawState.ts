@@ -2,49 +2,49 @@ import type { RawGraph } from '../RawGraph';
 import type { RawNode } from '../RawNode';
 
 export class RawNodeState {
-    signal: number = 0;
-    lastSignal: number = 0;
-    signalsCount: number = 0;
-    prevCycleActive: boolean = false;
-    cycleActive: boolean = false;
-    blockedCount: number = 0;
-    nodeInCycleOffset: number = 0;
+    public signal: number = 0;
+    public lastSignal: number = 0;
+    public signalsCount: number = 0;
+    public prevCycleActive: boolean = false;
+    public cycleActive: boolean = false;
+    public blockedCount: number = 0;
+    public nodeInCycleOffset: number = 0;
 
-    isEntryPoint: boolean = false;
-    isAdditionalUpdate: boolean = false;
-    isUpdated: boolean = false;
-    isChanged: boolean = false;
+    public isEntryPoint: boolean = false;
+    public isAdditionalUpdate: boolean = false;
+    public isUpdated: boolean = false;
+    public isChanged: boolean = false;
 
-    constructor(public node: RawNode) {}
+    public constructor(public node: RawNode) {}
 }
 
 export class RawCycleState {
-    length: number;
-    state: Uint32Array;
+    public length: number;
+    public state: Uint32Array;
 
-    constructor(length: number) {
+    public constructor(length: number) {
         this.length = length;
         this.state = new Uint32Array(Math.ceil(length / 32));
     }
 }
 
 export class RawChunkState {
-    isDirty: boolean = false;
+    public isDirty: boolean = false;
 
-    constructor(readonly chunkIdx: number = 0) {}
+    public constructor(public readonly chunkIdx: number = 0) {}
 }
 
 export class RawGraphState {
-    changedNodes: RawNodeState[];
-    tempChangedNodes: RawNodeState[];
+    public changedNodes: RawNodeState[];
+    public tempChangedNodes: RawNodeState[];
 
-    nodes: RawNodeState[];
-    chunks: RawChunkState[];
+    public nodes: RawNodeState[];
+    public chunks: RawChunkState[];
 
-    cycles: (RawCycleState | null)[];
-    tick: number;
+    public cycles: (RawCycleState | null)[];
+    public tick: number;
 
-    constructor() {
+    public constructor() {
         this.changedNodes = [];
         this.tempChangedNodes = [];
 
@@ -55,7 +55,7 @@ export class RawGraphState {
         this.tick = 0;
     }
 
-    reset(graph: RawGraph) {
+    public reset(graph: RawGraph) {
         this.update(graph);
 
         this.tick = 0;
@@ -79,13 +79,14 @@ export class RawGraphState {
         this.cycles.forEach((cycle) => {
             if (cycle) cycle.state.fill(0);
         });
+        this.tick = 0;
     }
 
-    makeDirtyNodeChunk(node: RawNode) {
+    public makeDirtyNodeChunk(node: RawNode) {
         this.chunks[node.chunkIdx].isDirty = true;
     }
 
-    getDirtyChunks(): [...chunkIdx: number[]] {
+    public getDirtyChunks(): [...chunkIdx: number[]] {
         const dirtyChunks: number[] = [];
         this.chunks.forEach((chunk) => {
             if (chunk.isDirty) {
@@ -96,7 +97,7 @@ export class RawGraphState {
         return dirtyChunks;
     }
 
-    update(graph: RawGraph) {
+    public update(graph: RawGraph) {
         for (let i = this.nodes.length; i < graph.nodes.length; i++) {
             const nodeState = new RawNodeState(graph.nodes[i]);
             nodeState.nodeInCycleOffset = graph.nodes[i].cycleOffset;

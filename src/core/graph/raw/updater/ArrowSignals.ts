@@ -27,4 +27,3 @@ ACTIVE_SIGNALS[ArrowType.BUTTON] = ArrowSignal.ORANGE;
 ACTIVE_SIGNALS[ArrowType.LEVEL_SOURCE] = ArrowSignal.RED;
 ACTIVE_SIGNALS[ArrowType.LEVEL_TARGET] = ArrowSignal.RED;
 ACTIVE_SIGNALS[ArrowType.DIRECTIONAL_BUTTON] = ArrowSignal.ORANGE;
-// TODO: Move from graph updating to arrow shader

@@ -3,11 +3,12 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { SortedSettingGroup } from 'src/core/settings/Manager';
 import { TextColor } from 'src/core/utils/TextColor';
+import type { IPatcher } from '../Patcher';
 
-export function PatchSettingsPage(
+export const PatchSettingsPage: IPatcher = (
     patchLoader: PatchLoader,
     graphDLC: GraphDLC,
-) {
+) => {
     const settingsManager = graphDLC.settingsManager;
 
     patchLoader.addDefinitionPatch(
@@ -16,7 +17,7 @@ export function PatchSettingsPage(
             return class SettingsPage extends _module {
                 private lastElement: HTMLElement;
 
-                constructor(container: HTMLElement) {
+                public constructor(container: HTMLElement) {
                     super(container);
 
                     const lastSetting = this.mainDiv.querySelector(
@@ -27,7 +28,9 @@ export function PatchSettingsPage(
 
                     const settingGroups =
                         settingsManager.getSortedSettings('menu-settings');
-                    settingGroups.forEach((group) => this.addGroup(group));
+                    settingGroups.forEach((group) => {
+                        this.addGroup(group);
+                    });
                 }
 
                 private addGroup(group: SortedSettingGroup) {
@@ -100,4 +103,4 @@ export function PatchSettingsPage(
             };
         },
     );
-}
+};

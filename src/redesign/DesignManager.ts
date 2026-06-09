@@ -21,7 +21,7 @@ export class DesignManager {
         },
     ];
 
-    constructor() {
+    public setup() {
         this.designSettings.forEach(this.applySetting);
     }
 

@@ -35,7 +35,7 @@ export class RawGraph {
     // TODO: Incapsulate graph updater to game engine for ast engine, soa engine, rust engine
     public cycleManager: CycleManager;
 
-    constructor(gameMap: GameMap) {
+    public constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
         this.nodes = [];
         this.chunks = [];
@@ -48,15 +48,15 @@ export class RawGraph {
         this.cycleManager = new CycleManager(this);
     }
 
-    getChunkByIdx(chunkIdx: number): Chunk {
-        return this.chunks[chunkIdx]!;
+    public getChunkByIdx(chunkIdx: number): Chunk {
+        return this.chunks[chunkIdx];
     }
 
-    getAllChunks(): readonly Chunk[] {
+    public getAllChunks(): readonly Chunk[] {
         return this.chunks;
     }
 
-    addCycle(nodes: RawNode[]): RawCycle {
+    public addCycle(nodes: RawNode[]): RawCycle {
         let index: number;
         const freeIndex = this.freeCycleIndices.pop();
         if (freeIndex !== undefined) {
@@ -74,7 +74,7 @@ export class RawGraph {
         return cycle;
     }
 
-    removeCycle(cycle: RawCycle) {
+    public removeCycle(cycle: RawCycle) {
         if (this.cycles[cycle.index] === cycle) {
             this.cycles[cycle.index] = null;
             this.graphState.cycles[cycle.index] = null;
@@ -82,11 +82,15 @@ export class RawGraph {
         }
     }
 
-    getNode(astIndex: number): RawNode {
+    public getNode(astIndex: number): RawNode {
         return this.nodes[astIndex];
     }
 
-    updateNodeRelations(node: RawNode, oldType: number, newType: number) {
+    public updateNodeRelations(
+        node: RawNode,
+        _oldType: number,
+        newType: number,
+    ) {
         const nodeArrow = node.arrow;
         const oldNextFull = node.next.slice();
 
@@ -196,21 +200,20 @@ export class RawGraph {
         );
     }
 
-    getOrCreateNode(
+    public getOrCreateNode(
         arrow: Arrow,
         chunk: Chunk,
         globalX: number,
         globalY: number,
     ): RawNode {
-        if (arrow.graphAstIndex != null)
-            return this.getNode(arrow.graphAstIndex);
+        if (arrow.astIndex != null) return this.getNode(arrow.astIndex);
 
-        if (chunk.graphAstIndex == null) {
-            chunk.graphAstIndex = this.chunks.length;
+        if (chunk.astIndex == null) {
+            chunk.astIndex = this.chunks.length;
             this.chunks.push(chunk);
         }
 
-        const chunkIdx = chunk.graphAstIndex!;
+        const chunkIdx = chunk.astIndex;
         const nodeIdx = this.nodes.length;
         const localX = globalX - chunk.x * CHUNK_SIZE;
         const localY = globalY - chunk.y * CHUNK_SIZE;
@@ -225,7 +228,7 @@ export class RawGraph {
             localY,
         );
         this.nodes.push(node);
-        arrow.graphAstIndex = nodeIdx;
+        arrow.astIndex = nodeIdx;
 
         this.graphState.update(this);
         if (arrow.type > ArrowTypeCount) {
@@ -237,7 +240,7 @@ export class RawGraph {
         return node;
     }
 
-    getOrCreateNodeByCoords(globalX: number, globalY: number): RawNode {
+    public getOrCreateNodeByCoords(globalX: number, globalY: number): RawNode {
         const chunk = (
             this.gameMap as any as PrivateGameMap
         ).getOrCreateChunkByArrowCoordinates(globalX, globalY);
@@ -246,14 +249,13 @@ export class RawGraph {
             globalY - chunk.y * CHUNK_SIZE,
         );
 
-        if (arrow.graphAstIndex != null)
-            return this.getNode(arrow.graphAstIndex);
+        if (arrow.astIndex != null) return this.getNode(arrow.astIndex);
         return this.getOrCreateNode(arrow, chunk, globalX, globalY);
     }
 
-    clear() {
+    public clear() {
         this.nodes.forEach((node) => {
-            node.arrow.graphAstIndex = undefined;
+            node.arrow.astIndex = undefined;
         });
         this.nodes.length = 0;
         this.cycles.length = 0;
@@ -263,7 +265,7 @@ export class RawGraph {
     // TODO: Optimize update calls
     // Also store chunks for future
 
-    updateArrowType(
+    public updateArrowType(
         arrow: Arrow,
         chunk: Chunk,
         globalX: number,
@@ -290,23 +292,23 @@ export class RawGraph {
         else removeWithSwap(this.entryPoints, node);
     }
 
-    updateArrowRotation(
+    public updateArrowRotation(
         arrow: Arrow,
         chunk: Chunk,
         globalX: number,
         globalY: number,
-        newRotation: number,
+        _newRotation: number,
     ) {
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node, arrow.type, arrow.type);
     }
 
-    updateArrowFlipped(
+    public updateArrowFlipped(
         arrow: Arrow,
         chunk: Chunk,
         globalX: number,
         globalY: number,
-        newFlipped: boolean,
+        _newFlipped: boolean,
     ) {
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
         this.updateNodeRelations(node, arrow.type, arrow.type);

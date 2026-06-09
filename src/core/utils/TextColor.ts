@@ -1,4 +1,4 @@
-export enum TextColor {
+export const enum TextColor {
     BLACK = 'rgb(0, 0, 0)',
     GRAY = 'rgb(80, 80, 80)',
     BLUE = 'rgb(55, 95, 187)',

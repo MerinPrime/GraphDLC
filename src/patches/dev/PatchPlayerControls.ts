@@ -2,15 +2,16 @@ import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerControls {
-    playerUI: PlayerUI;
+    readonly playerUI: PlayerUI;
 }
 
-export function PatchPlayerControls(
+export const PatchPlayerControls: IPatcher = (
     patchLoader: PatchLoader,
-    graphDLC: GraphDLC,
-) {
+    _graphDLC: GraphDLC,
+) => {
     patchLoader.addDefinitionPatch(
         'PlayerControls',
         (_module: typeof PlayerControls) => {
@@ -23,4 +24,4 @@ export function PatchPlayerControls(
             };
         },
     );
-}
+};

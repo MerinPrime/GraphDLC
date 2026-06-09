@@ -7,11 +7,10 @@ import { PatchGame } from 'src/patches/graph/PatchGame';
 import { PatchGameMap } from 'src/patches/graph/PatchGameMap';
 import { PatchLoad } from 'src/patches/graph/PatchLoad';
 import { PatchSave } from 'src/patches/graph/PatchSave';
-import { PathBuilding_PlayerControls } from 'src/patches/path_building/PlayerControls';
+import { PatchBackend } from 'src/patches/map_protection/PatchBackend';
 import { PatchGameRender } from 'src/patches/render/PatchGameRender';
 import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
-import { PatchBackend } from 'src/patches/utility/PatchBackend';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
 import { GraphDebug } from './debugger/GraphDebug';
@@ -20,13 +19,13 @@ import { PathFinder } from './path_finder/PathFinder';
 import { SettingsManager } from './settings/Manager';
 
 export class GraphDLC {
-    patchLoader: PatchLoader;
-    settingsManager: SettingsManager;
-    designManager: DesignManager;
-    pathFinder: PathFinder;
-    debugger: GraphDebug;
+    private patchLoader: PatchLoader;
+    public settingsManager: SettingsManager;
+    private designManager: DesignManager;
+    public pathFinder: PathFinder;
+    public debugger: GraphDebug;
 
-    constructor(patchLoader: PatchLoader) {
+    public constructor(patchLoader: PatchLoader) {
         this.patchLoader = patchLoader;
         this.settingsManager = new SettingsManager();
         this.designManager = new DesignManager();
@@ -34,7 +33,13 @@ export class GraphDLC {
         this.debugger = new GraphDebug();
     }
 
-    inject() {
+    public setup() {
+        this.settingsManager.setup();
+        this.designManager.setup();
+        this.inject();
+    }
+
+    public inject() {
         PatchArrow(this.patchLoader, this);
         PatchChunk(this.patchLoader, this);
         PatchSettingsPage(this.patchLoader, this);
@@ -50,6 +55,6 @@ export class GraphDLC {
         PatchSave(this.patchLoader, this);
         PatchChunkUpdates(this.patchLoader, this);
         PatchBackend(this.patchLoader, this);
-        PathBuilding_PlayerControls(this.patchLoader, this);
+        PatchPlayerControls(this.patchLoader, this);
     }
 }

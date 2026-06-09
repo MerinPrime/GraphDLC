@@ -6,7 +6,7 @@ import { NodeSignal } from './NodeSignal';
 import type { RawGraphState, RawNodeState } from './RawState';
 
 export class RawGraphUpdater {
-    onCycleBuild(graphState: RawGraphState, cycle: RawCycle) {
+    public onCycleBuild(graphState: RawGraphState, cycle: RawCycle) {
         const cycleState = graphState.cycles[cycle.index];
         if (!cycleState) return;
 
@@ -76,7 +76,7 @@ export class RawGraphUpdater {
         }
     }
 
-    onCycleDismantle(graphState: RawGraphState, cycle: RawCycle) {
+    public onCycleDismantle(graphState: RawGraphState, cycle: RawCycle) {
         const cycleState = graphState.cycles[cycle.index];
 
         for (const node of cycle.nodes) {
@@ -90,17 +90,6 @@ export class RawGraphUpdater {
                 const wordIndex = (position / 32) | 0;
                 const isActive =
                     (cycleState.state[wordIndex] & (1 << bitIndex)) !== 0;
-
-                const nextPosition =
-                    (((graphState.tick + node.origCycleOffset - 1) %
-                        cycleState.length) +
-                        cycleState.length) %
-                    cycleState.length;
-                const nextBitIndex = nextPosition % 32;
-                const nextWordIndex = (nextPosition / 32) | 0;
-                const nextIsActive =
-                    (cycleState.state[nextWordIndex] & (1 << nextBitIndex)) !==
-                    0;
 
                 if (isActive) {
                     nodeState.signal = NodeSignal.ACTIVE;
@@ -156,7 +145,7 @@ export class RawGraphUpdater {
         }
     }
 
-    updateNodeChange(
+    public updateNodeChange(
         graphState: RawGraphState,
         node: RawNode,
         oldNext: RawNode[],
@@ -170,7 +159,7 @@ export class RawGraphUpdater {
         }
     }
 
-    fullNodeStateCalculate(graphState: RawGraphState, node: RawNode) {
+    public fullNodeStateCalculate(graphState: RawGraphState, node: RawNode) {
         const nodeState = graphState.nodes[node.index];
         if (!nodeState || !node.valid) return;
 
@@ -216,7 +205,7 @@ export class RawGraphUpdater {
         this.markNodeAsChanged(graphState, nodeState);
     }
 
-    updateState(graphState: RawGraphState, tick: number) {
+    public updateState(graphState: RawGraphState) {
         for (let i = 0; i < graphState.changedNodes.length; i++) {
             const nodeState = graphState.changedNodes[i];
             const isActive = nodeState.signal === NodeSignal.ACTIVE;
@@ -236,7 +225,8 @@ export class RawGraphUpdater {
                 if (!cycleState) continue;
 
                 const position =
-                    (tick + nodeState.nodeInCycleOffset) % cycleState.length;
+                    (graphState.tick + nodeState.nodeInCycleOffset) %
+                    cycleState.length;
                 const bitIndex = position % 32;
                 const wordIndex = (position - bitIndex) / 32;
                 const mask = 1 << bitIndex;
@@ -260,7 +250,8 @@ export class RawGraphUpdater {
                 if (!cycleState) continue;
 
                 const position =
-                    (tick + nodeState.nodeInCycleOffset) % cycleState.length;
+                    (graphState.tick + nodeState.nodeInCycleOffset) %
+                    cycleState.length;
                 const bitIndex = position % 32;
                 const wordIndex = (position - bitIndex) / 32;
                 const mask = 1 << bitIndex;
@@ -327,7 +318,7 @@ export class RawGraphUpdater {
             if (
                 nodeState.isUpdated ||
                 (isChanged && nodeState.isAdditionalUpdate) ||
-                (tick === 0 && nodeState.isEntryPoint) ||
+                (graphState.tick === 0 && nodeState.isEntryPoint) ||
                 (nodeState.signal !== NodeSignal.NONE &&
                     nodeState.signalsCount === 0 &&
                     (nodeType === ArrowType.BUTTON ||
@@ -364,22 +355,26 @@ export class RawGraphUpdater {
         }
 
         graphState.tempChangedNodes.length = 0;
+        graphState.tick += 1;
     }
 
-    markNodeAsChangedNonTemp(
+    public markNodeAsChangedNonTemp(
         graphState: RawGraphState,
         nodeState: RawNodeState,
     ) {
         graphState.changedNodes.push(nodeState);
     }
 
-    markNodeAsChanged(graphState: RawGraphState, nodeState: RawNodeState) {
+    public markNodeAsChanged(
+        graphState: RawGraphState,
+        nodeState: RawNodeState,
+    ) {
         if (nodeState.isChanged || !nodeState.node.valid) return;
         nodeState.isChanged = true;
         graphState.tempChangedNodes.push(nodeState);
     }
 
-    updateNode(nodeState: RawNodeState): NodeSignal {
+    public updateNode(nodeState: RawNodeState): NodeSignal {
         const isReadHead = nodeState.node.headType === CycleHeadType.READ;
 
         if (isReadHead) {

@@ -3,9 +3,9 @@ import { BaseSetting } from './BaseSetting';
 import type { SettingMeta } from './Types';
 
 export class SelectSetting<T extends string | number> extends BaseSetting<T> {
-    readonly options: { value: T; label: I18nText }[];
+    private readonly options: { value: T; label: I18nText }[];
 
-    constructor(
+    public constructor(
         key: string,
         defaultValue: T,
         meta: SettingMeta,
@@ -15,7 +15,7 @@ export class SelectSetting<T extends string | number> extends BaseSetting<T> {
         this.options = options;
     }
 
-    buildUIComponent(): HTMLSelectElement {
+    public buildUIComponent(): HTMLSelectElement {
         const select = document.createElement('select');
         this.options.forEach((opt) => {
             const el = document.createElement('option');

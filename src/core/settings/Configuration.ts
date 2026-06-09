@@ -7,13 +7,15 @@ export type ConfigurationData<R extends SettingsRegistry> = {
 };
 
 export class Configuration<R extends SettingsRegistry> {
-    readonly registry: R;
+    private readonly registry: R;
     private readonly storageKey: string;
 
-    constructor(registry: R, storageKey = 'graphdlcv3-settings') {
+    public constructor(registry: R, storageKey = 'graphdlcv3-settings') {
         this.registry = registry;
         this.storageKey = storageKey;
+    }
 
+    public setup() {
         this.load();
 
         for (const key in this.registry) {
@@ -21,7 +23,7 @@ export class Configuration<R extends SettingsRegistry> {
         }
     }
 
-    get data(): ConfigurationData<R> {
+    public get data(): ConfigurationData<R> {
         const proxyData = {} as ConfigurationData<R>;
         for (const key in this.registry) {
             proxyData[key] = this.registry[key].value;
@@ -29,7 +31,7 @@ export class Configuration<R extends SettingsRegistry> {
         return proxyData;
     }
 
-    load(): void {
+    public load(): void {
         try {
             const rawData = localStorage.getItem(this.storageKey);
             if (!rawData) {
@@ -51,7 +53,7 @@ export class Configuration<R extends SettingsRegistry> {
         }
     }
 
-    save(): void {
+    public save(): void {
         try {
             const dataToSave = {} as Record<string, any>;
             for (const key in this.registry) {
@@ -67,7 +69,7 @@ export class Configuration<R extends SettingsRegistry> {
         }
     }
 
-    resetToDefaults(): void {
+    public resetToDefaults(): void {
         for (const key in this.registry) {
             const setting = this.registry[key];
             setting.value = setting.defaultValue;

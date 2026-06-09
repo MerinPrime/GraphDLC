@@ -1,4 +1,5 @@
 // @ts-nocheck
+// biome-ignore-all lint: old graphdlc
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
 
@@ -2834,7 +2835,7 @@ if (localStorage.getItem('arrows:selectedBundleId') === '1_2_1') {
     const patchLoader = new PatchLoader();
     patchLoader.hook();
     const graphDLC = new GraphDLC(patchLoader);
-    graphDLC.inject();
+    graphDLC.setup();
 
     window.graphdlc = graphDLC;
 }

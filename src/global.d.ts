@@ -13,8 +13,8 @@ declare global {
 
 declare module '@logic-arrows/player/game' {
     export interface Game {
-        path: PathStep[] | null = null
-}
+        path: PathStep[] | null;
+    }
 }
 
 declare module '@logic-arrows/game-render/game-render' {
@@ -25,7 +25,7 @@ declare module '@logic-arrows/game-render/game-render' {
 
 declare module '@logic-arrows/game-logic/chunk' {
     export interface Chunk {
-        graphAstIndex?: number | null;
+        astIndex?: number | null;
 
         getArrows(): readonly Arrow[];
     }
@@ -33,7 +33,7 @@ declare module '@logic-arrows/game-logic/chunk' {
 
 declare module '@logic-arrows/game-logic/arrow' {
     export interface Arrow {
-        graphAstIndex?: number | null;
+        astIndex?: number | null;
     }
 }
 

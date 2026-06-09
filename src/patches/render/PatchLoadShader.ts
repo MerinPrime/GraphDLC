@@ -1,6 +1,7 @@
-import { loadShader } from '@logic-arrows/render-engine/shader-loader';
+import type { loadShader } from '@logic-arrows/render-engine/shader-loader';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
 const patchedSolidColorShader = `#version 300 es
 precision highp float;
@@ -28,7 +29,10 @@ void main() {
   }
 }`;
 
-export function PatchLoadShader(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchLoadShader: IPatcher = (
+    patchLoader: PatchLoader,
+    _graphDLC: GraphDLC,
+) => {
     patchLoader.addDefinitionPatch(
         'loadShader',
         (_loadShader: typeof loadShader) => {
@@ -36,8 +40,8 @@ export function PatchLoadShader(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 if (path.includes('solid-color.frag')) {
                     return patchedSolidColorShader;
                 }
-                return loadShader(path);
+                return _loadShader(path);
             };
         },
     );
-}
+};

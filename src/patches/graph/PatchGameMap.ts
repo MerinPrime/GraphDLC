@@ -4,17 +4,21 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import { RawGraph } from 'src/core/graph/raw/RawGraph';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import type { IPatcher } from '../Patcher';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
 }
 
-export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchGameMap: IPatcher = (
+    patchLoader: PatchLoader,
+    _graphDLC: GraphDLC,
+) => {
     patchLoader.addDefinitionPatch('GameMap', (_module: typeof GameMap) => {
         return class GameMap extends _module {
             public rawGraph: RawGraph;
 
-            constructor() {
+            public constructor() {
                 super();
                 this.rawGraph = new RawGraph(this);
             }
@@ -134,4 +138,4 @@ export function PatchGameMap(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             }
         };
     });
-}
+};

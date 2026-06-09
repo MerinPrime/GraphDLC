@@ -9,7 +9,7 @@ export class PatchLoader {
         (name: string, definition: any) => boolean | Function
     >;
 
-    constructor() {
+    public constructor() {
         this.definitions = new Map();
         this.instances = new Map();
         this.patches = [];
@@ -64,7 +64,7 @@ export class PatchLoader {
 
                 if (isClass) {
                     patchedTarget = class extends original {
-                        constructor(...ctorArgs: any[]) {
+                        public constructor(...ctorArgs: any[]) {
                             super(...ctorArgs);
                             modLoader.setInstance(key, this);
                         }
@@ -114,10 +114,12 @@ export class PatchLoader {
     }
 
     public setDefinition<T = any>(name: string, value: T) {
-        if (!this.hasDefinition(name)) {
-            this.definitions.set(name, { def: null });
+        const definition = this.definitions.get(name);
+        if (!definition) {
+            this.definitions.set(name, { def: value });
+            return;
         }
-        this.definitions.get(name)!.def = value;
+        definition.def = value;
     }
 
     public hasDefinition(name: string): boolean {
@@ -169,7 +171,7 @@ function handleScriptInjection(element: HTMLElement): boolean {
         url = element.href;
     }
 
-    if (url && url.includes('bundle.js') && !url.includes('bundle-shell.js')) {
+    if (url?.includes('bundle.js') && !url.includes('bundle-shell.js')) {
         fetch(url)
             .then((res) => res.text())
             .then((gameCode) => {
@@ -192,8 +194,7 @@ function handleScriptInjection(element: HTMLElement): boolean {
                 }
 
                 const patchedScript = document.createElement('script');
-                patchedScript.textContent =
-                    patchedCode + `\n//# sourceURL=${url.split('?')[0]}`;
+                patchedScript.textContent = `${patchedCode}\n//# sourceURL=${url.split('?')[0]}`;
 
                 if (element instanceof HTMLScriptElement) {
                     for (let i = 0; i < element.attributes.length; i++) {

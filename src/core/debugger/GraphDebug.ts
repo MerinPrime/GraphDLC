@@ -1,12 +1,12 @@
-import { type Bounds, InBounds } from 'src/patches/graph/PatchGame';
-import { CycleHeadType } from '../graph/raw/CycleTypes';
+import { CycleHeadType, type RawCycle } from '../graph/raw/CycleTypes';
 import type { RawGraph } from '../graph/raw/RawGraph';
-import type { RawCycle, RawNode } from '../graph/raw/RawNode';
+import type { RawNode } from '../graph/raw/RawNode';
 import {
     DebugMode,
     DebugModeSetting,
 } from '../settings/instances/other/DebugModeSetting';
 import { ArrowType } from '../utils/ArrowType';
+import type { Bounds } from '../utils/Bounds';
 
 export class GraphDebug {
     public colorizeDebug(
@@ -55,11 +55,11 @@ export class GraphDebug {
         });
         cycles.forEach((cycle) => {
             cycle.nodes.forEach((node) => {
-                if (InBounds(bounds, node.globalX, node.globalY))
+                if (bounds.InBounds(node.globalX, node.globalY))
                     renderColor(node, 0.8, 0.2, 0.8, 0.25);
             });
             cycle.heads.forEach((node) => {
-                if (!InBounds(bounds, node.globalX, node.globalY)) return;
+                if (!bounds.InBounds(node.globalX, node.globalY)) return;
                 if (node.headType === CycleHeadType.READ)
                     renderColor(node, 0.2, 0.2, 0.8, 0.25);
                 if (node.headType === CycleHeadType.WRITE)
@@ -90,11 +90,10 @@ export class GraphDebug {
             [0.8, 0.8, 0.2],
             [0.8, 0.2, 0.8],
             [0.2, 0.8, 0.8],
-            // [0.2, 0.2, 0.2],
         ];
         rawGraph.nodes.forEach((node) => {
             if (node.arrow.type === ArrowType.EMPTY || !node.valid) return;
-            if (!InBounds(bounds, node.globalX, node.globalY)) return;
+            if (!bounds.InBounds(node.globalX, node.globalY)) return;
             let hash = 0;
             node.previous.forEach((prevNode) => {
                 if (prevNode.arrow.type === ArrowType.EMPTY || !prevNode.valid)
@@ -121,10 +120,15 @@ export class GraphDebug {
         const entryPoints: RawNode[] = rawGraph.entryPoints;
         const reachableNodes = new Set<RawNode>();
         const reachQueue: RawNode[] = [...entryPoints];
-        reachQueue.forEach((n) => reachableNodes.add(n));
+        reachQueue.forEach((n) => {
+            reachableNodes.add(n);
+        });
 
         while (reachQueue.length > 0) {
-            const current = reachQueue.shift()!;
+            const current = reachQueue.shift();
+            if (current === undefined) {
+                break;
+            }
             for (const nextNode of current.next) {
                 if (
                     nextNode.valid &&
@@ -139,7 +143,7 @@ export class GraphDebug {
 
         rawGraph.nodes.forEach((node) => {
             if (node.arrow.type === ArrowType.EMPTY || !node.valid) return;
-            if (!InBounds(bounds, node.globalX, node.globalY)) return;
+            if (!bounds.InBounds(node.globalX, node.globalY)) return;
             if (!reachableNodes.has(node)) {
                 renderColor(node, 0, 0, 0, 0.3);
             }

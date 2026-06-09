@@ -1,6 +1,6 @@
 import { ArrowType } from './ArrowType';
 
-type RelationCoords = Array<[number, number]>;
+type RelationCoords = Array<[forward: number, sideways: number]>;
 
 const ARROW_RELATIONS_MAP: Record<ArrowType, RelationCoords> = {
     [ArrowType.ARROW]: [[-1, 0]],

@@ -9,13 +9,17 @@ export interface SortedSettingGroup {
 }
 
 export class SettingsManager {
-    config: Configuration<typeof SettingsRegistry>;
+    private config: Configuration<typeof SettingsRegistry>;
 
     public constructor() {
         this.config = new Configuration(
             SettingsRegistry,
             'graphdlc-v3-settings',
         );
+    }
+
+    public setup() {
+        this.config.setup();
     }
 
     public get data(): {
@@ -58,7 +62,7 @@ export class SettingsManager {
             if (!groupsMap.has(group)) {
                 groupsMap.set(group, []);
             }
-            groupsMap.get(group)!.push(setting);
+            groupsMap.get(group)?.push(setting);
         }
 
         const sortedGroups: SortedSettingGroup[] = [];

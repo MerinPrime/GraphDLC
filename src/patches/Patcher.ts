@@ -8,5 +8,7 @@ export function ApplyPatches(
     graphDLC: GraphDLC,
     patches: IPatcher[],
 ) {
-    patches.forEach((patch) => patch(patchLoader, graphDLC));
+    patches.forEach((patch) => {
+        patch(patchLoader, graphDLC);
+    });
 }

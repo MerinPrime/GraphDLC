@@ -3,13 +3,13 @@ import type { TextColor } from 'src/core/utils/TextColor';
 import type { SettingGroup } from './SettingGroup';
 
 export interface SettingMeta {
-    name: I18nText;
-    description?: I18nText;
-    nameColor?: TextColor;
-    descriptionColor?: TextColor;
+    readonly name: I18nText;
+    readonly description?: I18nText;
+    readonly nameColor?: TextColor;
+    readonly descriptionColor?: TextColor;
 
-    isMapSetting: boolean;
-    group: SettingGroup;
-    order: number;
-    spaceAfter?: number;
+    readonly isMapSetting: boolean;
+    readonly group: SettingGroup;
+    readonly order: number;
+    readonly spaceAfter?: number;
 }

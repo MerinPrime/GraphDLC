@@ -2,9 +2,9 @@ import { BaseSetting } from './BaseSetting';
 import type { SettingMeta } from './Types';
 
 export class BoolSetting extends BaseSetting<boolean> {
-    readonly disabled: boolean;
+    public readonly disabled: boolean;
 
-    constructor(
+    public constructor(
         key: string,
         defaultValue: boolean,
         meta: SettingMeta,
@@ -14,7 +14,7 @@ export class BoolSetting extends BaseSetting<boolean> {
         this.disabled = disabled;
     }
 
-    buildUIComponent(): HTMLInputElement {
+    public buildUIComponent(): HTMLInputElement {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = this.value;

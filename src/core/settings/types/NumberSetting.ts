@@ -9,12 +9,12 @@ export interface NumberSettingOptions {
 }
 
 export class NumberSetting extends BaseSetting<number> {
-    readonly min: number;
-    readonly max: number;
-    readonly step: number;
+    public readonly min: number;
+    public readonly max: number;
+    public readonly step: number;
     private readonly formatLabel: (value: number) => string;
 
-    constructor(
+    public constructor(
         key: string,
         defaultValue: boolean | number,
         meta: SettingMeta,
@@ -36,11 +36,11 @@ export class NumberSetting extends BaseSetting<number> {
         this.formatLabel = options.formatLabel ?? ((value) => value.toString());
     }
 
-    override validate(newValue: number): boolean {
+    public override validate(newValue: number): boolean {
         return newValue >= this.min && newValue <= this.max;
     }
 
-    buildUIComponent(): HTMLDivElement {
+    public buildUIComponent(): HTMLDivElement {
         const container = document.createElement('div');
         const slider = document.createElement('input');
         const label = document.createElement('span');

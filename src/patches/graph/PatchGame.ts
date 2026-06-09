@@ -13,35 +13,24 @@ import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/E
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
 import { TargetFPSSetting } from 'src/core/settings/instances/other/TargetFPSSetting';
 import { ArrowType } from 'src/core/utils/ArrowType';
+import { Bounds } from 'src/core/utils/Bounds';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
+import type { IPatcher } from '../Patcher';
 
 interface PrivateGame {
     readonly gameMap: GameMap;
-    render: GameRender;
+    readonly render: GameRender;
 
     updateTime: number;
     tps: number;
     updatesPerSecond: number;
 }
 
-export interface Bounds {
-    minX: number;
-    minY: number;
-    maxX: number;
-    maxY: number;
-}
-
-export function InBounds(bounds: Bounds, x: number, y: number): boolean {
-    return (
-        x >= bounds.minX &&
-        y >= bounds.minY &&
-        x <= bounds.maxX &&
-        y <= bounds.maxY
-    );
-}
-
-export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
+export const PatchGame: IPatcher = (
+    patchLoader: PatchLoader,
+    graphDLC: GraphDLC,
+) => {
     let renderDelta = 0;
     let lastUpdateTime = -1;
     let accumulator = 0;
@@ -120,12 +109,12 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             ) {
                 if (
                     !ShowArrowConnectionsSetting.value ||
-                    arrowAtCursor.graphAstIndex == null
+                    arrowAtCursor.astIndex == null
                 )
                     return;
 
                 const astNode = gameMap.rawGraph.getNode(
-                    arrowAtCursor.graphAstIndex,
+                    arrowAtCursor.astIndex,
                 );
                 const isEmpty = arrowAtCursor.type === 0;
 
@@ -222,10 +211,10 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                     -this.offset[1] / CELL_SIZE + this.height / this.scale,
                 );
 
-                return { minX, minY, maxX, maxY };
+                return new Bounds(minX, minY, maxX, maxY);
             }
 
-            draw() {
+            public draw() {
                 const renderStart = performance.now();
 
                 const rawGraph = this.gameMap.rawGraph;
@@ -241,18 +230,23 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 const dirtyChunksIdx = graphState.getDirtyChunks();
                 dirtyChunksIdx.forEach((dirtyChunkIdx) => {
                     const chunk = rawGraph.getChunkByIdx(dirtyChunkIdx);
+                    // TODO: move this to graph engine
                     chunk.getArrows().forEach((arrow) => {
                         if (
-                            arrow.graphAstIndex == null ||
+                            arrow.astIndex == null ||
                             arrow.type === ArrowType.EMPTY
                         ) {
                             arrow.signal = ArrowSignal.NONE;
                             return;
                         }
-                        const node = rawGraph.getNode(arrow.graphAstIndex);
+                        const node = rawGraph.getNode(arrow.astIndex);
                         const cycle = node.cycleRef;
                         if (cycle) {
-                            const cycleState = graphState.cycles[cycle.index]!;
+                            const cycleState = graphState.cycles[cycle.index];
+                            if (!cycleState) {
+                                arrow.signal = ArrowSignal.NONE;
+                                return;
+                            }
                             const position =
                                 (graphState.tick + node.origCycleOffset) %
                                 cycleState.length;
@@ -263,7 +257,9 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                                     (1 << bitIndex)) !==
                                 0;
                             if (isActive)
-                                arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                                arrow.signal =
+                                    ACTIVE_SIGNALS[arrow.type] ??
+                                    ArrowSignal.NONE;
                             else arrow.signal = ArrowSignal.NONE;
                             return;
                         }
@@ -272,7 +268,9 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                             arrow.signal = ArrowSignal.NONE;
                         else if (nodeState.signal === NodeSignal.PENDING)
                             arrow.signal = ArrowSignal.BLUE;
-                        else arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                        else
+                            arrow.signal =
+                                ACTIVE_SIGNALS[arrow.type] ?? ArrowSignal.NONE;
                     });
                     chunk.markRenderDirty();
                 });
@@ -325,7 +323,7 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
                 renderDelta = renderEnd - renderStart;
             }
 
-            updateFrame(e = () => {}) {
+            public updateFrame(e = () => {}) {
                 const _this = this as any as PrivateGame;
 
                 if (!this.playing) {
@@ -409,4 +407,4 @@ export function PatchGame(patchLoader: PatchLoader, graphDLC: GraphDLC) {
             }
         };
     });
-}
+};

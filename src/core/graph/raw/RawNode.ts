@@ -3,28 +3,28 @@ import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type RawCycle } from './CycleTypes';
 
 export class RawNode {
-    arrow: Arrow; // Remove arrow, change to type, rotation, flipped
-    chunkIdx: number;
+    public readonly arrow: Arrow; // Remove arrow, change to type, rotation, flipped
+    public readonly chunkIdx: number;
 
-    index: number;
-    globalX: number;
-    globalY: number;
-    localX: number;
-    localY: number;
-    valid: boolean;
+    public readonly index: number;
+    public readonly globalX: number;
+    public readonly globalY: number;
+    public readonly localX: number;
+    public readonly localY: number;
+    public valid: boolean;
 
-    next: RawNode[];
-    previous: RawNode[];
-    detectedNode: RawNode | null;
+    public next: RawNode[];
+    public previous: RawNode[];
+    public detectedNode: RawNode | null;
 
-    isCycle: boolean;
-    cycleRef: RawCycle | null;
-    ioCycle: RawCycle | null;
-    headType: CycleHeadType;
-    cycleOffset: number;
-    origCycleOffset: number;
+    public isCycle: boolean;
+    public cycleRef: RawCycle | null;
+    public ioCycle: RawCycle | null;
+    public headType: CycleHeadType;
+    public cycleOffset: number;
+    public origCycleOffset: number;
 
-    constructor(
+    public constructor(
         arrow: Arrow,
         index: number,
         chunkIdx: number,
@@ -57,17 +57,17 @@ export class RawNode {
     // TODO: add setType, setRotation, setFlipped, setState(type, rotation, flipped)
     // Recalculate cycle only if changed edges or type
 
-    addNext(node: RawNode) {
+    public addNext(node: RawNode) {
         this.next.push(node);
         node.previous.push(this);
     }
 
-    removeNext(node: RawNode) {
+    public removeNext(node: RawNode) {
         removeWithSwap(this.next, node);
         removeWithSwap(node.previous, this);
     }
 
-    clearNext(): { oldNext: RawNode[]; detectors: RawNode[] } {
+    public clearNext(): { oldNext: RawNode[]; detectors: RawNode[] } {
         const oldNext = [...this.next];
         const detectors: RawNode[] = [];
 

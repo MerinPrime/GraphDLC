@@ -4,9 +4,9 @@ import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import { getRelativePosition } from './getRelativePosition';
 
 export interface RelativeArrow {
-    arrow?: Arrow;
     x: number;
     y: number;
+    arrow?: Arrow;
     chunk?: Chunk;
 }
 
@@ -45,7 +45,7 @@ export function getRelativeArrow(
                 x: targetX,
                 y: targetY,
             };
-        targetChunk = chunk.adjacentChunks[adjacentIndex]!;
+        targetChunk = chunk.adjacentChunks[adjacentIndex];
         chunkTargetX %= CHUNK_SIZE;
         chunkTargetY %= CHUNK_SIZE;
         if (chunkTargetX < 0) chunkTargetX += CHUNK_SIZE;
@@ -59,9 +59,9 @@ export function getRelativeArrow(
         };
 
     return {
-        arrow: targetChunk.getArrow(chunkTargetX, chunkTargetY),
         x: targetX,
         y: targetY,
+        arrow: targetChunk.getArrow(chunkTargetX, chunkTargetY),
         chunk: targetChunk,
     };
 }

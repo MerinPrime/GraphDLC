@@ -11,7 +11,7 @@ import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import { NodeSignal } from 'src/core/graph/raw/updater/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import type { PathStep } from 'src/core/path_finder/PathFinder';
+import type { PathStep } from 'src/core/path_finder/types';
 import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerControls {
@@ -25,7 +25,7 @@ interface PrivatePlayerControls {
     getPositionByMousePosition(): [x: number, y: number];
 }
 
-export const PathBuilding_PlayerControls: IPatcher = (
+export const PatchPlayerControls: IPatcher = (
     patchLoader: PatchLoader,
     graphDLC: GraphDLC,
 ) => {
@@ -60,16 +60,19 @@ export const PathBuilding_PlayerControls: IPatcher = (
                 private endPathY: number | null;
                 private path: PathStep[] | null;
 
-                constructor(
+                public constructor(
                     cnv: HTMLCanvasElement,
                     game: Game,
                     playerUI: PlayerUI,
                     history?: GameHistory | null,
                 ) {
                     super(cnv, game, playerUI, history);
+
                     const _this = this as any as PrivatePlayerControls;
+
                     const oldLeftClickCallback =
                         _this.mouseHandler.leftClickCallback;
+
                     _this.mouseHandler.leftClickCallback = () => {
                         oldLeftClickCallback();
                         const arrow: Arrow | undefined =
@@ -85,12 +88,13 @@ export const PathBuilding_PlayerControls: IPatcher = (
                             !shiftPressed
                         ) {
                             if (arrow.type === 21 || arrow.type === 24) {
-                                if (arrow.graphAstIndex != null) {
+                                if (arrow.astIndex != null) {
                                     const rawGraph =
                                         _this.game.gameMap.rawGraph;
                                     const astNode = rawGraph.getNode(
-                                        arrow.graphAstIndex,
+                                        arrow.astIndex,
                                     );
+                                    // TODO: Refactor this
                                     const astState =
                                         rawGraph.graphState.nodes[
                                             astNode.index
