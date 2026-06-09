@@ -1,32 +1,37 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
+import { ArrowType } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type RawCycle } from './CycleTypes';
 
 export class RawNode {
-    public readonly arrow: Arrow; // Remove arrow, change to type, rotation, flipped
+    public readonly arrow: Arrow;
+    public readonly nodeIdx: number;
     public readonly chunkIdx: number;
 
-    public readonly index: number;
+    public type: ArrowType = ArrowType.EMPTY;
+    public rotation: number = 0;
+    public flipped: boolean = false;
+
     public readonly globalX: number;
     public readonly globalY: number;
     public readonly localX: number;
     public readonly localY: number;
-    public valid: boolean;
 
-    public next: RawNode[];
-    public previous: RawNode[];
-    public detectedNode: RawNode | null;
+    public valid: boolean = false;
+    public next: RawNode[] = [];
+    public previous: RawNode[] = [];
+    public detectedNode: RawNode | null = null;
 
-    public isCycle: boolean;
-    public cycleRef: RawCycle | null;
-    public ioCycle: RawCycle | null;
-    public headType: CycleHeadType;
-    public cycleOffset: number;
-    public origCycleOffset: number;
+    public isCycle: boolean = false;
+    public cycleRef: RawCycle | null = null;
+    public ioCycle: RawCycle | null = null;
+    public headType: CycleHeadType = CycleHeadType.NONE;
+    public cycleOffset: number = 0;
+    public origCycleOffset: number = 0;
 
     public constructor(
         arrow: Arrow,
-        index: number,
+        nodeIdx: number,
         chunkIdx: number,
         globalX: number,
         globalY: number,
@@ -34,28 +39,26 @@ export class RawNode {
         localY: number,
     ) {
         this.arrow = arrow;
+        this.nodeIdx = nodeIdx;
         this.chunkIdx = chunkIdx;
 
-        this.index = index;
         this.globalX = globalX;
         this.globalY = globalY;
         this.localX = localX;
         this.localY = localY;
-        this.valid = false;
-        this.next = [];
-        this.previous = [];
-        this.detectedNode = null;
-
-        this.isCycle = false;
-        this.cycleRef = null;
-        this.ioCycle = null;
-        this.headType = CycleHeadType.NONE;
-        this.cycleOffset = 0;
-        this.origCycleOffset = 0;
     }
 
-    // TODO: add setType, setRotation, setFlipped, setState(type, rotation, flipped)
-    // Recalculate cycle only if changed edges or type
+    public setType(type: ArrowType) {
+        this.type = type;
+    }
+
+    public setRotation(rotation: number) {
+        this.rotation = rotation;
+    }
+
+    public setFlipped(flipped: boolean) {
+        this.flipped = flipped;
+    }
 
     public addNext(node: RawNode) {
         this.next.push(node);

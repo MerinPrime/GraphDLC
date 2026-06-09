@@ -64,9 +64,9 @@ export const PatchPlayerUI: IPatcher = (
                         );
                     }
                     const nodeState =
-                        astNode?.index != null
+                        astNode?.nodeIdx != null
                             ? game.gameMap.rawGraph.graphState.nodes[
-                                  astNode.index
+                                  astNode.nodeIdx
                               ]
                             : null;
                     if (nodeState) {

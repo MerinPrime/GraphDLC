@@ -121,7 +121,7 @@ export const PatchGame: IPatcher = (
                 render.setSolidColor(0.8, 0.2, 0.2, 0.25);
                 astNode.previous.forEach((previousNode) => {
                     if (
-                        astNode.arrow.type === ArrowType.DETECTOR &&
+                        astNode.type === ArrowType.DETECTOR &&
                         astNode.detectedNode !== previousNode
                     )
                         return;
@@ -145,7 +145,7 @@ export const PatchGame: IPatcher = (
 
                 astNode.next.forEach((nextNode) => {
                     if (
-                        nextNode.arrow.type === ArrowType.DETECTOR &&
+                        nextNode.type === ArrowType.DETECTOR &&
                         nextNode.detectedNode !== astNode
                     )
                         return;
@@ -263,7 +263,7 @@ export const PatchGame: IPatcher = (
                             else arrow.signal = ArrowSignal.NONE;
                             return;
                         }
-                        const nodeState = graphState.nodes[node.index];
+                        const nodeState = graphState.nodes[node.nodeIdx];
                         if (nodeState.signal === NodeSignal.NONE)
                             arrow.signal = ArrowSignal.NONE;
                         else if (nodeState.signal === NodeSignal.PENDING)

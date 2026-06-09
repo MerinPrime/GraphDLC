@@ -86,12 +86,7 @@ export class RawGraph {
         return this.nodes[astIndex];
     }
 
-    public updateNodeRelations(
-        node: RawNode,
-        _oldType: number,
-        newType: number,
-    ) {
-        const nodeArrow = node.arrow;
+    public updateNodeRelations(node: RawNode) {
         const oldNextFull = node.next.slice();
 
         const oldTargets: RawNode[] = [];
@@ -100,9 +95,9 @@ export class RawGraph {
         }
 
         const newTargets: RawNode[] = [];
-        if (node.arrow.type <= ArrowTypeCount) {
+        if (node.type <= ArrowTypeCount) {
             node.valid = true;
-            const relations = getArrowRelations(nodeArrow.type);
+            const relations = getArrowRelations(node.type);
             const chunk = (
                 this.gameMap as any as PrivateGameMap
             ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
@@ -111,16 +106,16 @@ export class RawGraph {
                     chunk,
                     node.localX,
                     node.localY,
-                    nodeArrow.rotation,
-                    nodeArrow.flipped,
+                    node.rotation,
+                    node.flipped,
                     relX,
                     relY,
                 );
                 const { x: globalRelX, y: globalRelY } = getRelativePosition(
                     node.globalX,
                     node.globalY,
-                    nodeArrow.rotation,
-                    nodeArrow.flipped,
+                    node.rotation,
+                    node.flipped,
                     relX,
                     relY,
                 );
@@ -151,8 +146,7 @@ export class RawGraph {
             const newCount = newTargetCounts.get(n) || 0;
             if (oldCount > newCount) {
                 for (let i = 0; i < oldCount - newCount; i++) {
-                    node.removeNext(n);
-                    this.cycleManager.onRemoveNext(node, n);
+                    this.removeNodeNext(node, n);
                 }
             }
         }
@@ -160,19 +154,18 @@ export class RawGraph {
             const oldCount = oldTargetCounts.get(n) || 0;
             if (newCount > oldCount) {
                 for (let i = 0; i < newCount - oldCount; i++) {
-                    node.addNext(n);
-                    this.cycleManager.onAddNext(node, n);
+                    this.addNodeNext(node, n);
                 }
             }
         }
 
         let newDetectedNode: RawNode | null = null;
-        if (newType === ArrowType.DETECTOR) {
+        if (node.type === ArrowType.DETECTOR) {
             const { x: backX, y: backY } = getRelativePosition(
                 node.globalX,
                 node.globalY,
-                node.arrow.rotation,
-                node.arrow.flipped,
+                node.rotation,
+                node.flipped,
                 1,
                 0,
             );
@@ -182,13 +175,11 @@ export class RawGraph {
         if (node.detectedNode !== newDetectedNode) {
             if (node.detectedNode) {
                 const oldDetected = node.detectedNode;
-                oldDetected.removeNext(node);
-                this.cycleManager.onRemoveNext(oldDetected, node);
+                this.removeNodeNext(oldDetected, node);
             }
             node.detectedNode = newDetectedNode;
             if (newDetectedNode) {
-                newDetectedNode.addNext(node);
-                this.cycleManager.onAddNext(newDetectedNode, node);
+                this.addNodeNext(newDetectedNode, node);
             }
         }
 
@@ -236,7 +227,8 @@ export class RawGraph {
             return node;
         }
         node.valid = true;
-        this.updateNodeRelations(node, 0, arrow.type);
+        // TIP: probably not needed cuz every changing using updateArrow*
+        // this.updateNodeRelations(node);
         return node;
     }
 
@@ -262,9 +254,6 @@ export class RawGraph {
         this.freeCycleIndices.length = 0;
     }
 
-    // TODO: Optimize update calls
-    // Also store chunks for future
-
     public updateArrowType(
         arrow: Arrow,
         chunk: Chunk,
@@ -279,12 +268,12 @@ export class RawGraph {
         const newEntryPoint = IsArrowEntryPoint(newType);
         const isAdditionalUpdate = IsAdditionalUpdate(newType);
 
-        const nodeState = this.graphState.nodes[node.index];
+        const nodeState = this.graphState.nodes[node.nodeIdx];
         nodeState.isEntryPoint = newEntryPoint;
         nodeState.isAdditionalUpdate = isAdditionalUpdate;
-        this.updateNodeRelations(node, oldType, newType);
         nodeState.lastSignal = 0;
         nodeState.signal = 0;
+        this.setNodeType(node, newType);
 
         if (oldEntryPoint === newEntryPoint) return;
 
@@ -297,10 +286,10 @@ export class RawGraph {
         chunk: Chunk,
         globalX: number,
         globalY: number,
-        _newRotation: number,
+        newRotation: number,
     ) {
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
-        this.updateNodeRelations(node, arrow.type, arrow.type);
+        this.setNodeRotation(node, newRotation);
     }
 
     public updateArrowFlipped(
@@ -308,9 +297,59 @@ export class RawGraph {
         chunk: Chunk,
         globalX: number,
         globalY: number,
-        _newFlipped: boolean,
+        newFlipped: boolean,
     ) {
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
-        this.updateNodeRelations(node, arrow.type, arrow.type);
+        this.setNodeFlipped(node, newFlipped);
+    }
+
+    public updateArrowState(
+        arrow: Arrow,
+        chunk: Chunk,
+        globalX: number,
+        globalY: number,
+    ) {
+        const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
+        this.updateNodeState(node, arrow.type, arrow.rotation, arrow.flipped);
+    }
+
+    private updateNodeState(
+        node: RawNode,
+        type: ArrowType,
+        rotation: number,
+        flipped: boolean,
+    ) {
+        const isTypeChanged = node.type === type;
+        node.setType(type);
+        node.setRotation(rotation);
+        node.setFlipped(flipped);
+        this.updateNodeRelations(node);
+        if (isTypeChanged) this.cycleManager.onChangeType(node);
+    }
+
+    private setNodeType(node: RawNode, type: ArrowType) {
+        node.setType(type);
+        this.updateNodeRelations(node);
+        this.cycleManager.onChangeType(node);
+    }
+
+    private setNodeRotation(node: RawNode, rotation: number) {
+        node.setRotation(rotation);
+        this.updateNodeRelations(node);
+    }
+
+    private setNodeFlipped(node: RawNode, flipped: boolean) {
+        node.setFlipped(flipped);
+        this.updateNodeRelations(node);
+    }
+
+    private addNodeNext(node: RawNode, nextNode: RawNode) {
+        node.addNext(nextNode);
+        this.cycleManager.onAddNext(node, nextNode);
+    }
+
+    private removeNodeNext(node: RawNode, nextNode: RawNode) {
+        node.removeNext(nextNode);
+        this.cycleManager.onRemoveNext(node, nextNode);
     }
 }

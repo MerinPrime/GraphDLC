@@ -61,7 +61,7 @@ export class RawGraphState {
         this.tick = 0;
         this.changedNodes.length = 0;
         graph.entryPoints.forEach((entryPoint) => {
-            this.changedNodes.push(this.nodes[entryPoint.index]);
+            this.changedNodes.push(this.nodes[entryPoint.nodeIdx]);
         });
         this.tempChangedNodes.length = 0;
         this.nodes.forEach((node) => {
@@ -71,6 +71,8 @@ export class RawGraphState {
             node.blockedCount = 0;
             node.isUpdated = false;
             node.isChanged = false;
+            node.prevCycleActive = false;
+            node.cycleActive = false;
         });
         this.chunks.forEach((chunk) => {
             chunk.isDirty = true;
@@ -116,11 +118,11 @@ export class RawGraphState {
                 if (!this.cycles[i]) {
                     this.cycles[i] = new RawCycleState(cycle.nodes.length);
                     for (const node of cycle.nodes) {
-                        this.nodes[node.index].nodeInCycleOffset =
+                        this.nodes[node.nodeIdx].nodeInCycleOffset =
                             node.cycleOffset;
                     }
                     for (const head of cycle.heads) {
-                        this.nodes[head.index].nodeInCycleOffset =
+                        this.nodes[head.nodeIdx].nodeInCycleOffset =
                             head.cycleOffset;
                     }
                 }

@@ -1,4 +1,4 @@
-import { ArrowType, IsArrowPath } from 'src/core/utils/ArrowType';
+import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
 import { CycleHeadType, type RawCycle } from './CycleTypes';
 import type { RawGraph } from './RawGraph';
 import type { RawNode } from './RawNode';
@@ -17,7 +17,7 @@ const ALLOWED_IN_CYCLE = new Set([
 ]);
 
 function canBeInCycle(node: RawNode): boolean {
-    return ALLOWED_IN_CYCLE.has(node.arrow.type);
+    return ALLOWED_IN_CYCLE.has(node.type);
 }
 
 export class CycleManager {
@@ -40,8 +40,8 @@ export class CycleManager {
             head.ioCycle = null;
             head.headType = CycleHeadType.NONE;
             head.cycleOffset = 0;
-            if (this.graph.graphState.nodes[head.index]) {
-                this.graph.graphState.nodes[head.index].nodeInCycleOffset = 0;
+            if (this.graph.graphState.nodes[head.nodeIdx]) {
+                this.graph.graphState.nodes[head.nodeIdx].nodeInCycleOffset = 0;
             }
         });
 
@@ -53,8 +53,8 @@ export class CycleManager {
             head.ioCycle = null;
             head.headType = CycleHeadType.NONE;
             head.cycleOffset = 0;
-            if (this.graph.graphState.nodes[head.index]) {
-                this.graph.graphState.nodes[head.index].nodeInCycleOffset = 0;
+            if (this.graph.graphState.nodes[head.nodeIdx]) {
+                this.graph.graphState.nodes[head.nodeIdx].nodeInCycleOffset = 0;
             }
         });
         cycle.heads.length = 0;
@@ -65,22 +65,22 @@ export class CycleManager {
             const node = cycle.nodes[cycle.nodes.length - i - 1];
             node.cycleOffset = i;
             node.origCycleOffset = i;
-            if (this.graph.graphState.nodes[node.index]) {
-                this.graph.graphState.nodes[node.index].nodeInCycleOffset =
+            if (this.graph.graphState.nodes[node.nodeIdx]) {
+                this.graph.graphState.nodes[node.nodeIdx].nodeInCycleOffset =
                     node.cycleOffset;
             }
 
             for (const nextNode of node.next) {
                 if (
-                    nextNode.arrow.type === ArrowType.LOGIC_AND &&
+                    nextNode.type === ArrowType.LOGIC_AND &&
                     !cycleSet.has(nextNode)
                 ) {
                     nextNode.ioCycle = cycle;
                     nextNode.headType = CycleHeadType.READ;
                     nextNode.cycleOffset = (i + 1) % cycle.nodes.length;
-                    if (this.graph.graphState.nodes[nextNode.index]) {
+                    if (this.graph.graphState.nodes[nextNode.nodeIdx]) {
                         this.graph.graphState.nodes[
-                            nextNode.index
+                            nextNode.nodeIdx
                         ].nodeInCycleOffset = nextNode.cycleOffset;
                     }
                     cycle.heads.push(nextNode);
@@ -88,33 +88,33 @@ export class CycleManager {
             }
             for (const prevNode of node.previous) {
                 if (!cycleSet.has(prevNode)) {
-                    if (prevNode.arrow.type === ArrowType.BLOCKER) {
+                    if (prevNode.type === ArrowType.BLOCKER) {
                         prevNode.ioCycle = cycle;
                         prevNode.headType = CycleHeadType.CLEAR;
                         prevNode.cycleOffset = (i + 1) % cycle.nodes.length;
-                        if (this.graph.graphState.nodes[prevNode.index]) {
+                        if (this.graph.graphState.nodes[prevNode.nodeIdx]) {
                             this.graph.graphState.nodes[
-                                prevNode.index
+                                prevNode.nodeIdx
                             ].nodeInCycleOffset = prevNode.cycleOffset;
                         }
                         cycle.heads.push(prevNode);
-                    } else if (node.arrow.type === ArrowType.LOGIC_XOR) {
+                    } else if (node.type === ArrowType.LOGIC_XOR) {
                         prevNode.ioCycle = cycle;
                         prevNode.headType = CycleHeadType.XOR_WRITE;
                         prevNode.cycleOffset = (i + 1) % cycle.nodes.length;
-                        if (this.graph.graphState.nodes[prevNode.index]) {
+                        if (this.graph.graphState.nodes[prevNode.nodeIdx]) {
                             this.graph.graphState.nodes[
-                                prevNode.index
+                                prevNode.nodeIdx
                             ].nodeInCycleOffset = prevNode.cycleOffset;
                         }
                         cycle.heads.push(prevNode);
-                    } else if (IsArrowPath(prevNode.arrow.type)) {
+                    } else {
                         prevNode.ioCycle = cycle;
                         prevNode.headType = CycleHeadType.WRITE;
                         prevNode.cycleOffset = (i + 1) % cycle.nodes.length;
-                        if (this.graph.graphState.nodes[prevNode.index]) {
+                        if (this.graph.graphState.nodes[prevNode.nodeIdx]) {
                             this.graph.graphState.nodes[
-                                prevNode.index
+                                prevNode.nodeIdx
                             ].nodeInCycleOffset = prevNode.cycleOffset;
                         }
                         cycle.heads.push(prevNode);
@@ -177,8 +177,8 @@ export class CycleManager {
             for (const neighbor of cycleNode.next) {
                 if (!cycleSet.has(neighbor)) {
                     if (
-                        neighbor.arrow.type !== ArrowType.EMPTY &&
-                        neighbor.arrow.type !== ArrowType.LOGIC_AND
+                        neighbor.type !== ArrowType.EMPTY &&
+                        neighbor.type !== ArrowType.LOGIC_AND
                     ) {
                         return false;
                     }
@@ -192,9 +192,11 @@ export class CycleManager {
                 if (!cycleSet.has(neighbor)) {
                     if (neighbor.next.length !== 1) return false;
                     if (
-                        !IsArrowPath(neighbor.arrow.type) &&
-                        neighbor.arrow.type !== ArrowType.LOGIC_AND &&
-                        neighbor.arrow.type !== ArrowType.BLOCKER
+                        IsArrowEntryPoint(neighbor.type) ||
+                        neighbor.type === ArrowType.RANDOM ||
+                        neighbor.type === ArrowType.DELAY ||
+                        neighbor.type === ArrowType.LATCH ||
+                        neighbor.type === ArrowType.FLIP_FLOP
                     )
                         return false;
                     if (moreThanOneWrite) return false;
@@ -393,6 +395,57 @@ export class CycleManager {
 
         if (node.cycleRef !== null) {
             this.refreshCycleIO(node.cycleRef);
+        }
+    }
+
+    public onChangeType(node: RawNode) {
+        if (node.cycleRef !== null) {
+            if (
+                !canBeInCycle(node) ||
+                !this.isValidCycle(node.cycleRef.nodes)
+            ) {
+                this.dismantleCycle(node.cycleRef);
+            } else {
+                this.refreshCycleIO(node.cycleRef);
+            }
+        }
+
+        if (node.ioCycle !== null) {
+            this.refreshCycleIO(node.ioCycle);
+        }
+
+        this.reevaluateParentCycles(node);
+
+        for (const next of node.next) {
+            if (next.cycleRef !== null && next.cycleRef !== node.cycleRef) {
+                if (!this.isValidCycle(next.cycleRef.nodes)) {
+                    this.dismantleCycle(next.cycleRef);
+                } else {
+                    this.refreshCycleIO(next.cycleRef);
+                }
+            }
+        }
+
+        this.tryRebuildCycle(node);
+        for (const prev of node.previous) {
+            this.tryRebuildCycle(prev);
+        }
+        for (const next of node.next) {
+            this.tryRebuildCycle(next);
+        }
+
+        if (node.isCycle) {
+            this.updateCycleStatusAfterRemoval(node);
+        }
+        for (const prev of node.previous) {
+            if (prev.isCycle) {
+                this.updateCycleStatusAfterRemoval(prev);
+            }
+        }
+        for (const next of node.next) {
+            if (next.isCycle) {
+                this.updateCycleStatusAfterRemoval(next);
+            }
         }
     }
 }

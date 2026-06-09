@@ -92,13 +92,13 @@ export class GraphDebug {
             [0.2, 0.8, 0.8],
         ];
         rawGraph.nodes.forEach((node) => {
-            if (node.arrow.type === ArrowType.EMPTY || !node.valid) return;
+            if (node.type === ArrowType.EMPTY || !node.valid) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             let hash = 0;
             node.previous.forEach((prevNode) => {
-                if (prevNode.arrow.type === ArrowType.EMPTY || !prevNode.valid)
+                if (prevNode.type === ArrowType.EMPTY || !prevNode.valid)
                     return;
-                hash += prevNode.arrow.type + 1;
+                hash += prevNode.type + 1;
             });
             const index = hash % colors.length;
             const [r, g, b] = colors[index];
@@ -132,7 +132,7 @@ export class GraphDebug {
             for (const nextNode of current.next) {
                 if (
                     nextNode.valid &&
-                    nextNode.arrow.type !== ArrowType.EMPTY &&
+                    nextNode.type !== ArrowType.EMPTY &&
                     !reachableNodes.has(nextNode)
                 ) {
                     reachableNodes.add(nextNode);
@@ -142,7 +142,7 @@ export class GraphDebug {
         }
 
         rawGraph.nodes.forEach((node) => {
-            if (node.arrow.type === ArrowType.EMPTY || !node.valid) return;
+            if (node.type === ArrowType.EMPTY || !node.valid) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             if (!reachableNodes.has(node)) {
                 renderColor(node, 0, 0, 0, 0.3);

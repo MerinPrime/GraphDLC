@@ -44,13 +44,11 @@ export const PatchLoad: IPatcher = (
                         arrow.type = type;
                         arrow.rotation = rotation & 0x3;
                         arrow.flipped = (rotation & 0x4) !== 0;
-                        map.rawGraph.updateArrowType(
+                        map.rawGraph.updateArrowState(
                             arrow,
                             chunk,
                             chunkX * CHUNK_SIZE + (position & 0xf),
                             chunkY * CHUNK_SIZE + (position >> 4),
-                            0,
-                            type,
                         );
                     }
                 }

@@ -97,7 +97,7 @@ export const PatchPlayerControls: IPatcher = (
                                     // TODO: Refactor this
                                     const astState =
                                         rawGraph.graphState.nodes[
-                                            astNode.index
+                                            astNode.nodeIdx
                                         ];
                                     astState.signal =
                                         arrow.signal !== 0
