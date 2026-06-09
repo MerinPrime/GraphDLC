@@ -4,6 +4,7 @@ import { EnableBreakpointSetting } from './instances/other/EnableBreakpointSetti
 import { MapProtectionSetting } from './instances/other/MapProtectionSetting';
 import { ShowArrowConnectionsSetting } from './instances/other/ShowArrowConnectionsSetting';
 import { TargetFPSSetting } from './instances/other/TargetFPSSetting';
+import { DarkThemeSetting } from './instances/redesign/DarkThemeSetting';
 import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
 import { QoLReDesignSetting } from './instances/redesign/QoLReDesignSetting';
 import type { BaseSetting } from './types/BaseSetting';
@@ -18,6 +19,7 @@ const settings: BaseSetting<any>[] = [
 
     QoLReDesignSetting,
     GraphDLCDesignSetting,
+    DarkThemeSetting,
 ];
 
 export const SettingsRegistry = settings.reduce<

@@ -1,6 +1,8 @@
+import { DarkThemeSetting } from 'src/core/settings/instances/redesign/DarkThemeSetting';
 import { GraphDLCDesignSetting } from 'src/core/settings/instances/redesign/GraphDLCDesignSetting';
 import { QoLReDesignSetting } from 'src/core/settings/instances/redesign/QoLReDesignSetting';
 import type { BoolSetting } from 'src/core/settings/types/BoolSetting';
+import darkStyle from 'src/redesign/dark/index.scss?raw';
 import graphDLCStyle from 'src/redesign/default/index.scss?raw';
 import qolStyle from 'src/redesign/qol/index.scss?raw';
 
@@ -18,6 +20,10 @@ export class DesignManager {
         {
             setting: GraphDLCDesignSetting,
             style: graphDLCStyle,
+        },
+        {
+            setting: DarkThemeSetting,
+            style: darkStyle,
         },
     ];
 
