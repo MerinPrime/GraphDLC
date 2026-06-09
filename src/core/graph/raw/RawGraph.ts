@@ -264,21 +264,7 @@ export class RawGraph {
     ) {
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
 
-        const oldEntryPoint = IsArrowEntryPoint(oldType);
-        const newEntryPoint = IsArrowEntryPoint(newType);
-        const isAdditionalUpdate = IsAdditionalUpdate(newType);
-
-        const nodeState = this.graphState.nodes[node.nodeIdx];
-        nodeState.isEntryPoint = newEntryPoint;
-        nodeState.isAdditionalUpdate = isAdditionalUpdate;
-        nodeState.lastSignal = 0;
-        nodeState.signal = 0;
         this.setNodeType(node, newType);
-
-        if (oldEntryPoint === newEntryPoint) return;
-
-        if (newEntryPoint) this.entryPoints.push(node);
-        else removeWithSwap(this.entryPoints, node);
     }
 
     public updateArrowRotation(
@@ -319,16 +305,49 @@ export class RawGraph {
         rotation: number,
         flipped: boolean,
     ) {
-        const isTypeChanged = node.type === type;
+        const oldType = node.type;
+
         node.setType(type);
         node.setRotation(rotation);
         node.setFlipped(flipped);
+
+        const nodeState = this.graphState.nodes[node.nodeIdx];
+        nodeState.isEntryPoint = IsArrowEntryPoint(type);
+        nodeState.isAdditionalUpdate = IsAdditionalUpdate(type);
+        nodeState.lastSignal = 0;
+        nodeState.signal = 0;
+
+        const oldEntryPoint = IsArrowEntryPoint(oldType);
+        const newEntryPoint = IsArrowEntryPoint(type);
+
+        if (oldEntryPoint !== newEntryPoint) {
+            if (newEntryPoint) this.entryPoints.push(node);
+            else removeWithSwap(this.entryPoints, node);
+        }
+
         this.updateNodeRelations(node);
-        if (isTypeChanged) this.cycleManager.onChangeType(node);
+        if (oldType !== node.type) this.cycleManager.onChangeType(node);
     }
 
     private setNodeType(node: RawNode, type: ArrowType) {
+        const oldType = node.type;
+
         node.setType(type);
+
+        const nodeState = this.graphState.nodes[node.nodeIdx];
+        nodeState.isEntryPoint = IsArrowEntryPoint(type);
+        nodeState.isAdditionalUpdate = IsAdditionalUpdate(type);
+        nodeState.lastSignal = 0;
+        nodeState.signal = 0;
+
+        const oldEntryPoint = IsArrowEntryPoint(oldType);
+        const newEntryPoint = IsArrowEntryPoint(type);
+
+        if (oldEntryPoint !== newEntryPoint) {
+            if (newEntryPoint) this.entryPoints.push(node);
+            else removeWithSwap(this.entryPoints, node);
+        }
+
         this.updateNodeRelations(node);
         this.cycleManager.onChangeType(node);
     }

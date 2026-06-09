@@ -60,10 +60,10 @@ export class RawGraphState {
 
         this.tick = 0;
         this.changedNodes.length = 0;
+        this.tempChangedNodes.length = 0;
         graph.entryPoints.forEach((entryPoint) => {
             this.changedNodes.push(this.nodes[entryPoint.nodeIdx]);
         });
-        this.tempChangedNodes.length = 0;
         this.nodes.forEach((node) => {
             node.signal = 0;
             node.lastSignal = 0;
