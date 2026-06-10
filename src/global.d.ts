@@ -1,6 +1,6 @@
-import { Arrow as OriginalArrow } from '@logic-arrows/game-logic/arrow';
-import { GraphDLC } from './core/GraphDLC';
-import { RawGraph } from './core/graph/raw/RawGraph';
+import type { Arrow as OriginalArrow } from '@logic-arrows/game-logic/arrow';
+import type { GraphDLC } from './core/GraphDLC';
+import type { Graph } from './core/graph/Graph';
 
 declare global {
     interface Window {
@@ -39,7 +39,7 @@ declare module '@logic-arrows/game-logic/arrow' {
 
 declare module '@logic-arrows/game-logic/game-map' {
     export interface GameMap {
-        rawGraph: RawGraph;
+        rawGraph: Graph;
     }
 }
 

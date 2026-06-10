@@ -1,10 +1,8 @@
-import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type RawCycle } from './CycleTypes';
 
-export class RawNode {
-    public readonly arrow: Arrow;
+export class GraphNode {
     public readonly nodeIdx: number;
     public readonly chunkIdx: number;
 
@@ -17,10 +15,9 @@ export class RawNode {
     public readonly localX: number;
     public readonly localY: number;
 
-    public valid: boolean = false;
-    public next: RawNode[] = [];
-    public previous: RawNode[] = [];
-    public detectedNode: RawNode | null = null;
+    public next: GraphNode[] = [];
+    public previous: GraphNode[] = [];
+    public detectedNode: GraphNode | null = null;
 
     public isBreakpoint: boolean = false;
 
@@ -32,7 +29,6 @@ export class RawNode {
     public origCycleOffset: number = 0;
 
     public constructor(
-        arrow: Arrow,
         nodeIdx: number,
         chunkIdx: number,
         globalX: number,
@@ -40,7 +36,6 @@ export class RawNode {
         localX: number,
         localY: number,
     ) {
-        this.arrow = arrow;
         this.nodeIdx = nodeIdx;
         this.chunkIdx = chunkIdx;
 
@@ -65,23 +60,23 @@ export class RawNode {
         this.onUpdate();
     }
 
-    public addNext(node: RawNode) {
+    public addNext(node: GraphNode) {
         this.next.push(node);
         node.previous.push(this);
         this.onUpdate();
         node.onUpdate();
     }
 
-    public removeNext(node: RawNode) {
+    public removeNext(node: GraphNode) {
         removeWithSwap(this.next, node);
         removeWithSwap(node.previous, this);
         this.onUpdate();
         node.onUpdate();
     }
 
-    public clearNext(): { oldNext: RawNode[]; detectors: RawNode[] } {
+    public clearNext(): { oldNext: GraphNode[]; detectors: GraphNode[] } {
         const oldNext = [...this.next];
-        const detectors: RawNode[] = [];
+        const detectors: GraphNode[] = [];
 
         for (const nextNode of oldNext) {
             removeWithSwap(nextNode.previous, this);

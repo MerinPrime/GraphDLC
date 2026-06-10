@@ -1,5 +1,15 @@
-import { ArrowType } from 'src/core/utils/ArrowType';
-import { ArrowSignal } from './ArrowSignal';
+import { ArrowType } from './ArrowType';
+
+export const enum ArrowSignal {
+    NONE = 0,
+    RED = 1,
+    BLUE = 2,
+    YELLOW = 3,
+    GREEN = 4,
+    ORANGE = 5,
+    PURPLE = 6,
+    BLACK = 7,
+}
 
 export const ACTIVE_SIGNALS: Array<ArrowSignal> = new Array<number>(25);
 ACTIVE_SIGNALS[ArrowType.EMPTY] = ArrowSignal.NONE;

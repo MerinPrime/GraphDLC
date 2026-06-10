@@ -9,7 +9,7 @@ import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actio
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { NodeSignal } from 'src/core/graph/raw/updater/NodeSignal';
+import { NodeSignal } from 'src/core/graph/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import type { IPatcher } from '../Patcher';
@@ -97,9 +97,9 @@ export const PatchPlayerControls: IPatcher = (
                                     );
                                     // TODO: Refactor this
                                     const astState =
-                                        rawGraph.graphState.nodes[
-                                            astNode.nodeIdx
-                                        ];
+                                        rawGraph.graphState.getNode(
+                                            astNode.nodeIdx,
+                                        );
                                     astState.signal =
                                         arrow.signal !== 0
                                             ? NodeSignal.ACTIVE

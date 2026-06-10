@@ -1,19 +1,19 @@
-import { CycleHeadType, type RawCycle } from '../graph/raw/CycleTypes';
-import type { RawGraph } from '../graph/raw/RawGraph';
-import type { RawNode } from '../graph/raw/RawNode';
+import { CycleHeadType, type RawCycle } from '../graph/CycleTypes';
+import type { Graph } from '../graph/Graph';
+import type { GraphNode } from '../graph/GraphNode';
 import {
     DebugMode,
     DebugModeSetting,
 } from '../settings/instances/other/DebugModeSetting';
-import { ArrowType } from '../utils/ArrowType';
+import { ArrowType, IsArrowEntryPoint } from '../utils/ArrowType';
 import type { Bounds } from '../utils/Bounds';
 
 export class GraphDebug {
     public colorizeDebug(
-        rawGraph: RawGraph,
+        rawGraph: Graph,
         bounds: Bounds,
         renderColor: (
-            node: RawNode,
+            node: GraphNode,
             r: number,
             g: number,
             b: number,
@@ -38,10 +38,10 @@ export class GraphDebug {
     }
 
     private showRings(
-        rawGraph: RawGraph,
+        rawGraph: Graph,
         bounds: Bounds,
         renderColor: (
-            node: RawNode,
+            node: GraphNode,
             r: number,
             g: number,
             b: number,
@@ -49,7 +49,7 @@ export class GraphDebug {
         ) => void,
     ) {
         const cycles = new Set<RawCycle>();
-        rawGraph.nodes.forEach((node) => {
+        rawGraph.getNodes().forEach((node) => {
             if (!node.cycleRef) return;
             cycles.add(node.cycleRef);
         });
@@ -73,10 +73,10 @@ export class GraphDebug {
     }
 
     private showSignalPropagation(
-        rawGraph: RawGraph,
+        rawGraph: Graph,
         bounds: Bounds,
         renderColor: (
-            node: RawNode,
+            node: GraphNode,
             r: number,
             g: number,
             b: number,
@@ -91,13 +91,12 @@ export class GraphDebug {
             [0.8, 0.2, 0.8],
             [0.2, 0.8, 0.8],
         ];
-        rawGraph.nodes.forEach((node) => {
-            if (node.type === ArrowType.EMPTY || !node.valid) return;
+        rawGraph.getNodes().forEach((node) => {
+            if (node.type === ArrowType.EMPTY) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             let hash = 0;
             node.previous.forEach((prevNode) => {
-                if (prevNode.type === ArrowType.EMPTY || !prevNode.valid)
-                    return;
+                if (prevNode.type === ArrowType.EMPTY) return;
                 hash += prevNode.type;
             });
             const index = hash % colors.length;
@@ -107,19 +106,21 @@ export class GraphDebug {
     }
 
     private showDeadNodes(
-        rawGraph: RawGraph,
+        rawGraph: Graph,
         bounds: Bounds,
         renderColor: (
-            node: RawNode,
+            node: GraphNode,
             r: number,
             g: number,
             b: number,
             a: number,
         ) => void,
     ) {
-        const entryPoints: RawNode[] = rawGraph.entryPoints;
-        const reachableNodes = new Set<RawNode>();
-        const reachQueue: RawNode[] = [...entryPoints];
+        const entryPoints: GraphNode[] = rawGraph
+            .getNodes()
+            .filter((node) => IsArrowEntryPoint(node.type));
+        const reachableNodes = new Set<GraphNode>();
+        const reachQueue: GraphNode[] = [...entryPoints];
         reachQueue.forEach((n) => {
             reachableNodes.add(n);
         });
@@ -131,7 +132,6 @@ export class GraphDebug {
             }
             for (const nextNode of current.next) {
                 if (
-                    nextNode.valid &&
                     nextNode.type !== ArrowType.EMPTY &&
                     !reachableNodes.has(nextNode)
                 ) {
@@ -141,8 +141,8 @@ export class GraphDebug {
             }
         }
 
-        rawGraph.nodes.forEach((node) => {
-            if (node.type === ArrowType.EMPTY || !node.valid) return;
+        rawGraph.getNodes().forEach((node) => {
+            if (node.type === ArrowType.EMPTY) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             if (!reachableNodes.has(node)) {
                 renderColor(node, 0, 0, 0, 0.3);

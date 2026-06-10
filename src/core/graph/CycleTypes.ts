@@ -1,4 +1,4 @@
-import type { RawNode } from './RawNode';
+import type { GraphNode } from './GraphNode';
 
 export const enum CycleHeadType {
     NONE = 0,
@@ -10,6 +10,6 @@ export const enum CycleHeadType {
 
 export interface RawCycle {
     index: number;
-    nodes: RawNode[];
-    heads: RawNode[];
+    nodes: GraphNode[];
+    heads: GraphNode[];
 }

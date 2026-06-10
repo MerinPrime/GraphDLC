@@ -2,19 +2,13 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import {
-    ArrowType,
-    ArrowTypeCount,
-    IsAdditionalUpdate,
-    IsArrowEntryPoint,
-} from 'src/core/utils/ArrowType';
+import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
-import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleManager } from './CycleManager';
-import type { RawCycle } from './CycleTypes';
-import { RawNode } from './RawNode';
+import { CycleHeadType, type RawCycle } from './CycleTypes';
+import { GraphNode } from './GraphNode';
 import { RawGraphState } from './updater/RawState';
 import { RawGraphUpdater } from './updater/RawUpdater';
 
@@ -22,11 +16,10 @@ interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
 }
 
-export class RawGraph {
+export class Graph {
     private gameMap: GameMap;
-    public nodes: RawNode[];
+    private nodes: GraphNode[];
     private chunks: Chunk[];
-    public entryPoints: RawNode[];
     public cycles: (RawCycle | null)[];
     private freeCycleIndices: number[];
 
@@ -39,7 +32,6 @@ export class RawGraph {
         this.gameMap = gameMap;
         this.nodes = [];
         this.chunks = [];
-        this.entryPoints = [];
         this.cycles = [];
         this.freeCycleIndices = [];
 
@@ -56,7 +48,7 @@ export class RawGraph {
         return this.chunks;
     }
 
-    public addCycle(nodes: RawNode[]): RawCycle {
+    public addCycle(nodes: GraphNode[]): RawCycle {
         let index: number;
         const freeIndex = this.freeCycleIndices.pop();
         if (freeIndex !== undefined) {
@@ -71,10 +63,40 @@ export class RawGraph {
             heads: [],
         };
         this.cycles[index] = cycle;
+
+        for (const n of nodes) {
+            n.isCycle = true;
+            n.cycleRef = cycle;
+        }
+
+        this.cycleManager.refreshCycleIO(cycle);
+        cycle.nodes.forEach((node) => {
+            this.graphState.updateNode(node);
+        });
+        cycle.heads.forEach((head) => {
+            this.graphState.updateNode(head);
+        });
+        this.graphUpdater.onCycleBuild(this.graphState, cycle);
+
         return cycle;
     }
 
     public removeCycle(cycle: RawCycle) {
+        this.graphUpdater.onCycleDismantle(this.graphState, cycle);
+
+        for (const node of cycle.nodes) {
+            node.isCycle = false;
+            node.cycleRef = null;
+            node.headType = CycleHeadType.NONE;
+            node.cycleOffset = 0;
+            this.graphState.updateNode(node);
+        }
+
+        cycle.heads.forEach((head) => {
+            this.cycleManager.resetHead(head);
+            this.graphState.updateNode(head);
+        });
+
         if (this.cycles[cycle.index] === cycle) {
             this.cycles[cycle.index] = null;
             this.graphState.cycles[cycle.index] = null;
@@ -82,63 +104,62 @@ export class RawGraph {
         }
     }
 
-    public getNode(astIndex: number): RawNode {
-        return this.nodes[astIndex];
+    public getNodes(): readonly GraphNode[] {
+        return this.nodes;
     }
 
-    public updateNodeRelations(node: RawNode) {
+    public getNode(nodeIdx: number): GraphNode {
+        return this.nodes[nodeIdx];
+    }
+
+    public updateNodeRelations(node: GraphNode) {
         const oldNextFull = node.next.slice();
 
-        const oldTargets: RawNode[] = [];
+        const oldTargets: GraphNode[] = [];
         for (const n of node.next) {
             if (n.detectedNode !== node) oldTargets.push(n);
         }
 
-        const newTargets: RawNode[] = [];
-        if (node.type <= ArrowTypeCount) {
-            node.valid = true;
-            const relations = getArrowRelations(node.type);
-            const chunk = (
-                this.gameMap as any as PrivateGameMap
-            ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
-            relations.forEach(([relX, relY]) => {
-                const relativeArrow = getRelativeArrow(
-                    chunk,
-                    node.localX,
-                    node.localY,
-                    node.rotation,
-                    node.flipped,
-                    relX,
-                    relY,
-                );
-                const { x: globalRelX, y: globalRelY } = getRelativePosition(
-                    node.globalX,
-                    node.globalY,
-                    node.rotation,
-                    node.flipped,
-                    relX,
-                    relY,
-                );
-                const relNode =
-                    relativeArrow.arrow && relativeArrow.chunk
-                        ? this.getOrCreateNode(
-                              relativeArrow.arrow,
-                              relativeArrow.chunk,
-                              globalRelX,
-                              globalRelY,
-                          )
-                        : this.getOrCreateNodeByCoords(globalRelX, globalRelY);
-                newTargets.push(relNode);
-            });
-        } else {
-            node.valid = false;
-        }
+        const newTargets: GraphNode[] = [];
+        const relations = getArrowRelations(node.type);
+        const chunk = (
+            this.gameMap as any as PrivateGameMap
+        ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
+        relations.forEach(([relX, relY]) => {
+            const relativeArrow = getRelativeArrow(
+                chunk,
+                node.localX,
+                node.localY,
+                node.rotation,
+                node.flipped,
+                relX,
+                relY,
+            );
+            const { x: globalRelX, y: globalRelY } = getRelativePosition(
+                node.globalX,
+                node.globalY,
+                node.rotation,
+                node.flipped,
+                relX,
+                relY,
+            );
+            const relNode =
+                relativeArrow.arrow && relativeArrow.chunk
+                    ? this.getOrCreateNode(
+                          relativeArrow.arrow,
+                          relativeArrow.chunk,
+                          globalRelX,
+                          globalRelY,
+                      )
+                    : this.getOrCreateNodeByCoords(globalRelX, globalRelY);
+            newTargets.push(relNode);
+        });
 
-        const oldTargetCounts = new Map<RawNode, number>();
+        const oldTargetCounts = new Map<GraphNode, number>();
         for (const n of oldTargets)
             oldTargetCounts.set(n, (oldTargetCounts.get(n) || 0) + 1);
 
-        const newTargetCounts = new Map<RawNode, number>();
+        const newTargetCounts = new Map<GraphNode, number>();
         for (const n of newTargets)
             newTargetCounts.set(n, (newTargetCounts.get(n) || 0) + 1);
 
@@ -159,7 +180,7 @@ export class RawGraph {
             }
         }
 
-        let newDetectedNode: RawNode | null = null;
+        let newDetectedNode: GraphNode | null = null;
         if (node.type === ArrowType.DETECTOR) {
             const { x: backX, y: backY } = getRelativePosition(
                 node.globalX,
@@ -196,12 +217,13 @@ export class RawGraph {
         chunk: Chunk,
         globalX: number,
         globalY: number,
-    ): RawNode {
+    ): GraphNode {
         if (arrow.astIndex != null) return this.getNode(arrow.astIndex);
 
         if (chunk.astIndex == null) {
             chunk.astIndex = this.chunks.length;
             this.chunks.push(chunk);
+            this.graphState.updateChunk(chunk);
         }
 
         const chunkIdx = chunk.astIndex;
@@ -209,8 +231,7 @@ export class RawGraph {
         const localX = globalX - chunk.x * CHUNK_SIZE;
         const localY = globalY - chunk.y * CHUNK_SIZE;
 
-        const node = new RawNode(
-            arrow,
+        const node = new GraphNode(
             nodeIdx,
             chunkIdx,
             globalX,
@@ -221,18 +242,17 @@ export class RawGraph {
         this.nodes.push(node);
         arrow.astIndex = nodeIdx;
 
-        this.graphState.update(this);
-        if (arrow.type > ArrowTypeCount) {
-            node.valid = false;
-            return node;
-        }
-        node.valid = true;
+        this.graphState.updateNode(node);
         // TIP: probably not needed cuz every changing using updateArrow*
+        // this.graphState.update(this);
         // this.updateNodeRelations(node);
         return node;
     }
 
-    public getOrCreateNodeByCoords(globalX: number, globalY: number): RawNode {
+    public getOrCreateNodeByCoords(
+        globalX: number,
+        globalY: number,
+    ): GraphNode {
         const chunk = (
             this.gameMap as any as PrivateGameMap
         ).getOrCreateChunkByArrowCoordinates(globalX, globalY);
@@ -246,12 +266,10 @@ export class RawGraph {
     }
 
     public clear() {
-        this.nodes.forEach((node) => {
-            node.arrow.astIndex = undefined;
-        });
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
+        this.graphState.clear();
     }
 
     public updateArrowType(
@@ -259,11 +277,10 @@ export class RawGraph {
         chunk: Chunk,
         globalX: number,
         globalY: number,
-        oldType: number,
+        _oldType: number,
         newType: number,
     ) {
         const node = this.getOrCreateNode(arrow, chunk, globalX, globalY);
-
         this.setNodeType(node, newType);
     }
 
@@ -300,7 +317,7 @@ export class RawGraph {
     }
 
     private updateNodeState(
-        node: RawNode,
+        node: GraphNode,
         type: ArrowType,
         rotation: number,
         flipped: boolean,
@@ -310,65 +327,39 @@ export class RawGraph {
         node.setType(type);
         node.setRotation(rotation);
         node.setFlipped(flipped);
-
-        const nodeState = this.graphState.nodes[node.nodeIdx];
-        nodeState.isEntryPoint = IsArrowEntryPoint(type);
-        nodeState.isAdditionalUpdate = IsAdditionalUpdate(type);
-        nodeState.lastSignal = 0;
-        nodeState.signal = 0;
-
-        const oldEntryPoint = IsArrowEntryPoint(oldType);
-        const newEntryPoint = IsArrowEntryPoint(type);
-
-        if (oldEntryPoint !== newEntryPoint) {
-            if (newEntryPoint) this.entryPoints.push(node);
-            else removeWithSwap(this.entryPoints, node);
-        }
-
+        this.graphState.updateNode(node);
         this.updateNodeRelations(node);
         if (oldType !== node.type) this.cycleManager.onChangeType(node);
     }
 
-    private setNodeType(node: RawNode, type: ArrowType) {
-        const oldType = node.type;
-
+    private setNodeType(node: GraphNode, type: ArrowType) {
         node.setType(type);
-
-        const nodeState = this.graphState.nodes[node.nodeIdx];
-        nodeState.isEntryPoint = IsArrowEntryPoint(type);
-        nodeState.isAdditionalUpdate = IsAdditionalUpdate(type);
-        nodeState.lastSignal = 0;
-        nodeState.signal = 0;
-
-        const oldEntryPoint = IsArrowEntryPoint(oldType);
-        const newEntryPoint = IsArrowEntryPoint(type);
-
-        if (oldEntryPoint !== newEntryPoint) {
-            if (newEntryPoint) this.entryPoints.push(node);
-            else removeWithSwap(this.entryPoints, node);
-        }
-
         this.updateNodeRelations(node);
         this.cycleManager.onChangeType(node);
+        this.graphState.updateNode(node);
     }
 
-    private setNodeRotation(node: RawNode, rotation: number) {
+    private setNodeRotation(node: GraphNode, rotation: number) {
         node.setRotation(rotation);
         this.updateNodeRelations(node);
+        this.graphState.updateNode(node);
     }
 
-    private setNodeFlipped(node: RawNode, flipped: boolean) {
+    private setNodeFlipped(node: GraphNode, flipped: boolean) {
         node.setFlipped(flipped);
         this.updateNodeRelations(node);
+        this.graphState.updateNode(node);
     }
 
-    private addNodeNext(node: RawNode, nextNode: RawNode) {
+    private addNodeNext(node: GraphNode, nextNode: GraphNode) {
         node.addNext(nextNode);
         this.cycleManager.onAddNext(node, nextNode);
+        this.graphState.updateNode(node);
     }
 
-    private removeNodeNext(node: RawNode, nextNode: RawNode) {
+    private removeNodeNext(node: GraphNode, nextNode: GraphNode) {
         node.removeNext(nextNode);
         this.cycleManager.onRemoveNext(node, nextNode);
+        this.graphState.updateNode(node);
     }
 }

@@ -2,7 +2,7 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { RawGraph } from 'src/core/graph/raw/RawGraph';
+import { Graph } from 'src/core/graph/Graph';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../Patcher';
 
@@ -16,11 +16,11 @@ export const PatchGameMap: IPatcher = (
 ) => {
     patchLoader.addDefinitionPatch('GameMap', (_module: typeof GameMap) => {
         return class GameMap extends _module {
-            public rawGraph: RawGraph;
+            public rawGraph: Graph;
 
             public constructor() {
                 super();
-                this.rawGraph = new RawGraph(this);
+                this.rawGraph = new Graph(this);
             }
 
             public setArrowType(

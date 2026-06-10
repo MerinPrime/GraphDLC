@@ -18,7 +18,7 @@ export const PatchChunkUpdates: IPatcher = (
             };
 
             _module.clearSignals = function clearSignals(gameMap: GameMap) {
-                gameMap.rawGraph.graphState.reset(gameMap.rawGraph);
+                gameMap.rawGraph.graphState.reset();
             };
         },
     );
