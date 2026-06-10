@@ -9,6 +9,7 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { CycleManager } from './CycleManager';
 import { CycleHeadType, type RawCycle } from './CycleTypes';
 import { GraphNode } from './GraphNode';
+import { StateRewinder } from './StateRewinder';
 import { RawGraphState } from './updater/RawState';
 import { RawGraphUpdater } from './updater/RawUpdater';
 
@@ -24,6 +25,7 @@ export class Graph {
     private freeCycleIndices: number[];
 
     public graphState: RawGraphState;
+    public stateRewinder: StateRewinder;
     public graphUpdater: RawGraphUpdater;
     // TODO: Incapsulate graph updater to game engine for ast engine, soa engine, rust engine
     public cycleManager: CycleManager;
@@ -38,6 +40,7 @@ export class Graph {
         this.graphState = new RawGraphState();
         this.graphUpdater = new RawGraphUpdater();
         this.cycleManager = new CycleManager(this);
+        this.stateRewinder = new StateRewinder();
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {

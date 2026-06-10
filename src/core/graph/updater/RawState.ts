@@ -4,6 +4,7 @@ import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
 import type { GraphNode } from '../GraphNode';
 import { RawCycleState } from './RawCycleState';
+import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
 export class RawNodeState {
     public type: NodeType = NodeType.EMPTY;
@@ -17,7 +18,9 @@ export class RawNodeState {
     public isEntryPoint: boolean = false;
     public isAdditionalUpdate: boolean = false;
     public isUpdated: boolean = false;
+
     public isChanged: boolean = false;
+    public isTempChanged: boolean = false;
 
     public constructor(public node: GraphNode) {}
 }
@@ -91,6 +94,7 @@ export class RawGraphState {
             node.blockedCount = 0;
             node.isUpdated = false;
             node.isChanged = false;
+            node.isTempChanged = false;
         });
         this.chunks.forEach((chunk) => {
             chunk.isDirty = true;
@@ -150,5 +154,115 @@ export class RawGraphState {
 
     public removeCycle(rawCycle: RawCycle) {
         this.cycles[rawCycle.index] = null;
+    }
+
+    public makeSnapshot(): RawSnapshot {
+        const snapshot = new RawSnapshot();
+
+        snapshot.tick = this.tick;
+        snapshot.breakPoint = this.breakPoint;
+
+        snapshot.nodes = this.nodes.map((nodeState, nodeIdx) => {
+            const nodeSnapshot = new RawNodeSnapshot();
+            nodeSnapshot.nodeIdx = nodeIdx;
+
+            nodeSnapshot.signal = nodeState.signal;
+            nodeSnapshot.lastSignal = nodeState.lastSignal;
+            nodeSnapshot.signalsCount = nodeState.signalsCount;
+            nodeSnapshot.blockedCount = nodeState.blockedCount;
+
+            return nodeSnapshot;
+        });
+
+        snapshot.chunks = this.chunks.map((chunk) => chunk.chunkIdx);
+
+        snapshot.changedNodes = this.changedNodes.map(
+            (nodeState) => nodeState.node.nodeIdx,
+        );
+
+        snapshot.tempChangedNodes = this.tempChangedNodes.map(
+            (nodeState) => nodeState.node.nodeIdx,
+        );
+
+        snapshot.cycles = this.cycles
+            .map((cycleState, cycleIdx) => {
+                if (cycleState === null || cycleState === undefined)
+                    return null;
+
+                const cycleSnapshot = new RawCycleSnapshot(
+                    cycleIdx,
+                    cycleState.length,
+                );
+                cycleSnapshot.state.set(cycleState.state);
+
+                return cycleSnapshot;
+            })
+            .filter((cycle) => cycle !== null);
+
+        return snapshot;
+    }
+
+    public loadSnapshot(snapshot: RawSnapshot) {
+        this.tick = snapshot.tick;
+        this.breakPoint = snapshot.breakPoint;
+
+        snapshot.nodes.forEach((nodeSnapshot) => {
+            const nodeState = this.getNode(nodeSnapshot.nodeIdx);
+            nodeState.signal = nodeSnapshot.signal;
+            nodeState.lastSignal = nodeSnapshot.lastSignal;
+            nodeState.signalsCount = nodeSnapshot.signalsCount;
+            nodeState.blockedCount = nodeSnapshot.blockedCount;
+        });
+
+        snapshot.chunks.forEach((chunkIdx) => {
+            this.makeDirtyChunk(chunkIdx);
+        });
+
+        const updatedNodes = this.changedNodes.filter(
+            (nodeState) => nodeState.isUpdated,
+        );
+        this.changedNodes.forEach((nodeState) => {
+            nodeState.isChanged = false;
+        });
+        this.changedNodes.length = 0;
+        snapshot.changedNodes.forEach((nodeIdx) => {
+            this.markNodeChanged(this.getNode(nodeIdx));
+        });
+        updatedNodes.forEach((nodeState) => {
+            this.markNodeChanged(nodeState);
+        });
+
+        const updatedTempNodes = this.tempChangedNodes.filter(
+            (nodeState) => nodeState.isUpdated,
+        );
+        this.tempChangedNodes.forEach((nodeState) => {
+            nodeState.isTempChanged = false;
+        });
+        this.tempChangedNodes.length = 0;
+        snapshot.tempChangedNodes.forEach((nodeIdx) => {
+            this.markNodeTempChanged(this.getNode(nodeIdx));
+        });
+        updatedTempNodes.forEach((nodeState) => {
+            this.markNodeTempChanged(nodeState);
+        });
+
+        snapshot.cycles.forEach((cycleSnapshot) => {
+            const cycleState = this.cycles[cycleSnapshot.cycleIdx];
+            if (!cycleState) return;
+            if (cycleState.length !== cycleSnapshot.length) return;
+            cycleState.state.set(cycleSnapshot.state);
+        });
+
+        return snapshot;
+    }
+
+    public markNodeChanged(nodeState: RawNodeState) {
+        if (nodeState.isChanged) return;
+        nodeState.isChanged = true;
+        this.changedNodes.push(nodeState);
+    }
+
+    public markNodeTempChanged(nodeState: RawNodeState) {
+        this.tempChangedNodes.push(nodeState);
     }
 }

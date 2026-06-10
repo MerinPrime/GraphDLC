@@ -1,6 +1,6 @@
 export class RawCycleState {
     public readonly length: number;
-    private readonly state: Uint32Array;
+    public readonly state: Uint32Array;
 
     public constructor(length: number) {
         this.length = length;

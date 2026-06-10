@@ -55,11 +55,11 @@ export const PatchPlayerControls: IPatcher = (
         'PlayerControls',
         (_module: typeof PlayerControls) => {
             return class PlayerControls extends _module {
-                private startPathX: number | null;
-                private startPathY: number | null;
-                private endPathX: number | null;
-                private endPathY: number | null;
-                private path: PathStep[] | null;
+                private startPathX: number | null = null;
+                private startPathY: number | null = null;
+                private endPathX: number | null = null;
+                private endPathY: number | null = null;
+                private path: PathStep[] | null = null;
 
                 public constructor(
                     cnv: HTMLCanvasElement,
@@ -127,11 +127,27 @@ export const PatchPlayerControls: IPatcher = (
                             }
                         }
                     };
-                    this.startPathX = null;
-                    this.startPathY = null;
-                    this.endPathX = null;
-                    this.endPathY = null;
-                    this.path = null;
+
+                    const oldKeyDownCallback = _this.keyboardHandler.onKeyDown;
+
+                    _this.keyboardHandler.onKeyDown = (
+                        code: string,
+                        key: string,
+                    ) => {
+                        if (
+                            _this.keyboardHandler.getShiftPressed() &&
+                            code === 'Enter'
+                        ) {
+                            const rawGraph = _this.game.gameMap.rawGraph;
+                            rawGraph.stateRewinder.rewindSnapshot(
+                                rawGraph.graphUpdater,
+                                rawGraph.graphState,
+                                rawGraph.graphState.tick - 1,
+                            );
+                            return;
+                        }
+                        if (oldKeyDownCallback) oldKeyDownCallback(code, key);
+                    };
                 }
 
                 public update(): void {

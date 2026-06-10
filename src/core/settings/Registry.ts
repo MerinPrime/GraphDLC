@@ -1,6 +1,7 @@
 import { DebugModeSetting } from './instances/other/DebugModeSetting';
 import { EnableArrowRelationsSetting } from './instances/other/EnableArrowRelationsSetting';
 import { EnableBreakpointSetting } from './instances/other/EnableBreakpointSetting';
+import { EnableSnapshotsSetting } from './instances/other/EnableSnapshotsSetting';
 import { MapProtectionSetting } from './instances/other/MapProtectionSetting';
 import { ShowArrowConnectionsSetting } from './instances/other/ShowArrowConnectionsSetting';
 import { TargetFPSSetting } from './instances/other/TargetFPSSetting';
@@ -16,6 +17,7 @@ const settings: BaseSetting<any>[] = [
     ShowArrowConnectionsSetting,
     MapProtectionSetting,
     DebugModeSetting,
+    EnableSnapshotsSetting,
 
     QoLReDesignSetting,
     GraphDLCDesignSetting,
