@@ -1,5 +1,5 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
-import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
+import { CELL_SIZE, CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
@@ -203,16 +203,25 @@ export const PatchGame: IPatcher = (
             }
 
             private getViewportBounds(): Bounds {
-                const minX = Math.floor(-this.offset[0] / CELL_SIZE) - 1;
-                const minY = Math.floor(-this.offset[1] / CELL_SIZE) - 1;
+                const minX =
+                    Math.floor(-this.offset[0] / CELL_SIZE / CHUNK_SIZE) - 1;
+                const minY =
+                    Math.floor(-this.offset[1] / CELL_SIZE / CHUNK_SIZE) - 1;
                 const maxX = Math.floor(
-                    -this.offset[0] / CELL_SIZE + this.width / this.scale,
+                    -this.offset[0] / CELL_SIZE / CHUNK_SIZE +
+                        this.width / this.scale / CHUNK_SIZE,
                 );
                 const maxY = Math.floor(
-                    -this.offset[1] / CELL_SIZE + this.height / this.scale,
+                    -this.offset[1] / CELL_SIZE / CHUNK_SIZE +
+                        this.height / this.scale / CHUNK_SIZE,
                 );
 
-                return new Bounds(minX, minY, maxX, maxY);
+                return new Bounds(
+                    minX * CHUNK_SIZE,
+                    minY * CHUNK_SIZE,
+                    maxX * CHUNK_SIZE,
+                    maxY * CHUNK_SIZE,
+                );
             }
 
             public draw() {
@@ -221,6 +230,8 @@ export const PatchGame: IPatcher = (
                 const rawGraph = this.gameMap.rawGraph;
                 const graphState = rawGraph.graphState;
 
+                const bounds = this.getViewportBounds();
+
                 rawGraph.cycles.forEach((cycle) => {
                     if (cycle === null) return;
                     cycle.nodes.forEach((node) => {
@@ -228,10 +239,16 @@ export const PatchGame: IPatcher = (
                     });
                 });
 
-                const dirtyChunksIdx = graphState.getDirtyChunks();
+                const dirtyChunksIdx = graphState.getDirtyChunks(false);
                 dirtyChunksIdx.forEach((dirtyChunkIdx) => {
                     const chunk = rawGraph.getChunkByIdx(dirtyChunkIdx);
-                    // TODO: move this to graph engine
+                    if (
+                        !bounds.InBounds(
+                            chunk.x * CHUNK_SIZE,
+                            chunk.y * CHUNK_SIZE,
+                        )
+                    )
+                        return;
                     chunk.getArrows().forEach((arrow) => {
                         if (
                             arrow.astIndex == null ||
@@ -250,6 +267,7 @@ export const PatchGame: IPatcher = (
                         else arrow.signal = ArrowSignal.NONE;
                     });
                     chunk.markRenderDirty();
+                    graphState.makeUndirtyChunk(dirtyChunkIdx);
                 });
 
                 super.draw();
@@ -279,7 +297,6 @@ export const PatchGame: IPatcher = (
 
                 this.drawPath(render, offsetX, offsetY);
 
-                const bounds = this.getViewportBounds();
                 graphDLC.debugger.colorizeDebug(
                     gameMap.rawGraph,
                     bounds,

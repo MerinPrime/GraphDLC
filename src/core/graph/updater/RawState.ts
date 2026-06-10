@@ -110,15 +110,21 @@ export class RawGraphState {
         this.chunks[chunkIdx].isDirty = true;
     }
 
-    public getDirtyChunks(): [...chunkIdx: number[]] {
+    public getDirtyChunks(
+        markUndirty: boolean = false,
+    ): [...chunkIdx: number[]] {
         const dirtyChunks: number[] = [];
         this.chunks.forEach((chunk) => {
             if (chunk.isDirty) {
-                chunk.isDirty = false;
+                if (markUndirty) chunk.isDirty = false;
                 dirtyChunks.push(chunk.chunkIdx);
             }
         });
         return dirtyChunks;
+    }
+
+    public makeUndirtyChunk(chunkIdx: number) {
+        this.chunks[chunkIdx].isDirty = false;
     }
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
