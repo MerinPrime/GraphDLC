@@ -98,7 +98,7 @@ export class GraphDebug {
             node.previous.forEach((prevNode) => {
                 if (prevNode.type === ArrowType.EMPTY || !prevNode.valid)
                     return;
-                hash += prevNode.type + 1;
+                hash += prevNode.type;
             });
             const index = hash % colors.length;
             const [r, g, b] = colors[index];
