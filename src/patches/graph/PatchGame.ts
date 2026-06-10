@@ -3,13 +3,15 @@ import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
+import type { UIPauseSign } from '@logic-arrows/ui/components/ui-pause-sign';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import { ArrowSignal } from 'src/core/graph/raw/updater/ArrowSignal';
 import { ACTIVE_SIGNALS } from 'src/core/graph/raw/updater/ArrowSignals';
 import { NodeSignal } from 'src/core/graph/raw/updater/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import type { PathStep } from 'src/core/path_finder/PathFinder';
+import type { PathStep } from 'src/core/path_finder/types';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
+import { EnableBreakpointSetting } from 'src/core/settings/instances/other/EnableBreakpointSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/other/ShowArrowConnectionsSetting';
 import { TargetFPSSetting } from 'src/core/settings/instances/other/TargetFPSSetting';
 import { ArrowType } from 'src/core/utils/ArrowType';
@@ -395,6 +397,16 @@ export const PatchGame: IPatcher = (
                             }
                             accumulator -= skip;
                         }
+                    }
+                    if (
+                        EnableBreakpointSetting.value &&
+                        this.gameMap.rawGraph.graphState.breakPoint
+                    ) {
+                        this.gameMap.rawGraph.graphState.breakPoint = false;
+                        this.playing = false;
+                        patchLoader
+                            .getInstance<UIPauseSign>('UIPauseSign')
+                            ?.setVisibility(true);
                     }
                 }
 

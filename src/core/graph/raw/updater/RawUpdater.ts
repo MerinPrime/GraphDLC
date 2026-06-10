@@ -351,6 +351,12 @@ export class RawGraphUpdater {
                 if (signal !== NodeSignal.KEEP_SIGNAL) {
                     nodeState.signal = signal;
                     graphState.makeDirtyNodeChunk(nodeState.node);
+                    if (
+                        signal === NodeSignal.ACTIVE &&
+                        nodeState.node.isBreakpoint
+                    ) {
+                        graphState.breakPoint = true;
+                    }
                 }
             }
         }

@@ -22,6 +22,8 @@ export class RawNode {
     public previous: RawNode[] = [];
     public detectedNode: RawNode | null = null;
 
+    public isBreakpoint: boolean = false;
+
     public isCycle: boolean = false;
     public cycleRef: RawCycle | null = null;
     public ioCycle: RawCycle | null = null;
@@ -50,24 +52,31 @@ export class RawNode {
 
     public setType(type: ArrowType) {
         this.type = type;
+        this.onUpdate();
     }
 
     public setRotation(rotation: number) {
         this.rotation = rotation;
+        this.onUpdate();
     }
 
     public setFlipped(flipped: boolean) {
         this.flipped = flipped;
+        this.onUpdate();
     }
 
     public addNext(node: RawNode) {
         this.next.push(node);
         node.previous.push(this);
+        this.onUpdate();
+        node.onUpdate();
     }
 
     public removeNext(node: RawNode) {
         removeWithSwap(this.next, node);
         removeWithSwap(node.previous, this);
+        this.onUpdate();
+        node.onUpdate();
     }
 
     public clearNext(): { oldNext: RawNode[]; detectors: RawNode[] } {
@@ -79,6 +88,21 @@ export class RawNode {
             if (nextNode.detectedNode === this) detectors.push(nextNode);
         }
         this.next.length = 0;
+        for (const nextNode of oldNext) {
+            nextNode.onUpdate();
+        }
+        this.onUpdate();
         return { oldNext, detectors };
+    }
+
+    private onUpdate() {
+        if (this.type === ArrowType.BLOCKER) {
+            const isBlockedBlocker = this.next.some(
+                (nextNode) => nextNode.type === ArrowType.BLOCKER,
+            );
+            this.isBreakpoint = isBlockedBlocker;
+        } else {
+            this.isBreakpoint = false;
+        }
     }
 }

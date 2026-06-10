@@ -58,6 +58,7 @@ export const PatchPlayerUI: IPatcher = (
                         info.push(`NextLen: ${astNode.next.length}`);
                         info.push(`PrevLen: ${astNode.previous.length}`);
                         info.push(`IsCycle: ${astNode.isCycle}`);
+                        info.push(`IsBreakpoint: ${astNode.isBreakpoint}`);
                         info.push(`CycleOffset: ${astNode.cycleOffset}`);
                         info.push(
                             `OrigCycleOffset: ${astNode.origCycleOffset}`,

@@ -43,6 +43,7 @@ export class RawGraphState {
 
     public cycles: (RawCycleState | null)[];
     public tick: number;
+    public breakPoint: boolean = false;
 
     public constructor() {
         this.changedNodes = [];
