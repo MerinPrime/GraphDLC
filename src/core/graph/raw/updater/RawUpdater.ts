@@ -216,27 +216,7 @@ export class RawGraphUpdater {
             const isCycleHead =
                 nodeState.node.headType !== CycleHeadType.NONE &&
                 nodeState.node.headType !== CycleHeadType.READ;
-            const isReadHead = nodeState.node.headType === CycleHeadType.READ;
 
-            if (isReadHead) {
-                const cycle = nodeState.node.ioCycle;
-                if (!cycle) continue;
-
-                const cycleState = graphState.cycles[cycle.index];
-                if (!cycleState) continue;
-
-                const position =
-                    (graphState.tick + nodeState.nodeInCycleOffset) %
-                    cycleState.length;
-                const bitIndex = position % 32;
-                const wordIndex = (position - bitIndex) / 32;
-                const mask = 1 << bitIndex;
-
-                const cycleActive = (cycleState.state[wordIndex] & mask) !== 0;
-
-                nodeState.prevCycleActive = nodeState.cycleActive;
-                nodeState.cycleActive = cycleActive;
-            }
             if (isCycleHead) {
                 if (
                     !isActive &&
@@ -347,7 +327,7 @@ export class RawGraphUpdater {
                     graphState.makeDirtyNodeChunk(nodeState.node);
                 }
             } else {
-                const signal = this.updateNode(nodeState);
+                const signal = this.updateNode(graphState, nodeState);
                 if (signal !== NodeSignal.KEEP_SIGNAL) {
                     nodeState.signal = signal;
                     graphState.makeDirtyNodeChunk(nodeState.node);
@@ -381,13 +361,29 @@ export class RawGraphUpdater {
         graphState.tempChangedNodes.push(nodeState);
     }
 
-    public updateNode(nodeState: RawNodeState): NodeSignal {
-        const isReadHead = nodeState.node.headType === CycleHeadType.READ;
+    public updateNode(
+        graphState: RawGraphState,
+        nodeState: RawNodeState,
+    ): NodeSignal {
+        if (nodeState.node.headType === CycleHeadType.READ) {
+            if (nodeState.signalsCount > 1) return NodeSignal.ACTIVE;
+            if (nodeState.signalsCount === 0) return NodeSignal.NONE;
 
-        if (isReadHead) {
-            return nodeState.signalsCount + +nodeState.prevCycleActive > 1
-                ? NodeSignal.ACTIVE
-                : NodeSignal.NONE;
+            const cycle = nodeState.node.ioCycle;
+            if (!cycle) return NodeSignal.KEEP_SIGNAL;
+
+            const cycleState = graphState.cycles[cycle.index];
+            if (!cycleState) return NodeSignal.KEEP_SIGNAL;
+
+            const position =
+                (graphState.tick + nodeState.nodeInCycleOffset) %
+                cycleState.length;
+            const bitIndex = position % 32;
+            const wordIndex = (position - bitIndex) / 32;
+            const mask = 1 << bitIndex;
+
+            const cycleActive = (cycleState.state[wordIndex] & mask) !== 0;
+            return cycleActive ? NodeSignal.ACTIVE : NodeSignal.NONE;
         }
         switch (nodeState.node.type) {
             case ArrowType.ARROW:

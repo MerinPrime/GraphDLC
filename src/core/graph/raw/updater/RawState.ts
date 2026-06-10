@@ -5,8 +5,6 @@ export class RawNodeState {
     public signal: number = 0;
     public lastSignal: number = 0;
     public signalsCount: number = 0;
-    public prevCycleActive: boolean = false;
-    public cycleActive: boolean = false;
     public blockedCount: number = 0;
     public nodeInCycleOffset: number = 0;
 
@@ -72,8 +70,6 @@ export class RawGraphState {
             node.blockedCount = 0;
             node.isUpdated = false;
             node.isChanged = false;
-            node.prevCycleActive = false;
-            node.cycleActive = false;
         });
         this.chunks.forEach((chunk) => {
             chunk.isDirty = true;

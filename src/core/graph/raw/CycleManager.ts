@@ -77,7 +77,7 @@ export class CycleManager {
                 ) {
                     nextNode.ioCycle = cycle;
                     nextNode.headType = CycleHeadType.READ;
-                    nextNode.cycleOffset = (i + 1) % cycle.nodes.length;
+                    nextNode.cycleOffset = (i + 1 - 1) % cycle.nodes.length;
                     if (this.graph.graphState.nodes[nextNode.nodeIdx]) {
                         this.graph.graphState.nodes[
                             nextNode.nodeIdx
@@ -172,7 +172,28 @@ export class CycleManager {
     public isValidCycle(cyclePath: RawNode[]): boolean {
         const cycleSet = new Set<RawNode>(cyclePath);
 
-        for (const cycleNode of cyclePath) {
+        for (let i = 0; i < cyclePath.length; i++) {
+            const cycleNode = cyclePath[i];
+
+            const nextCycleNode = cyclePath[(i + 1) % cyclePath.length];
+
+            const hasExternalNext = cycleNode.next.some(
+                (neighbor) =>
+                    !cycleSet.has(neighbor) &&
+                    neighbor.type !== ArrowType.EMPTY,
+            );
+
+            if (hasExternalNext) {
+                const hasExternalPreviousInNextNode =
+                    nextCycleNode.previous.some(
+                        (neighbor) => !cycleSet.has(neighbor),
+                    );
+
+                if (hasExternalPreviousInNextNode) {
+                    return false;
+                }
+            }
+
             let moreThanOneNext = false;
             for (const neighbor of cycleNode.next) {
                 if (!cycleSet.has(neighbor)) {
@@ -187,6 +208,7 @@ export class CycleManager {
                     moreThanOneNext = true;
                 }
             }
+
             let moreThanOneWrite = false;
             for (const neighbor of cycleNode.previous) {
                 if (!cycleSet.has(neighbor)) {
