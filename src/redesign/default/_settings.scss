@@ -1,0 +1,19 @@
+.setting-name {
+  color: var(--text-primary);
+}
+
+.account-user-name-title {
+  color: var(--text-primary);
+}
+
+.setting-value {
+  color: var(--text-primary);
+}
+
+.setting-divider {
+  border: none !important;
+  hr {
+    border: none !important;
+    border-top: 1px solid var(--bg-surface) !important;
+  }
+}

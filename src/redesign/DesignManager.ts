@@ -29,6 +29,55 @@ export class DesignManager {
 
     public setup() {
         this.designSettings.forEach(this.applySetting);
+
+        DarkThemeSetting.onChange.add(() => {
+            window.location.reload();
+        });
+
+        const syncSrcToCustomProperty = (img: HTMLImageElement) => {
+            if (img.src) {
+                img.style.setProperty('--icon-url', `url('${img.src}')`);
+            }
+        };
+
+        const processNewNodes = (nodes: NodeList) => {
+            nodes.forEach((node) => {
+                if (node instanceof HTMLImageElement) {
+                    syncSrcToCustomProperty(node);
+                } else if (node instanceof Element) {
+                    node.querySelectorAll('img').forEach(
+                        syncSrcToCustomProperty,
+                    );
+                }
+            });
+        };
+
+        document.querySelectorAll('img').forEach(syncSrcToCustomProperty);
+
+        const observer = new MutationObserver((mutationsList) => {
+            for (const mutation of mutationsList) {
+                if (
+                    mutation.type === 'attributes' &&
+                    mutation.attributeName === 'src'
+                ) {
+                    if (mutation.target instanceof HTMLImageElement) {
+                        syncSrcToCustomProperty(mutation.target);
+                    }
+                } else if (
+                    mutation.type === 'childList' &&
+                    mutation.addedNodes.length > 0
+                ) {
+                    processNewNodes(mutation.addedNodes);
+                }
+            }
+        });
+
+        observer.observe(document.documentElement, {
+            attributes: true,
+            childList: true,
+            subtree: true,
+            attributeFilter: ['src'],
+        });
     }
 
     private applySetting({ setting, style }: DesignSetting) {

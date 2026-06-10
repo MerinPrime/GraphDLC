@@ -4,7 +4,7 @@
     appearance: none;
     width: 160px;
     height: 6px;
-    background: #e2e8f0;
+    background: var(--bg-surface); /* Заменили #e2e8f0 */
     border-radius: 4px;
     outline: none;
     vertical-align: middle;
@@ -15,7 +15,9 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: var(--accent-color);
+      background: var(
+        --bg-accent
+      ); /* Заменили --accent-color на вашу основную переменную */
       cursor: pointer;
       transition: transform 0.1s ease;
       border: none;
@@ -29,7 +31,9 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: var(--accent-color);
+      background: var(
+        --bg-accent
+      ); /* Заменили --accent-color на вашу основную переменную */
       cursor: pointer;
       transition: transform 0.1s ease;
       border: none;

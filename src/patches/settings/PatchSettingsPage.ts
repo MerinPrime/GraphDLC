@@ -50,11 +50,11 @@ export const PatchSettingsPage: IPatcher = (
 
                 private addText(
                     label: string,
-                    labelColor: TextColor = TextColor.BLACK,
+                    labelColor: TextColor = TextColor.PRIMARY,
                 ) {
                     const labelText = document.createElement('div');
                     labelText.innerText = label;
-                    labelText.style.color = labelColor;
+                    labelText.classList.add(labelColor);
                     this.lastElement.after(labelText);
                     this.lastElement = labelText;
                 }
@@ -70,8 +70,8 @@ export const PatchSettingsPage: IPatcher = (
                     label: string,
                     controlFactory: () => HTMLElement,
                     description: string | null = null,
-                    labelColor: TextColor = TextColor.BLACK,
-                    descriptionColor: TextColor = TextColor.GRAY,
+                    labelColor: TextColor = TextColor.PRIMARY,
+                    descriptionColor: TextColor = TextColor.MUTED,
                 ): void {
                     const row = document.createElement('tr');
                     this.lastElement.after(row);
@@ -82,14 +82,14 @@ export const PatchSettingsPage: IPatcher = (
 
                     const labelText = document.createElement('div');
                     labelText.innerText = `${label}:`;
-                    labelText.style.color = labelColor;
+                    labelText.classList.add(labelColor);
                     nameCell.appendChild(labelText);
 
                     if (description) {
                         const descText = document.createElement('div');
                         descText.classList.add('setting-description');
                         descText.innerText = description;
-                        descText.style.color = descriptionColor;
+                        descText.classList.add(descriptionColor);
                         nameCell.appendChild(descText);
                     }
 

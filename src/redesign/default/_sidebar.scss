@@ -1,0 +1,35 @@
+#menu-page-side-bar {
+  background-color: var(--bg-accent) !important;
+}
+
+.side-menu-element {
+  background-color: var(--bg-accent) !important;
+}
+
+.side-menu-element-selected {
+  background-color: var(--bg-accent-active) !important;
+}
+
+.side-menu-title {
+  color: var(--sidebar-text-primary) !important;
+}
+
+.side-menu-icon {
+  --icon-url: url("");
+  background-color: var(--bg-hover);
+
+  -webkit-mask-image: var(--icon-url);
+  mask-image: var(--icon-url);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  color: transparent;
+  opacity: 1;
+
+  object-position: -9999px -9999px;
+}

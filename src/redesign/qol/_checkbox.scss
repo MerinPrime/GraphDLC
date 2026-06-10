@@ -4,7 +4,7 @@
     -webkit-appearance: none;
     width: 28px;
     height: 28px;
-    border: 2px solid #ccc;
+    border: 2px solid var(--border-default);
     border-radius: 8px;
     outline: none;
     cursor: pointer;
@@ -15,35 +15,35 @@
     vertical-align: middle;
 
     &:hover:not(:disabled) {
-      border-color: #0066cc;
+      border-color: var(--checkbox-accent);
     }
 
     &:checked {
-      background-color: #0066cc;
-      border-color: #0066cc;
+      background-color: var(--checkbox-accent);
+      border-color: var(--checkbox-accent);
 
       &::before {
         content: "";
         width: 10px;
         height: 6px;
-        border-left: 2px solid white;
-        border-bottom: 2px solid white;
+        border-left: 2px solid var(--bg-base);
+        border-bottom: 2px solid var(--bg-base);
         transform: rotate(-45deg) translate(1px, -1px);
       }
     }
 
     &:disabled {
       cursor: not-allowed;
-      background-color: #f1f5f9;
-      border-color: #cbd5e1;
+      background-color: var(--bg-disabled);
+      border-color: var(--bg-surface);
 
       &:checked {
-        background-color: #e2e8f0;
-        border-color: #cbd5e1;
+        background-color: var(--bg-disabled-checked);
+        border-color: var(--bg-surface);
 
         &::before {
-          border-left-color: #94a3b8;
-          border-bottom-color: #94a3b8;
+          border-left-color: var(--text-disabled);
+          border-bottom-color: var(--text-disabled);
         }
       }
     }

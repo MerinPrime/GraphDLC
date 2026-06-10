@@ -1,0 +1,11 @@
+.ui-inventory-items {
+  background-color: var(--bg-disabled) !important;
+}
+
+.ui-inventory-line {
+  background-color: transparent !important;
+
+  img {
+    background-color: var(--bg-disabled-checked) !important;
+  }
+}

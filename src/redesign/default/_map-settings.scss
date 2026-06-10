@@ -1,4 +1,6 @@
 .ui-map-settings {
   font-family: var(--font);
-  font-size: 1.2rem;
+  font-size: clamp(0.5rem, 1.5vw, 1.2rem);
+  display: flex;
+  flex-direction: column;
 }
