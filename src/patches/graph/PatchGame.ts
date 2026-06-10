@@ -241,38 +241,12 @@ export const PatchGame: IPatcher = (
                             arrow.signal = ArrowSignal.NONE;
                             return;
                         }
-                        const node = rawGraph.getNode(arrow.astIndex);
-                        const cycle = node.cycleRef;
-                        if (cycle) {
-                            const cycleState = graphState.cycles[cycle.index];
-                            if (!cycleState) {
-                                arrow.signal = ArrowSignal.NONE;
-                                return;
-                            }
-                            const position =
-                                (graphState.tick + node.origCycleOffset) %
-                                cycleState.length;
-                            const bitIndex = position % 32;
-                            const wordIndex = (position / 32) | 0;
-                            const isActive =
-                                (cycleState.state[wordIndex] &
-                                    (1 << bitIndex)) !==
-                                0;
-                            if (isActive)
-                                arrow.signal =
-                                    ACTIVE_SIGNALS[arrow.type] ??
-                                    ArrowSignal.NONE;
-                            else arrow.signal = ArrowSignal.NONE;
-                            return;
-                        }
-                        const nodeState = graphState.nodes[node.nodeIdx];
-                        if (nodeState.signal === NodeSignal.NONE)
-                            arrow.signal = ArrowSignal.NONE;
-                        else if (nodeState.signal === NodeSignal.PENDING)
-                            arrow.signal = ArrowSignal.BLUE;
-                        else
-                            arrow.signal =
-                                ACTIVE_SIGNALS[arrow.type] ?? ArrowSignal.NONE;
+                        const signal = rawGraph.graphState.getNodeSignal(
+                            arrow.astIndex,
+                        );
+                        if (signal === NodeSignal.ACTIVE)
+                            arrow.signal = ACTIVE_SIGNALS[signal];
+                        else arrow.signal = ArrowSignal.NONE;
                     });
                     chunk.markRenderDirty();
                 });

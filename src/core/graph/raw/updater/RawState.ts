@@ -1,5 +1,6 @@
 import type { RawGraph } from '../RawGraph';
 import type { RawNode } from '../RawNode';
+import { NodeSignal } from './NodeSignal';
 
 export class RawNodeState {
     public signal: number = 0;
@@ -94,6 +95,28 @@ export class RawGraphState {
             }
         });
         return dirtyChunks;
+    }
+
+    public getNodeSignal(nodeIdx: number): NodeSignal {
+        const nodeState = this.nodes[nodeIdx];
+        const cycle = nodeState.node.cycleRef;
+        if (cycle) {
+            const cycleState = this.cycles[cycle.index];
+            if (!cycleState) return NodeSignal.NONE;
+            const position =
+                (this.tick + nodeState.node.origCycleOffset) %
+                cycleState.length;
+            const bitIndex = position % 32;
+            const wordIndex = (position / 32) | 0;
+            const isActive =
+                (cycleState.state[wordIndex] & (1 << bitIndex)) !== 0;
+            if (isActive) return NodeSignal.ACTIVE;
+            return NodeSignal.NONE;
+        }
+        if (nodeState.signal === NodeSignal.NONE) return NodeSignal.NONE;
+        else if (nodeState.signal === NodeSignal.PENDING)
+            return NodeSignal.PENDING;
+        else return NodeSignal.ACTIVE;
     }
 
     public update(graph: RawGraph) {
