@@ -1,8 +1,9 @@
+import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { Graph } from 'src/core/graph/Graph';
+import { Graph } from 'src/core/graph/ast/Graph';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../Patcher';
 
@@ -17,10 +18,12 @@ export const PatchGameMap: IPatcher = (
     patchLoader.addDefinitionPatch('GameMap', (_module: typeof GameMap) => {
         return class GameMap extends _module {
             public rawGraph: Graph;
+            public isMain: boolean = false;
 
-            public constructor() {
+            public constructor(isMain: boolean = false) {
                 super();
                 this.rawGraph = new Graph(this);
+                this.isMain = isMain;
             }
 
             public setArrowType(
@@ -40,14 +43,15 @@ export const PatchGameMap: IPatcher = (
                 super.setArrowType(globalX, globalY, type, player);
                 if (oldType === arrow.type) return;
                 const newType = arrow.type;
-                this.rawGraph.updateArrowType(
-                    arrow,
-                    chunk,
-                    globalX,
-                    globalY,
-                    oldType,
-                    newType,
-                );
+                if (this.isMain)
+                    this.rawGraph.updateArrowType(
+                        arrow,
+                        chunk,
+                        globalX,
+                        globalY,
+                        oldType,
+                        newType,
+                    );
             }
 
             public setArrowRotation(
@@ -67,13 +71,14 @@ export const PatchGameMap: IPatcher = (
                 super.setArrowRotation(globalX, globalY, rotation, player);
                 if (oldRotation === arrow.rotation) return;
                 const newRotation = arrow.rotation;
-                this.rawGraph.updateArrowRotation(
-                    arrow,
-                    chunk,
-                    globalX,
-                    globalY,
-                    newRotation,
-                );
+                if (this.isMain)
+                    this.rawGraph.updateArrowRotation(
+                        arrow,
+                        chunk,
+                        globalX,
+                        globalY,
+                        newRotation,
+                    );
             }
 
             public setArrowFlipped(
@@ -93,13 +98,14 @@ export const PatchGameMap: IPatcher = (
                 super.setArrowFlipped(globalX, globalY, flipped, player);
                 if (oldFlipped === arrow.flipped) return;
                 const newFlipped = arrow.flipped;
-                this.rawGraph.updateArrowFlipped(
-                    arrow,
-                    chunk,
-                    globalX,
-                    globalY,
-                    newFlipped,
-                );
+                if (this.isMain)
+                    this.rawGraph.updateArrowFlipped(
+                        arrow,
+                        chunk,
+                        globalX,
+                        globalY,
+                        newFlipped,
+                    );
             }
 
             public removeArrow(
@@ -118,23 +124,45 @@ export const PatchGameMap: IPatcher = (
                 super.removeArrow(globalX, globalY, player);
                 if (oldType === arrow.type) return;
                 const newType = arrow.type;
-                this.rawGraph.updateArrowType(
-                    arrow,
-                    chunk,
-                    globalX,
-                    globalY,
-                    oldType,
-                    newType,
-                );
+                if (this.isMain)
+                    this.rawGraph.updateArrowType(
+                        arrow,
+                        chunk,
+                        globalX,
+                        globalY,
+                        oldType,
+                        newType,
+                    );
             }
 
-            public clearChunkIfEmpty(_chunk: Chunk): void {
+            public updateArrowState(
+                arrow: Arrow,
+                chunk: Chunk,
+                chunkX: number,
+                chunkY: number,
+            ) {
+                if (this.isMain)
+                    this.rawGraph.updateArrowState(
+                        arrow,
+                        chunk,
+                        chunkX,
+                        chunkY,
+                    );
+            }
+
+            public clearChunkIfEmpty(chunk: Chunk): void {
                 // TIP: Graph stores all connections include empty arrows
+                if (!this.isMain) super.clearChunkIfEmpty(chunk);
             }
 
             public clear(): void {
+                this.chunks.forEach((chunk: Chunk) => {
+                    chunk.getArrows().forEach((arrow) => {
+                        arrow.astIndex = null;
+                    });
+                });
                 super.clear();
-                this.rawGraph.clear();
+                if (this.isMain) this.rawGraph.clear();
             }
         };
     });

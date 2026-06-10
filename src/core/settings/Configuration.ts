@@ -7,7 +7,7 @@ export type ConfigurationData<R extends SettingsRegistry> = {
 };
 
 export class Configuration<R extends SettingsRegistry> {
-    private readonly registry: R;
+    public readonly registry: R;
     private readonly storageKey: string;
 
     public constructor(registry: R, storageKey = 'graphdlcv3-settings') {

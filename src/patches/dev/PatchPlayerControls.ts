@@ -2,14 +2,12 @@ import type { KeyboardHandler } from '@logic-arrows/controls/keyboard-handler';
 import type { MouseHandler } from '@logic-arrows/controls/mouse-handler';
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { ArrowData } from '@logic-arrows/game-logic/arrow-data';
-import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
 import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actions';
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { NodeSignal } from 'src/core/graph/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import type { IPatcher } from '../Patcher';
@@ -90,39 +88,10 @@ export const PatchPlayerControls: IPatcher = (
                         ) {
                             if (arrow.type === 21 || arrow.type === 24) {
                                 if (arrow.astIndex != null) {
-                                    const rawGraph =
-                                        _this.game.gameMap.rawGraph;
-                                    const astNode = rawGraph.getNode(
-                                        arrow.astIndex,
-                                    );
-                                    // TODO: Refactor this
-                                    const astState =
-                                        rawGraph.graphState.getNode(
-                                            astNode.nodeIdx,
-                                        );
-                                    astState.signal =
-                                        arrow.signal !== 0
-                                            ? NodeSignal.ACTIVE
-                                            : NodeSignal.NONE;
-                                    rawGraph.graphUpdater.markNodeAsChanged(
-                                        rawGraph.graphState,
-                                        astState,
-                                    );
-                                    rawGraph.graphState.changedNodes.push(
-                                        astState,
-                                    );
-                                }
-                                _this.game.screenUpdated = true;
-                                const [x, y]: [number, number] =
-                                    _this.getPositionByMousePosition();
-                                const chunk: Chunk | undefined =
-                                    _this.game.gameMap.getChunkByArrowCoordinates(
-                                        x,
-                                        y,
-                                    );
-                                if (chunk !== undefined) {
-                                    chunk.setUpdated();
-                                    chunk.markRenderDirty();
+                                    const engine =
+                                        _this.game.gameMap.rawGraph.engine;
+                                    const state = arrow.signal !== 0;
+                                    engine.doPressButton(arrow.astIndex, state);
                                 }
                             }
                         }
@@ -138,11 +107,9 @@ export const PatchPlayerControls: IPatcher = (
                             _this.keyboardHandler.getShiftPressed() &&
                             code === 'Enter'
                         ) {
-                            const rawGraph = _this.game.gameMap.rawGraph;
-                            rawGraph.stateRewinder.rewindSnapshot(
-                                rawGraph.graphUpdater,
-                                rawGraph.graphState,
-                                rawGraph.graphState.tick - 1,
+                            const engine = _this.game.gameMap.rawGraph.engine;
+                            engine.rewindToTick(
+                                Math.max(engine.getTick() - 1, 0),
                             );
                             return;
                         }

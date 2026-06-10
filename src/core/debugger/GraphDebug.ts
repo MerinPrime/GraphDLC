@@ -1,6 +1,6 @@
-import { CycleHeadType, type RawCycle } from '../graph/CycleTypes';
-import type { Graph } from '../graph/Graph';
-import type { GraphNode } from '../graph/GraphNode';
+import { CycleHeadType, type RawCycle } from '../graph/ast/CycleTypes';
+import type { Graph } from '../graph/ast/Graph';
+import type { GraphNode } from '../graph/ast/GraphNode';
 import {
     DebugMode,
     DebugModeSetting,

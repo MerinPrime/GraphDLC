@@ -1,158 +1,11 @@
 import { ArrowType } from 'src/core/utils/ArrowType';
-import { removeWithSwap } from 'src/core/utils/removeWithSwap';
-import { CycleHeadType, type RawCycle } from '../CycleTypes';
+import { CycleHeadType } from '../../ast/CycleTypes';
+import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
-import type { GraphNode } from '../GraphNode';
+import { NodeType } from '../core/NodeType';
 import type { RawGraphState, RawNodeState } from './RawState';
 
 export class RawGraphUpdater {
-    public onCycleBuild(graphState: RawGraphState, cycle: RawCycle) {
-        graphState.addCycle(cycle);
-        const cycleState = graphState.cycles[cycle.index];
-        if (!cycleState) return;
-
-        for (const node of cycle.nodes) {
-            const nodeState = graphState.getNode(node.nodeIdx);
-
-            if (nodeState.signal === NodeSignal.ACTIVE) {
-                cycleState.writeBit(graphState.tick, node.origCycleOffset);
-            }
-
-            nodeState.signal = NodeSignal.NONE;
-            nodeState.lastSignal = NodeSignal.NONE;
-            graphState.makeDirtyChunk(node.chunkIdx);
-        }
-
-        for (const node of cycle.nodes) {
-            const nodeState = graphState.getNode(node.nodeIdx);
-            const isHead =
-                node.headType !== CycleHeadType.NONE &&
-                node.headType !== CycleHeadType.READ;
-
-            if (!isHead) {
-                if (nodeState.isChanged) {
-                    removeWithSwap(graphState.changedNodes, nodeState);
-                    removeWithSwap(graphState.tempChangedNodes, nodeState);
-                    nodeState.isChanged = false;
-                }
-            } else {
-                this.markNodeAsChangedNonTemp(graphState, nodeState);
-                this.markNodeAsChanged(graphState, nodeState);
-            }
-        }
-
-        for (const headNode of cycle.heads) {
-            if (headNode.cycleRef === cycle) {
-                continue;
-            }
-
-            const nodeState = graphState.getNode(headNode.nodeIdx);
-            if (headNode.headType !== CycleHeadType.NONE) {
-                this.markNodeAsChangedNonTemp(graphState, nodeState);
-                this.markNodeAsChanged(graphState, nodeState);
-            }
-        }
-
-        const affectedNodes = new Set<GraphNode>();
-        for (const node of cycle.nodes) {
-            affectedNodes.add(node);
-            for (const next of node.next) {
-                affectedNodes.add(next);
-            }
-        }
-        for (const head of cycle.heads) {
-            affectedNodes.add(head);
-            for (const next of head.next) {
-                affectedNodes.add(next);
-            }
-        }
-
-        for (const affectedNode of affectedNodes) {
-            this.fullNodeStateCalculate(graphState, affectedNode);
-        }
-    }
-
-    public onCycleDismantle(graphState: RawGraphState, cycle: RawCycle) {
-        const cycleState = graphState.cycles[cycle.index];
-
-        for (const node of cycle.nodes) {
-            const nodeState = graphState.getNode(node.nodeIdx);
-
-            if (cycleState) {
-                const isActive = cycleState.getBit(
-                    graphState.tick,
-                    node.origCycleOffset,
-                );
-
-                if (isActive) {
-                    nodeState.signal = NodeSignal.ACTIVE;
-                    nodeState.lastSignal = nodeState.signal;
-                    graphState.makeDirtyChunk(node.chunkIdx);
-                } else {
-                    if (nodeState.signal !== NodeSignal.ACTIVE)
-                        nodeState.signal = NodeSignal.NONE;
-                    nodeState.lastSignal = nodeState.signal;
-                    graphState.makeDirtyChunk(node.chunkIdx);
-                }
-            }
-
-            nodeState.nodeInCycleOffset = 0;
-            nodeState.isUpdated = true;
-
-            this.markNodeAsChangedNonTemp(graphState, nodeState);
-            this.markNodeAsChanged(graphState, nodeState);
-        }
-
-        for (const node of cycle.nodes) {
-            node.isCycle = false;
-            node.cycleRef = null;
-            node.headType = CycleHeadType.NONE;
-            node.cycleOffset = 0;
-        }
-        for (const head of cycle.heads) {
-            head.ioCycle = null;
-            head.headType = CycleHeadType.NONE;
-            head.cycleOffset = 0;
-            const headState = graphState.getNode(head.nodeIdx);
-            if (headState) {
-                headState.nodeInCycleOffset = 0;
-            }
-        }
-
-        const affectedNodes = new Set<GraphNode>();
-        for (const node of cycle.nodes) {
-            affectedNodes.add(node);
-            for (const next of node.next) {
-                affectedNodes.add(next);
-            }
-        }
-        for (const head of cycle.heads) {
-            affectedNodes.add(head);
-            for (const next of head.next) {
-                affectedNodes.add(next);
-            }
-        }
-
-        for (const affectedNode of affectedNodes) {
-            this.fullNodeStateCalculate(graphState, affectedNode);
-        }
-        graphState.removeCycle(cycle);
-    }
-
-    public updateNodeChange(
-        graphState: RawGraphState,
-        node: GraphNode,
-        oldNext: GraphNode[],
-        newNext: GraphNode[],
-    ) {
-        const allNodes = new Set([...oldNext, ...newNext]);
-
-        this.fullNodeStateCalculate(graphState, node);
-        for (const edgeNode of allNodes) {
-            this.fullNodeStateCalculate(graphState, edgeNode);
-        }
-    }
-
     public fullNodeStateCalculate(graphState: RawGraphState, node: GraphNode) {
         const nodeState = graphState.getNode(node.nodeIdx);
         if (!nodeState) return;
@@ -378,27 +231,17 @@ export class RawGraphUpdater {
             );
             return cycleActive ? NodeSignal.ACTIVE : NodeSignal.NONE;
         }
-        switch (nodeState.node.type) {
-            case ArrowType.ARROW:
-            case ArrowType.SPLITTER_UP_DOWN:
-            case ArrowType.SPLITTER_UP_RIGHT:
-            case ArrowType.SPLITTER_UP_RIGHT_LEFT:
-            case ArrowType.BLUE_ARROW:
-            case ArrowType.DIAGONAL_ARROW:
-            case ArrowType.SPLITTER_UP_UP:
-            case ArrowType.SPLITTER_RIGHT_UP:
-            case ArrowType.SPLITTER_UP_DIAGONAL:
-            case ArrowType.LEVEL_SOURCE:
-            case ArrowType.LEVEL_TARGET:
-            case ArrowType.BLOCKER:
-            case ArrowType.DETECTOR:
-            case ArrowType.DIRECTIONAL_BUTTON:
+        switch (nodeState.type) {
+            case NodeType.PATH:
+            case NodeType.BLOCKER:
+            case NodeType.DETECTOR:
+            case NodeType.DIRECTIONAL_BUTTON:
                 return nodeState.signalsCount > 0
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
-            case ArrowType.SOURCE:
+            case NodeType.SOURCE:
                 return NodeSignal.ACTIVE;
-            case ArrowType.DELAY:
+            case NodeType.DELAY:
                 if (nodeState.signal === NodeSignal.PENDING) {
                     return NodeSignal.ACTIVE;
                 } else if (nodeState.signalsCount > 0) {
@@ -409,27 +252,27 @@ export class RawGraphUpdater {
                     return NodeSignal.NONE;
                 }
                 return NodeSignal.KEEP_SIGNAL;
-            case ArrowType.IMPULSE:
+            case NodeType.IMPULSE:
                 if (nodeState.signal === NodeSignal.NONE)
                     return NodeSignal.ACTIVE;
                 return NodeSignal.PENDING;
-            case ArrowType.LOGIC_NOT:
+            case NodeType.LOGIC_NOT:
                 return nodeState.signalsCount === 0
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
-            case ArrowType.LOGIC_AND:
+            case NodeType.LOGIC_AND:
                 return nodeState.signalsCount > 1
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
-            case ArrowType.LOGIC_XOR:
+            case NodeType.LOGIC_XOR:
                 return nodeState.signalsCount % 2 === 1
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
-            case ArrowType.LATCH:
+            case NodeType.LATCH:
                 if (nodeState.signalsCount > 1) return NodeSignal.ACTIVE;
                 else if (nodeState.signalsCount === 1) return NodeSignal.NONE;
                 return NodeSignal.KEEP_SIGNAL;
-            case ArrowType.FLIP_FLOP:
+            case NodeType.FLIP_FLOP:
                 if (nodeState.signalsCount > 0) {
                     if (nodeState.signal === NodeSignal.ACTIVE) {
                         return NodeSignal.NONE;
@@ -438,11 +281,11 @@ export class RawGraphUpdater {
                     }
                 }
                 return NodeSignal.KEEP_SIGNAL;
-            case ArrowType.RANDOM:
+            case NodeType.RANDOM:
                 return nodeState.signalsCount > 0 && Math.random() > 0.5
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
-            case ArrowType.BUTTON:
+            case NodeType.BUTTON:
                 return NodeSignal.NONE;
             default:
                 return NodeSignal.NONE;

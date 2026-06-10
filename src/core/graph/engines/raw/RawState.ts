@@ -1,8 +1,8 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { RawCycle } from '../CycleTypes';
+import type { RawCycle } from '../../ast/CycleTypes';
+import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
-import type { GraphNode } from '../GraphNode';
 import { RawCycleState } from './RawCycleState';
 import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
@@ -43,10 +43,6 @@ export class RawGraphState {
     public tick: number = 0;
     public breakPoint: boolean = false;
 
-    public getNode(nodeIdx: number): RawNodeState {
-        return this.nodes[nodeIdx];
-    }
-
     public clear() {
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;
@@ -55,6 +51,10 @@ export class RawGraphState {
         this.cycles.length = 0;
         this.tick = 0;
         this.breakPoint = false;
+    }
+
+    public getNode(nodeIdx: number): RawNodeState {
+        return this.nodes[nodeIdx];
     }
 
     public updateNode(node: GraphNode) {
@@ -69,6 +69,8 @@ export class RawGraphState {
         );
         nodeState.lastSignal = 0;
         nodeState.signal = 0;
+
+        nodeState.nodeInCycleOffset = node.cycleOffset;
 
         this.changedNodes.push(nodeState);
     }

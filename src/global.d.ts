@@ -1,6 +1,6 @@
 import type { Arrow as OriginalArrow } from '@logic-arrows/game-logic/arrow';
 import type { GraphDLC } from './core/GraphDLC';
-import type { Graph } from './core/graph/Graph';
+import type { Graph } from './core/graph/ast/Graph';
 
 declare global {
     interface Window {
@@ -40,6 +40,14 @@ declare module '@logic-arrows/game-logic/arrow' {
 declare module '@logic-arrows/game-logic/game-map' {
     export interface GameMap {
         rawGraph: Graph;
+        isMain: boolean;
+
+        updateArrowState(
+            arrow: Arrow,
+            chunk: Chunk,
+            chunkX: number,
+            chunkY: number,
+        );
     }
 }
 

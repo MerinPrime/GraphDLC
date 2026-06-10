@@ -6,12 +6,12 @@ import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
+import type { IEngine } from '../engines/core/types';
+import { RawEngine } from '../engines/raw/RawEngine';
+import type { RawGraphState } from '../engines/raw/RawState';
 import { CycleManager } from './CycleManager';
-import { CycleHeadType, type RawCycle } from './CycleTypes';
+import type { RawCycle } from './CycleTypes';
 import { GraphNode } from './GraphNode';
-import { StateRewinder } from './StateRewinder';
-import { RawGraphState } from './updater/RawState';
-import { RawGraphUpdater } from './updater/RawUpdater';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -19,28 +19,24 @@ interface PrivateGameMap {
 
 export class Graph {
     private gameMap: GameMap;
-    private nodes: GraphNode[];
-    private chunks: Chunk[];
-    public cycles: (RawCycle | null)[];
-    private freeCycleIndices: number[];
+    private nodes: GraphNode[] = [];
+    private chunks: Chunk[] = [];
+    private cycles: (RawCycle | null)[] = [];
+    private freeCycleIndices: number[] = [];
 
-    public graphState: RawGraphState;
-    public stateRewinder: StateRewinder;
-    public graphUpdater: RawGraphUpdater;
+    private readonly cycleManager: CycleManager = new CycleManager();
+
     // TODO: Incapsulate graph updater to game engine for ast engine, soa engine, rust engine
-    public cycleManager: CycleManager;
+    public graphState: RawGraphState;
+
+    public engine: IEngine;
 
     public constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
-        this.nodes = [];
-        this.chunks = [];
-        this.cycles = [];
-        this.freeCycleIndices = [];
 
-        this.graphState = new RawGraphState();
-        this.graphUpdater = new RawGraphUpdater();
-        this.cycleManager = new CycleManager(this);
-        this.stateRewinder = new StateRewinder();
+        this.engine = new RawEngine();
+
+        this.graphState = (this.engine as any).state;
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
@@ -51,60 +47,13 @@ export class Graph {
         return this.chunks;
     }
 
-    public addCycle(nodes: GraphNode[]): RawCycle {
-        let index: number;
-        const freeIndex = this.freeCycleIndices.pop();
-        if (freeIndex !== undefined) {
-            index = freeIndex;
-        } else {
-            index = this.cycles.length;
-        }
-
-        const cycle: RawCycle = {
-            index,
-            nodes,
-            heads: [],
-        };
-        this.cycles[index] = cycle;
-
-        for (const n of nodes) {
-            n.isCycle = true;
-            n.cycleRef = cycle;
-        }
-
-        this.cycleManager.refreshCycleIO(cycle);
-        cycle.nodes.forEach((node) => {
-            this.graphState.updateNode(node);
+    public markCyclesChunksDirty() {
+        this.cycles.forEach((cycle) => {
+            if (cycle === null) return;
+            cycle.nodes.forEach((node) => {
+                this.graphState.makeDirtyChunk(node.chunkIdx);
+            });
         });
-        cycle.heads.forEach((head) => {
-            this.graphState.updateNode(head);
-        });
-        this.graphUpdater.onCycleBuild(this.graphState, cycle);
-
-        return cycle;
-    }
-
-    public removeCycle(cycle: RawCycle) {
-        this.graphUpdater.onCycleDismantle(this.graphState, cycle);
-
-        for (const node of cycle.nodes) {
-            node.isCycle = false;
-            node.cycleRef = null;
-            node.headType = CycleHeadType.NONE;
-            node.cycleOffset = 0;
-            this.graphState.updateNode(node);
-        }
-
-        cycle.heads.forEach((head) => {
-            this.cycleManager.resetHead(head);
-            this.graphState.updateNode(head);
-        });
-
-        if (this.cycles[cycle.index] === cycle) {
-            this.cycles[cycle.index] = null;
-            this.graphState.cycles[cycle.index] = null;
-            this.freeCycleIndices.push(cycle.index);
-        }
     }
 
     public getNodes(): readonly GraphNode[] {
@@ -207,12 +156,7 @@ export class Graph {
             }
         }
 
-        this.graphUpdater.updateNodeChange(
-            this.graphState,
-            node,
-            oldNextFull,
-            node.next,
-        );
+        this.engine.updateNodeChange(node, oldNextFull, node.next);
     }
 
     public getOrCreateNode(
@@ -332,13 +276,13 @@ export class Graph {
         node.setFlipped(flipped);
         this.graphState.updateNode(node);
         this.updateNodeRelations(node);
-        if (oldType !== node.type) this.cycleManager.onChangeType(node);
+        if (oldType !== node.type) this.cycleManager.onChangeType(this, node);
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
         node.setType(type);
         this.updateNodeRelations(node);
-        this.cycleManager.onChangeType(node);
+        this.cycleManager.onChangeType(this, node);
         this.graphState.updateNode(node);
     }
 
@@ -356,13 +300,67 @@ export class Graph {
 
     private addNodeNext(node: GraphNode, nextNode: GraphNode) {
         node.addNext(nextNode);
-        this.cycleManager.onAddNext(node, nextNode);
+        this.cycleManager.onAddNext(this, node, nextNode);
         this.graphState.updateNode(node);
     }
 
     private removeNodeNext(node: GraphNode, nextNode: GraphNode) {
         node.removeNext(nextNode);
-        this.cycleManager.onRemoveNext(node, nextNode);
+        this.cycleManager.onRemoveNext(this, node, nextNode);
         this.graphState.updateNode(node);
+    }
+
+    public addCycle(nodes: GraphNode[]): RawCycle {
+        const index = this.allocateCycleIndex();
+
+        const cycle: RawCycle = {
+            index,
+            nodes,
+            heads: [],
+        };
+        this.cycles[index] = cycle;
+
+        this.cycleManager.attachNodesToCycle(cycle, nodes);
+
+        this.syncNodesAndHeadsState(cycle.nodes, cycle.heads);
+
+        this.engine.onCycleBuild(cycle);
+
+        return cycle;
+    }
+
+    public removeCycle(cycle: RawCycle) {
+        this.engine.onCycleDismantle(cycle);
+
+        const affectedNodes = [...cycle.nodes];
+        const affectedHeads = [...cycle.heads];
+
+        this.cycleManager.detachNodesFromCycle(cycle);
+
+        this.syncNodesAndHeadsState(affectedNodes, affectedHeads);
+
+        this.reclaimCycleIndex(cycle.index);
+    }
+
+    private allocateCycleIndex(): number {
+        const freeIndex = this.freeCycleIndices.pop();
+        return freeIndex !== undefined ? freeIndex : this.cycles.length;
+    }
+
+    private reclaimCycleIndex(index: number) {
+        if (this.cycles[index] !== null) {
+            this.cycles[index] = null;
+            this.graphState.cycles[index] = null;
+            this.freeCycleIndices.push(index);
+        }
+    }
+
+    private syncNodesAndHeadsState(nodes: GraphNode[], heads: GraphNode[]) {
+        for (const node of nodes) {
+            this.graphState.updateNode(node);
+        }
+        for (const head of heads) {
+            this.graphState.updateNode(head);
+        }
     }
 }

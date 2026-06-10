@@ -3,6 +3,8 @@ import { CycleHeadType, type RawCycle } from './CycleTypes';
 import type { Graph } from './Graph';
 import type { GraphNode } from './GraphNode';
 
+// TODO: maybe async cycle finding?
+
 const ALLOWED_IN_CYCLE = new Set([
     ArrowType.ARROW,
     ArrowType.SPLITTER_UP_DOWN,
@@ -21,20 +23,10 @@ function canBeInCycle(node: GraphNode): boolean {
 }
 
 export class CycleManager {
-    private graph: Graph;
-
-    public constructor(graph: Graph) {
-        this.graph = graph;
-    }
-
     public resetHead(head: GraphNode) {
         head.ioCycle = null;
         head.headType = CycleHeadType.NONE;
         head.cycleOffset = 0;
-        const headState = this.graph.graphState.getNode(head.nodeIdx);
-        if (headState) {
-            headState.nodeInCycleOffset = 0;
-        }
     }
 
     private assignCycleHead(
@@ -46,18 +38,13 @@ export class CycleManager {
         headNode.ioCycle = cycle;
         headNode.headType = headType;
         headNode.cycleOffset = offset;
-
-        const headState = this.graph.graphState.getNode(headNode.nodeIdx);
-        if (headState) {
-            headState.nodeInCycleOffset = offset;
-        }
         cycle.heads.push(headNode);
     }
 
-    private validateOrDismantle(cycle: RawCycle | null) {
+    private validateOrDismantle(graph: Graph, cycle: RawCycle | null) {
         if (!cycle) return;
         if (!this.isValidCycle(cycle.nodes)) {
-            this.graph.removeCycle(cycle);
+            graph.removeCycle(cycle);
         } else {
             this.refreshCycleIO(cycle);
         }
@@ -82,11 +69,6 @@ export class CycleManager {
             const node = cycle.nodes[cycleLen - i - 1];
             node.cycleOffset = i;
             node.origCycleOffset = i;
-
-            const nodeState = this.graph.graphState.getNode(node.nodeIdx);
-            if (nodeState) {
-                nodeState.nodeInCycleOffset = i;
-            }
 
             for (const nextNode of node.next) {
                 if (
@@ -119,23 +101,23 @@ export class CycleManager {
         }
     }
 
-    public tryRebuildCycle(startNode: GraphNode) {
+    public tryRebuildCycle(graph: Graph, startNode: GraphNode) {
         if (startNode.cycleRef !== null || !canBeInCycle(startNode)) {
             return;
         }
 
         const cyclePath = this.findCyclePath(startNode, startNode);
         if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-            this.graph.addCycle(cyclePath);
+            graph.addCycle(cyclePath);
         }
     }
 
-    public reevaluateParentCycles(node: GraphNode) {
+    public reevaluateParentCycles(graph: Graph, node: GraphNode) {
         for (const parent of node.previous) {
-            this.validateOrDismantle(parent.cycleRef);
+            this.validateOrDismantle(graph, parent.cycleRef);
 
             if (parent.cycleRef === null) {
-                this.tryRebuildCycle(parent);
+                this.tryRebuildCycle(graph, parent);
             }
         }
     }
@@ -290,20 +272,20 @@ export class CycleManager {
         }
     }
 
-    public onAddNext(node: GraphNode, target: GraphNode) {
+    public onAddNext(graph: Graph, node: GraphNode, target: GraphNode) {
         if (canBeInCycle(node) && canBeInCycle(target)) {
             const cyclePath = this.findCyclePath(target, node);
 
             if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                this.graph.addCycle(cyclePath);
+                graph.addCycle(cyclePath);
                 return;
             }
         }
 
-        this.validateOrDismantle(node.cycleRef);
+        this.validateOrDismantle(graph, node.cycleRef);
 
         if (target.cycleRef !== node.cycleRef) {
-            this.validateOrDismantle(target.cycleRef);
+            this.validateOrDismantle(graph, target.cycleRef);
         }
 
         const refreshExternalCycle = (ref: RawCycle | null) => {
@@ -319,19 +301,19 @@ export class CycleManager {
             refreshExternalCycle(next.cycleRef);
         }
 
-        this.tryRebuildCycle(node);
-        this.tryRebuildCycle(target);
+        this.tryRebuildCycle(graph, node);
+        this.tryRebuildCycle(graph, target);
     }
 
-    public onRemoveNext(node: GraphNode, target: GraphNode) {
+    public onRemoveNext(graph: Graph, node: GraphNode, target: GraphNode) {
         if (node.cycleRef !== null && target.cycleRef === node.cycleRef) {
-            this.graph.removeCycle(node.cycleRef);
+            graph.removeCycle(node.cycleRef);
         }
 
-        this.reevaluateParentCycles(node);
+        this.reevaluateParentCycles(graph, node);
 
-        this.tryRebuildCycle(node);
-        this.tryRebuildCycle(target);
+        this.tryRebuildCycle(graph, node);
+        this.tryRebuildCycle(graph, target);
 
         this.updateCycleStatusIfActive(node);
         this.updateCycleStatusIfActive(target);
@@ -344,16 +326,16 @@ export class CycleManager {
         }
     }
 
-    public onClearNext(node: GraphNode, oldNext: GraphNode[]) {
+    public onClearNext(graph: Graph, node: GraphNode, oldNext: GraphNode[]) {
         if (node.cycleRef !== null) {
-            this.graph.removeCycle(node.cycleRef);
+            graph.removeCycle(node.cycleRef);
         }
 
-        this.reevaluateParentCycles(node);
+        this.reevaluateParentCycles(graph, node);
 
-        this.tryRebuildCycle(node);
+        this.tryRebuildCycle(graph, node);
         for (const oldNode of oldNext) {
-            this.tryRebuildCycle(oldNode);
+            this.tryRebuildCycle(graph, oldNode);
         }
 
         this.updateCycleStatusIfActive(node);
@@ -374,13 +356,13 @@ export class CycleManager {
         }
     }
 
-    public onChangeType(node: GraphNode) {
+    public onChangeType(graph: Graph, node: GraphNode) {
         if (node.cycleRef !== null) {
             if (
                 !canBeInCycle(node) ||
                 !this.isValidCycle(node.cycleRef.nodes)
             ) {
-                this.graph.removeCycle(node.cycleRef);
+                graph.removeCycle(node.cycleRef);
             } else {
                 this.refreshCycleIO(node.cycleRef);
             }
@@ -390,20 +372,20 @@ export class CycleManager {
             this.refreshCycleIO(node.ioCycle);
         }
 
-        this.reevaluateParentCycles(node);
+        this.reevaluateParentCycles(graph, node);
 
         for (const next of node.next) {
             if (next.cycleRef !== null && next.cycleRef !== node.cycleRef) {
-                this.validateOrDismantle(next.cycleRef);
+                this.validateOrDismantle(graph, next.cycleRef);
             }
         }
 
-        this.tryRebuildCycle(node);
+        this.tryRebuildCycle(graph, node);
         for (const prev of node.previous) {
-            this.tryRebuildCycle(prev);
+            this.tryRebuildCycle(graph, prev);
         }
         for (const next of node.next) {
-            this.tryRebuildCycle(next);
+            this.tryRebuildCycle(graph, next);
         }
 
         this.updateCycleStatusIfActive(node);
@@ -412,6 +394,27 @@ export class CycleManager {
         }
         for (const next of node.next) {
             this.updateCycleStatusIfActive(next);
+        }
+    }
+
+    public attachNodesToCycle(cycle: RawCycle, nodes: GraphNode[]) {
+        for (const node of nodes) {
+            node.isCycle = true;
+            node.cycleRef = cycle;
+        }
+        this.refreshCycleIO(cycle);
+    }
+
+    public detachNodesFromCycle(cycle: RawCycle) {
+        for (const node of cycle.nodes) {
+            node.isCycle = false;
+            node.cycleRef = null;
+            node.headType = CycleHeadType.NONE;
+            node.cycleOffset = 0;
+        }
+
+        for (const head of cycle.heads) {
+            this.resetHead(head);
         }
     }
 }

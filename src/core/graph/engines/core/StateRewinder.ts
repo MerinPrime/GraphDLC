@@ -1,21 +1,22 @@
-import type { RawSnapshot } from './updater/RawSnapshot';
-import type { RawGraphState } from './updater/RawState';
-import type { RawGraphUpdater } from './updater/RawUpdater';
+import type { ISnapshot } from './types';
 
-interface Tier {
+interface Tier<TSnapshot extends ISnapshot> {
     level: number;
     interval: number;
-    snapshots: RawSnapshot[];
+    snapshots: TSnapshot[];
 }
 
-export class StateRewinder {
-    private tiers: Tier[] = [];
+export class StateRewinder<TSnapshot extends ISnapshot> {
+    private tiers: Tier<TSnapshot>[] = [];
 
-    public static readonly SNAPSHOT_INTERVAL: number = 1000;
     public static readonly SNAPSHOTS_PER_TIER: number = 10;
     public static readonly MAX_LEVELS: number = 5;
 
-    public constructor() {
+    public readonly interval: number;
+
+    public constructor(interval: number) {
+        this.interval = interval;
+
         this.initTiers();
     }
 
@@ -24,47 +25,23 @@ export class StateRewinder {
         for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
             this.tiers.push({
                 level: l,
-                interval: StateRewinder.SNAPSHOT_INTERVAL * 2 ** l,
+                interval: this.interval * 2 ** l,
                 snapshots: [],
             });
         }
     }
 
-    public saveSnapshot(graphState: RawGraphState) {
-        const tick = graphState.tick;
+    public saveSnapshot(snapshot: TSnapshot) {
+        const tick = snapshot.tick;
 
-        if (tick % StateRewinder.SNAPSHOT_INTERVAL !== 0) {
+        if (tick % this.interval !== 0) {
             return;
         }
 
-        this.addSnapshotToTier(0, graphState.makeSnapshot());
+        this.addSnapshotToTier(0, snapshot);
     }
 
-    public rewindSnapshot(
-        graphUpdater: RawGraphUpdater,
-        graphState: RawGraphState,
-        targetTick: number,
-    ): boolean {
-        const closestSnapshot = this.findClosestSnapshot(targetTick);
-        if (!closestSnapshot) {
-            return false;
-        }
-
-        const stepsToSimulate = targetTick - closestSnapshot.tick;
-        if (stepsToSimulate > 1000000) {
-            this.reset();
-            return false;
-        }
-
-        graphState.loadSnapshot(closestSnapshot);
-        for (let i = 0; i < stepsToSimulate; i++) {
-            graphUpdater.updateState(graphState);
-        }
-
-        return true;
-    }
-
-    private addSnapshotToTier(level: number, snapshot: RawSnapshot) {
+    private addSnapshotToTier(level: number, snapshot: TSnapshot) {
         if (level >= StateRewinder.MAX_LEVELS) {
             return;
         }
@@ -89,8 +66,8 @@ export class StateRewinder {
         }
     }
 
-    private findClosestSnapshot(targetTick: number): RawSnapshot | null {
-        let bestMatch: RawSnapshot | null = null;
+    public findClosestSnapshot(targetTick: number): TSnapshot | null {
+        let bestMatch: TSnapshot | null = null;
 
         for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
             const snapshots = this.tiers[l].snapshots;

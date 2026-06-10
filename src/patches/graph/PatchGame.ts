@@ -5,7 +5,7 @@ import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { UIPauseSign } from '@logic-arrows/ui/components/ui-pause-sign';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { NodeSignal } from 'src/core/graph/core/NodeSignal';
+import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/other/EnableArrowRelationsSetting';
@@ -20,7 +20,7 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import type { IPatcher } from '../Patcher';
 
 interface PrivateGame {
-    readonly gameMap: GameMap;
+    gameMap: GameMap;
     readonly render: GameRender;
 
     updateTime: number;
@@ -40,6 +40,12 @@ export const PatchGame: IPatcher = (
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public path: PathStep[] | null = null;
+
+            public constructor(canvas: HTMLCanvasElement) {
+                super(canvas);
+                const _this = this as any as PrivateGame;
+                _this.gameMap.isMain = true;
+            }
 
             public getArrowAtCursor(): Arrow | undefined {
                 return this.gameMap.getArrow(
@@ -207,14 +213,16 @@ export const PatchGame: IPatcher = (
                     Math.floor(-this.offset[0] / CELL_SIZE / CHUNK_SIZE) - 1;
                 const minY =
                     Math.floor(-this.offset[1] / CELL_SIZE / CHUNK_SIZE) - 1;
-                const maxX = Math.floor(
-                    -this.offset[0] / CELL_SIZE / CHUNK_SIZE +
-                        this.width / this.scale / CHUNK_SIZE,
-                );
-                const maxY = Math.floor(
-                    -this.offset[1] / CELL_SIZE / CHUNK_SIZE +
-                        this.height / this.scale / CHUNK_SIZE,
-                );
+                const maxX =
+                    Math.floor(
+                        -this.offset[0] / CELL_SIZE / CHUNK_SIZE +
+                            this.width / this.scale / CHUNK_SIZE,
+                    ) + CHUNK_SIZE;
+                const maxY =
+                    Math.floor(
+                        -this.offset[1] / CELL_SIZE / CHUNK_SIZE +
+                            this.height / this.scale / CHUNK_SIZE,
+                    ) + CHUNK_SIZE;
 
                 return new Bounds(
                     minX * CHUNK_SIZE,
@@ -232,12 +240,7 @@ export const PatchGame: IPatcher = (
 
                 const bounds = this.getViewportBounds();
 
-                rawGraph.cycles.forEach((cycle) => {
-                    if (cycle === null) return;
-                    cycle.nodes.forEach((node) => {
-                        graphState.makeDirtyChunk(node.chunkIdx);
-                    });
-                });
+                rawGraph.markCyclesChunksDirty();
 
                 const dirtyChunksIdx = graphState.getDirtyChunks(false);
                 dirtyChunksIdx.forEach((dirtyChunkIdx) => {
