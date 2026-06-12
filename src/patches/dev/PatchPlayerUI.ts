@@ -17,11 +17,16 @@ export const PatchPlayerUI: IPatcher = (
     patchLoader.addDefinitionPatch('PlayerUI', (_module: typeof PlayerUI) => {
         return class PlayerUI extends _module {
             public addSpeedController() {
+                const hasPause = PLATFORM === 'mobile';
                 this.speedController = new _UISpeedController.def(
                     document.body,
                     9,
-                    PLATFORM === 'mobile',
+                    hasPause,
                     (e: number) => {
+                        if (hasPause) {
+                            if (e === 0) return 'Pause';
+                            e -= 1;
+                        }
                         const TPS_LIMITS = [
                             '3',
                             '12',
@@ -34,6 +39,13 @@ export const PatchPlayerUI: IPatcher = (
                             'MAX',
                         ];
                         return `${TPS_LIMITS[e]} TPS`;
+                    },
+                    (value: number) => {
+                        if (PLATFORM === 'mobile') {
+                            if (value === 0) return 'pause';
+                            value--;
+                        }
+                        return '';
                     },
                 );
             }
