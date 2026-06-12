@@ -1,5 +1,8 @@
 // @ts-nocheck
 // biome-ignore-all lint: old graphdlc
+import { LangSettings } from '@logic-arrows/lang/lang-settings';
+import type { LangType } from '@logic-arrows/lang/lang-type';
+import { LangUtils } from '@logic-arrows/lang/lang-utils';
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
 
@@ -2832,6 +2835,11 @@ if (localStorage.getItem('arrows:selectedBundleId') === '1_2_1') {
         R.inject(), (window.graphdlc = R);
     })();
 } else {
+    const lang: string | null = localStorage.getItem('lang');
+    if (lang !== null) {
+        LangSettings.setLanguage(LangUtils.getLanguageFromString(lang));
+    }
+
     const patchLoader = new PatchLoader();
     patchLoader.hook();
     const graphDLC = new GraphDLC(patchLoader);
