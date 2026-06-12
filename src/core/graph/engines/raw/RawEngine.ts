@@ -38,6 +38,12 @@ export class RawEngine implements IEngine {
         this.updater.updateState(this.state);
     }
 
+    public runManyTicks(ticksCount: number): void {
+        for (let i = 0; i < ticksCount; i++) {
+            this.runTick();
+        }
+    }
+
     public rewindToTick(targetTick: number): void {
         const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
         if (!closestSnapshot) {

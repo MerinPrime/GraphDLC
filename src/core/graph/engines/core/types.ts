@@ -7,7 +7,7 @@ export interface ISnapshot {
 
 export interface IEngine {
     runTick(): void;
-    // runMaxTPS(): void;
+    runManyTicks(ticksCount: number): void;
     rewindToTick(targetTick: number): void;
 
     getTick(): number;

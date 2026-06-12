@@ -25,6 +25,7 @@ interface PrivateGame {
 
     updateTime: number;
     tps: number;
+    tick: number;
     updatesPerSecond: number;
 }
 
@@ -36,6 +37,8 @@ export const PatchGame: IPatcher = (
     let lastUpdateTime = -1;
     let accumulator = 0;
     let previousSpeed = 0;
+
+    let adaptiveBatchSize = 100;
 
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
@@ -320,7 +323,7 @@ export const PatchGame: IPatcher = (
                 renderDelta = renderEnd - renderStart;
             }
 
-            public updateFrame(e = () => {}) {
+            public updateFrame(payload = () => {}) {
                 const _this = this as any as PrivateGame;
 
                 if (!this.playing) {
@@ -372,24 +375,75 @@ export const PatchGame: IPatcher = (
                     this.gameMap.rawGraph.graphState.changedNodes.length !== 0
                 ) {
                     if (isMaxTPS) {
+                        const frameBudget = 1000 / TargetFPSSetting.value;
+
+                        const browserOverhead = Math.max(4, frameBudget * 0.12);
+
                         const timeLimit =
                             performance.now() +
-                            1000 / TargetFPSSetting.value -
-                            Math.min(
-                                renderDelta,
-                                1000 / TargetFPSSetting.value / 2,
+                            frameBudget -
+                            Math.min(renderDelta, frameBudget / 2) -
+                            browserOverhead;
+
+                        let currentTime = performance.now();
+
+                        while (currentTime < timeLimit - 0.5) {
+                            const remainingTime = timeLimit - currentTime;
+
+                            const currentBatch = Math.max(
+                                5,
+                                Math.min(adaptiveBatchSize, 100000),
                             );
-                        do {
-                            this.updateTick(e);
-                            _this.updatesPerSecond++;
-                        } while (performance.now() < timeLimit);
+
+                            const startBatch = performance.now();
+
+                            payload();
+                            this.gameMap.rawGraph.engine.runManyTicks(
+                                currentBatch,
+                            );
+
+                            const endBatch = performance.now();
+                            const elapsed = endBatch - startBatch;
+
+                            _this.tick += currentBatch;
+                            _this.updatesPerSecond += currentBatch;
+                            currentTime = endBatch;
+
+                            if (elapsed > 0.5) {
+                                const singleTickDuration =
+                                    elapsed / currentBatch;
+
+                                const predictedTicks = Math.floor(
+                                    (remainingTime * 0.8) / singleTickDuration,
+                                );
+
+                                const maxGrowth = currentBatch * 1.5;
+                                adaptiveBatchSize = Math.floor(
+                                    Math.max(
+                                        5,
+                                        Math.min(predictedTicks, maxGrowth),
+                                    ),
+                                );
+                            } else {
+                                adaptiveBatchSize = Math.floor(
+                                    Math.max(
+                                        5,
+                                        Math.min(
+                                            adaptiveBatchSize * 1.5,
+                                            100000,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+
                         accumulator = 0;
                     } else {
                         while (accumulator >= skip) {
-                            for (let i = 0; i < ticks; i++) {
-                                this.updateTick(e);
-                                _this.updatesPerSecond++;
-                            }
+                            payload();
+                            this.gameMap.rawGraph.engine.runManyTicks(ticks);
+                            _this.tick += ticks;
+                            _this.updatesPerSecond += ticks;
                             accumulator -= skip;
                         }
                     }

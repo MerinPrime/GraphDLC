@@ -25,3 +25,4 @@ export const EnableSnapshotsSetting = new BoolSetting('EnableSnapshots', true, {
     group: PerformanceSettingGroup,
     order: 2,
 });
+// TODO: add interval setting
