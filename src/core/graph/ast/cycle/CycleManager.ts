@@ -4,16 +4,17 @@ import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
 import { CycleHeadType, type GraphCycle } from '../CycleTypes';
 import type { Graph } from '../Graph';
 import type { GraphNode } from '../GraphNode';
+import type { IGraphListener } from '../IGraphListener';
 import { CycleSearchTask } from './CycleSearchTask';
 import { canBeInCycle } from './utils';
 
-export class CycleManager {
+export class CycleManager implements IGraphListener {
     private readonly scheduler = new AsyncScheduler(
         () => CycleBudgetSetting.value,
     );
 
     public resetHead(head: GraphNode) {
-        head.ioCycle = null;
+        head.cycleRef = null;
         head.headType = CycleHeadType.NONE;
         head.cycleOffset = 0;
     }
@@ -24,7 +25,7 @@ export class CycleManager {
         headType: CycleHeadType,
         offset: number,
     ) {
-        headNode.ioCycle = cycle;
+        headNode.cycleRef = cycle;
         headNode.headType = headType;
         headNode.cycleOffset = offset;
         cycle.heads.push(headNode);
@@ -57,15 +58,14 @@ export class CycleManager {
         for (let i = 0; i < cycleLen; i++) {
             const node = cycle.nodes[cycleLen - i - 1];
             node.cycleOffset = i;
-            node.origCycleOffset = i;
 
-            for (const nextNode of node.next) {
+            for (const linkedNode of node.links) {
                 if (
-                    nextNode.type === ArrowType.LOGIC_AND &&
-                    !cycleSet.has(nextNode)
+                    linkedNode.type === ArrowType.LOGIC_AND &&
+                    !cycleSet.has(linkedNode)
                 ) {
                     this.assignCycleHead(
-                        nextNode,
+                        linkedNode,
                         cycle,
                         CycleHeadType.READ,
                         i,
@@ -73,18 +73,23 @@ export class CycleManager {
                 }
             }
 
-            for (const prevNode of node.previous) {
-                if (!cycleSet.has(prevNode)) {
+            for (const backLinkedNode of node.backLinks) {
+                if (!cycleSet.has(backLinkedNode)) {
                     const offset = (i + 1) % cycleLen;
                     let headType = CycleHeadType.WRITE;
 
-                    if (prevNode.type === ArrowType.BLOCKER) {
+                    if (backLinkedNode.type === ArrowType.BLOCKER) {
                         headType = CycleHeadType.CLEAR;
                     } else if (node.type === ArrowType.LOGIC_XOR) {
                         headType = CycleHeadType.XOR_WRITE;
                     }
 
-                    this.assignCycleHead(prevNode, cycle, headType, offset);
+                    this.assignCycleHead(
+                        backLinkedNode,
+                        cycle,
+                        headType,
+                        offset,
+                    );
                 }
             }
         }
@@ -118,7 +123,7 @@ export class CycleManager {
     }
 
     public reevaluateParentCycles(graph: Graph, node: GraphNode) {
-        for (const parent of node.previous) {
+        for (const parent of node.backLinks) {
             this.validateOrDismantle(graph, parent.cycleRef);
 
             if (parent.cycleRef === null) {
@@ -135,25 +140,24 @@ export class CycleManager {
             const cycleNode = cyclePath[i];
             const nextCycleNode = cyclePath[(i + 1) % pathLen];
 
-            const hasExternalNext = cycleNode.next.some(
+            const hasExternalLinks = cycleNode.links.some(
                 (neighbor) =>
                     !cycleSet.has(neighbor) &&
                     neighbor.type !== ArrowType.EMPTY,
             );
 
-            if (hasExternalNext) {
-                const hasExternalPreviousInNextNode =
-                    nextCycleNode.previous.some(
-                        (neighbor) => !cycleSet.has(neighbor),
-                    );
+            if (hasExternalLinks) {
+                const hasExternalPreviousInLink = nextCycleNode.backLinks.some(
+                    (neighbor) => !cycleSet.has(neighbor),
+                );
 
-                if (hasExternalPreviousInNextNode) {
+                if (hasExternalPreviousInLink) {
                     return false;
                 }
             }
 
-            let moreThanOneNext = false;
-            for (const neighbor of cycleNode.next) {
+            let hasReadLink = false;
+            for (const neighbor of cycleNode.links) {
                 if (!cycleSet.has(neighbor)) {
                     if (
                         neighbor.type !== ArrowType.EMPTY &&
@@ -162,15 +166,15 @@ export class CycleManager {
                         return false;
                     }
                 } else {
-                    if (moreThanOneNext) return false;
-                    moreThanOneNext = true;
+                    if (hasReadLink) return false;
+                    hasReadLink = true;
                 }
             }
 
-            let moreThanOneWrite = false;
-            for (const neighbor of cycleNode.previous) {
+            let hasWriteLink = false;
+            for (const neighbor of cycleNode.backLinks) {
                 if (!cycleSet.has(neighbor)) {
-                    if (neighbor.next.length !== 1) return false;
+                    if (neighbor.links.length !== 1) return false;
 
                     const isInvalidEntryPoint =
                         IsArrowEntryPoint(neighbor.type) ||
@@ -180,8 +184,8 @@ export class CycleManager {
                         neighbor.type === ArrowType.FLIP_FLOP;
 
                     if (isInvalidEntryPoint) return false;
-                    if (moreThanOneWrite) return false;
-                    moreThanOneWrite = true;
+                    if (hasWriteLink) return false;
+                    hasWriteLink = true;
                 }
             }
         }
@@ -199,7 +203,7 @@ export class CycleManager {
         const parentMap = new Map<GraphNode, GraphNode>();
 
         if (startNode === targetNode) {
-            for (const child of startNode.next) {
+            for (const child of startNode.links) {
                 if (canBeInCycle(child)) {
                     queue.push(child);
                     visited.add(child);
@@ -214,7 +218,7 @@ export class CycleManager {
         while (head < queue.length) {
             const current = queue[head++];
 
-            for (const child of current.next) {
+            for (const child of current.links) {
                 if (child === targetNode) {
                     const path: GraphNode[] = [targetNode];
                     let curr: GraphNode | undefined = current;
@@ -266,19 +270,21 @@ export class CycleManager {
                             if (!neighborStillInCycle) {
                                 neighbor.isCycle = false;
                                 neighbor.cycleRef = null;
+                                neighbor.headType = CycleHeadType.NONE;
+                                neighbor.cycleOffset = 0;
                                 queue.push(neighbor);
                             }
                         }
                     }
                 };
 
-                checkNeighbors(current.next);
-                checkNeighbors(current.previous);
+                checkNeighbors(current.links);
+                checkNeighbors(current.backLinks);
             }
         }
     }
 
-    public onAddNext(graph: Graph, node: GraphNode, target: GraphNode) {
+    public onLinkAdded(graph: Graph, node: GraphNode, target: GraphNode) {
         if (canBeInCycle(node) && canBeInCycle(target)) {
             const budget = CycleBudgetSetting.value;
             if (budget === 0) {
@@ -314,10 +320,10 @@ export class CycleManager {
             }
         };
 
-        for (const prev of node.previous) {
+        for (const prev of node.backLinks) {
             refreshExternalCycle(prev.cycleRef);
         }
-        for (const next of target.next) {
+        for (const next of target.links) {
             refreshExternalCycle(next.cycleRef);
         }
 
@@ -325,71 +331,43 @@ export class CycleManager {
         this.tryRebuildCycle(graph, target);
     }
 
-    public onRemoveNext(graph: Graph, node: GraphNode, target: GraphNode) {
-        this.scheduler.cancel(node);
-        this.scheduler.cancel(target);
+    public onLinkRemoved(
+        graph: Graph,
+        fromNode: GraphNode,
+        toNode: GraphNode,
+    ): void {
+        this.scheduler.cancel(fromNode);
+        this.scheduler.cancel(toNode);
 
-        if (node.cycleRef !== null && target.cycleRef === node.cycleRef) {
-            graph.removeCycle(node.cycleRef);
+        if (
+            fromNode.cycleRef !== null &&
+            toNode.cycleRef === fromNode.cycleRef
+        ) {
+            graph.removeCycle(fromNode.cycleRef);
         }
 
-        this.reevaluateParentCycles(graph, node);
+        this.reevaluateParentCycles(graph, fromNode);
 
-        this.tryRebuildCycle(graph, node);
-        this.tryRebuildCycle(graph, target);
+        this.tryRebuildCycle(graph, fromNode);
+        this.tryRebuildCycle(graph, toNode);
 
-        this.updateCycleStatusIfActive(node);
-        this.updateCycleStatusIfActive(target);
+        this.updateCycleStatusIfActive(fromNode);
+        this.updateCycleStatusIfActive(toNode);
 
-        if (node.cycleRef !== null) {
-            this.refreshCycleIO(node.cycleRef);
+        if (fromNode.cycleRef !== null) {
+            this.refreshCycleIO(fromNode.cycleRef);
         }
-        if (target.cycleRef !== null && target.cycleRef !== node.cycleRef) {
-            this.refreshCycleIO(target.cycleRef);
-        }
-    }
-
-    public onClearNext(graph: Graph, node: GraphNode, oldNext: GraphNode[]) {
-        this.scheduler.cancel(node);
-        for (const oldNode of oldNext) {
-            this.scheduler.cancel(oldNode);
-        }
-
-        if (node.cycleRef !== null) {
-            graph.removeCycle(node.cycleRef);
-        }
-
-        this.reevaluateParentCycles(graph, node);
-
-        this.tryRebuildCycle(graph, node);
-        for (const oldNode of oldNext) {
-            this.tryRebuildCycle(graph, oldNode);
-        }
-
-        this.updateCycleStatusIfActive(node);
-
-        for (const oldNode of oldNext) {
-            this.updateCycleStatusIfActive(oldNode);
-
-            if (
-                oldNode.cycleRef !== null &&
-                oldNode.cycleRef !== node.cycleRef
-            ) {
-                this.refreshCycleIO(oldNode.cycleRef);
-            }
-        }
-
-        if (node.cycleRef !== null) {
-            this.refreshCycleIO(node.cycleRef);
+        if (toNode.cycleRef !== null && toNode.cycleRef !== fromNode.cycleRef) {
+            this.refreshCycleIO(toNode.cycleRef);
         }
     }
 
-    public onChangeType(graph: Graph, node: GraphNode) {
+    public onNodeTypeChanged(graph: Graph, node: GraphNode) {
         this.scheduler.cancel(node);
-        for (const prev of node.previous) {
+        for (const prev of node.backLinks) {
             this.scheduler.cancel(prev);
         }
-        for (const next of node.next) {
+        for (const next of node.links) {
             this.scheduler.cancel(next);
         }
 
@@ -404,31 +382,31 @@ export class CycleManager {
             }
         }
 
-        if (node.ioCycle !== null) {
-            this.refreshCycleIO(node.ioCycle);
+        if (node.cycleRef !== null) {
+            this.refreshCycleIO(node.cycleRef);
         }
 
         this.reevaluateParentCycles(graph, node);
 
-        for (const next of node.next) {
+        for (const next of node.links) {
             if (next.cycleRef !== null && next.cycleRef !== node.cycleRef) {
                 this.validateOrDismantle(graph, next.cycleRef);
             }
         }
 
         this.tryRebuildCycle(graph, node);
-        for (const prev of node.previous) {
+        for (const prev of node.backLinks) {
             this.tryRebuildCycle(graph, prev);
         }
-        for (const next of node.next) {
+        for (const next of node.links) {
             this.tryRebuildCycle(graph, next);
         }
 
         this.updateCycleStatusIfActive(node);
-        for (const prev of node.previous) {
+        for (const prev of node.backLinks) {
             this.updateCycleStatusIfActive(prev);
         }
-        for (const next of node.next) {
+        for (const next of node.links) {
             this.updateCycleStatusIfActive(next);
         }
     }
@@ -453,4 +431,10 @@ export class CycleManager {
             this.resetHead(head);
         }
     }
+
+    public onGraphClear(_graph: Graph): void {}
+
+    public onCycleAdded(_graph: Graph, _cycle: GraphCycle): void {}
+
+    public onCycleRemoved(_graph: Graph, _cycle: GraphCycle): void {}
 }

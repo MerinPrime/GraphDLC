@@ -1,5 +1,6 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from '../../ast/CycleTypes';
+import { ArrowType } from 'src/core/utils/ArrowType';
+import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
@@ -12,16 +13,23 @@ export class RawNodeState {
 
     public type: NodeType = NodeType.EMPTY;
 
+    public links: RawNodeState[] = [];
+    public detectorLinks: RawNodeState[] = [];
+
     public signal: number = 0;
     public lastSignal: number = 0;
     public signalsCount: number = 0;
     public blockedCount: number = 0;
-    public nodeInCycleOffset: number = 0;
 
     public isEntryPoint: boolean = false;
     public isAdditionalUpdate: boolean = false;
-    public isUpdated: boolean = false;
+    public isBreakpoint: boolean = false;
 
+    public cycleIdx: number | null = null;
+    public headType: CycleHeadType = CycleHeadType.NONE;
+    public cycleOffset: number = 0;
+
+    public isUpdated: boolean = false;
     public isChanged: boolean = false;
     public isTempChanged: boolean = false;
 
@@ -76,15 +84,40 @@ export class RawGraphState {
             );
         }
         const nodeState = this.nodes[node.nodeIdx];
+
         nodeState.type = NodeTypes.fromArrowType(node.type);
+        nodeState.links = node.links
+            .filter((linkedNode) => linkedNode.type !== ArrowType.DETECTOR)
+            .map((linkedNode) => this.getNode(linkedNode.nodeIdx));
+
+        nodeState.detectorLinks = node.links
+            .filter(
+                (linkedNode) =>
+                    linkedNode.type === ArrowType.DETECTOR &&
+                    linkedNode.detectedLink === nodeState.node,
+            )
+            .map((node) => this.getNode(node.nodeIdx));
+
         nodeState.isEntryPoint = NodeTypes.isEntryPoint(nodeState.type);
         nodeState.isAdditionalUpdate = NodeTypes.isAdditionalUpdate(
             nodeState.type,
         );
-        nodeState.lastSignal = 0;
-        nodeState.signal = 0;
+        nodeState.isBreakpoint = node.isBreakpoint;
+        if (node.cycleRef) {
+            nodeState.cycleIdx = node.cycleRef.index;
+            nodeState.headType = node.headType;
+            nodeState.cycleOffset = node.cycleOffset;
+        } else {
+            nodeState.cycleIdx = null;
+            nodeState.headType = CycleHeadType.NONE;
+            nodeState.cycleOffset = 0;
+        }
+        if (resetSignal) {
+            nodeState.lastSignal = 0;
+            nodeState.signal = 0;
+        }
 
-        nodeState.nodeInCycleOffset = node.cycleOffset;
+        nodeState.cycleOffset = node.cycleOffset;
 
         this.changedNodes.push(nodeState);
     }
@@ -145,13 +178,13 @@ export class RawGraphState {
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
         const nodeState = this.getNode(nodeIdx);
-        const cycle = nodeState.node.cycleRef;
-        if (cycle) {
-            const cycleState = this.cycles[cycle.index];
+        const cycleIdx = nodeState.cycleIdx;
+        if (cycleIdx && nodeState.headType === CycleHeadType.NONE) {
+            const cycleState = this.cycles[cycleIdx];
             if (!cycleState) return NodeSignal.NONE;
             const isActive = cycleState.getBit(
                 this.tick,
-                nodeState.node.origCycleOffset,
+                nodeState.cycleOffset,
             );
             if (isActive) return NodeSignal.ACTIVE;
             return NodeSignal.NONE;
@@ -165,13 +198,10 @@ export class RawGraphState {
     public addCycle(rawCycle: GraphCycle) {
         if (this.cycles[rawCycle.index]) return;
 
-        this.cycles[rawCycle.index] = new RawCycleState(rawCycle.nodes.length);
-        for (const node of rawCycle.nodes) {
-            this.getNode(node.nodeIdx).nodeInCycleOffset = node.cycleOffset;
-        }
-        for (const head of rawCycle.heads) {
-            this.getNode(head.nodeIdx).nodeInCycleOffset = head.cycleOffset;
-        }
+        this.cycles[rawCycle.index] = new RawCycleState(
+            rawCycle.index,
+            rawCycle.nodes.length,
+        );
     }
 
     public removeCycle(rawCycle: GraphCycle) {
@@ -199,11 +229,11 @@ export class RawGraphState {
         snapshot.chunks = this.chunks.map((chunk) => chunk.chunkIdx);
 
         snapshot.changedNodes = this.changedNodes.map(
-            (nodeState) => nodeState.node.nodeIdx,
+            (nodeState) => nodeState.nodeIdx,
         );
 
         snapshot.tempChangedNodes = this.tempChangedNodes.map(
-            (nodeState) => nodeState.node.nodeIdx,
+            (nodeState) => nodeState.nodeIdx,
         );
 
         snapshot.cycles = this.cycles

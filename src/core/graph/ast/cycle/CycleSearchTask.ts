@@ -21,7 +21,7 @@ export class CycleSearchTask implements ITask<GraphNode[] | null> {
         this.targetNode = targetNode;
 
         if (startNode === targetNode) {
-            for (const child of startNode.next) {
+            for (const child of startNode.links) {
                 if (canBeInCycle(child)) {
                     this.queue.push(child);
                     this.visited.add(child);
@@ -45,7 +45,7 @@ export class CycleSearchTask implements ITask<GraphNode[] | null> {
             const current = this.queue[this.head++];
             stepsRun++;
 
-            for (const child of current.next) {
+            for (const child of current.links) {
                 if (child === this.targetNode) {
                     this.buildPath(current);
                     this.complete(this.resultPath);

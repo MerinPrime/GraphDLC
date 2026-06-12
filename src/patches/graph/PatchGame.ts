@@ -127,10 +127,10 @@ export const PatchGame: IPatcher = (
                 const isEmpty = arrowAtCursor.type === 0;
 
                 render.setSolidColor(0.8, 0.2, 0.2, 0.25);
-                astNode.previous.forEach((previousNode) => {
+                astNode.backLinks.forEach((previousNode) => {
                     if (
                         astNode.type === ArrowType.DETECTOR &&
-                        astNode.detectedNode !== previousNode
+                        astNode.detectedLink !== previousNode
                     )
                         return;
                     render.drawSolidColorRect(
@@ -151,15 +151,15 @@ export const PatchGame: IPatcher = (
                     nextColor[3],
                 );
 
-                astNode.next.forEach((nextNode) => {
+                astNode.links.forEach((linkedNode) => {
                     if (
-                        nextNode.type === ArrowType.DETECTOR &&
-                        nextNode.detectedNode !== astNode
+                        linkedNode.type === ArrowType.DETECTOR &&
+                        linkedNode.detectedLink !== astNode
                     )
                         return;
                     render.drawSolidColorRect(
-                        nextNode.globalX * this.scale + offsetX,
-                        nextNode.globalY * this.scale + offsetY,
+                        linkedNode.globalX * this.scale + offsetX,
+                        linkedNode.globalY * this.scale + offsetY,
                         this.scale,
                         this.scale,
                     );

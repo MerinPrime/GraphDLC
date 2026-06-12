@@ -15,15 +15,14 @@ export class GraphNode {
     public readonly localX: number;
     public readonly localY: number;
 
-    public next: GraphNode[] = [];
-    public previous: GraphNode[] = [];
-    public detectedNode: GraphNode | null = null;
+    public links: GraphNode[] = [];
+    public backLinks: GraphNode[] = [];
+    public detectedLink: GraphNode | null = null;
 
     public isBreakpoint: boolean = false;
 
     public isCycle: boolean = false;
     public cycleRef: GraphCycle | null = null;
-    public ioCycle: GraphCycle | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
     public cycleOffset: number = 0;
     public origCycleOffset: number = 0;
@@ -60,42 +59,26 @@ export class GraphNode {
         this.onUpdate();
     }
 
-    public addNext(node: GraphNode) {
-        this.next.push(node);
-        node.previous.push(this);
+    public addLink(node: GraphNode) {
+        this.links.push(node);
+        node.backLinks.push(this);
         this.onUpdate();
         node.onUpdate();
     }
 
-    public removeNext(node: GraphNode) {
-        removeWithSwap(this.next, node);
-        removeWithSwap(node.previous, this);
+    public removeLink(node: GraphNode) {
+        removeWithSwap(this.links, node);
+        removeWithSwap(node.backLinks, this);
         this.onUpdate();
         node.onUpdate();
-    }
-
-    public clearNext(): { oldNext: GraphNode[]; detectors: GraphNode[] } {
-        const oldNext = [...this.next];
-        const detectors: GraphNode[] = [];
-
-        for (const nextNode of oldNext) {
-            removeWithSwap(nextNode.previous, this);
-            if (nextNode.detectedNode === this) detectors.push(nextNode);
-        }
-        this.next.length = 0;
-        for (const nextNode of oldNext) {
-            nextNode.onUpdate();
-        }
-        this.onUpdate();
-        return { oldNext, detectors };
     }
 
     private onUpdate() {
         if (this.type === ArrowType.BLOCKER) {
-            const isBlockedBlocker = this.next.some(
-                (nextNode) => nextNode.type === ArrowType.BLOCKER,
+            const isBreakpoint = this.links.some(
+                (linkedNode) => linkedNode.type === ArrowType.BLOCKER,
             );
-            this.isBreakpoint = isBlockedBlocker;
+            this.isBreakpoint = isBreakpoint;
         } else {
             this.isBreakpoint = false;
         }

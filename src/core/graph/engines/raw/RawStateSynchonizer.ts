@@ -21,7 +21,7 @@ export class RawStateSynchronizer {
             const nodeState = state.getNode(node.nodeIdx);
 
             if (nodeState.signal === NodeSignal.ACTIVE) {
-                cycleState.writeBit(state.tick, node.origCycleOffset);
+                cycleState.writeBit(state.tick, node.cycleOffset);
             }
 
             nodeState.signal = NodeSignal.NONE;
@@ -62,13 +62,13 @@ export class RawStateSynchronizer {
         const affectedNodes = new Set<GraphNode>();
         for (const node of cycle.nodes) {
             affectedNodes.add(node);
-            for (const next of node.next) {
+            for (const next of node.links) {
                 affectedNodes.add(next);
             }
         }
         for (const head of cycle.heads) {
             affectedNodes.add(head);
-            for (const next of head.next) {
+            for (const next of head.links) {
                 affectedNodes.add(next);
             }
         }
@@ -87,7 +87,7 @@ export class RawStateSynchronizer {
             if (cycleState) {
                 const isActive = cycleState.getBit(
                     state.tick,
-                    node.origCycleOffset,
+                    node.cycleOffset,
                 );
 
                 if (isActive) {
@@ -102,7 +102,7 @@ export class RawStateSynchronizer {
                 }
             }
 
-            nodeState.nodeInCycleOffset = 0;
+            nodeState.cycleOffset = 0;
             nodeState.isUpdated = true;
 
             this.updater.markNodeAsChangedNonTemp(state, nodeState);
@@ -112,13 +112,13 @@ export class RawStateSynchronizer {
         const affectedNodes = new Set<GraphNode>();
         for (const node of cycle.nodes) {
             affectedNodes.add(node);
-            for (const next of node.next) {
+            for (const next of node.links) {
                 affectedNodes.add(next);
             }
         }
         for (const head of cycle.heads) {
             affectedNodes.add(head);
-            for (const next of head.next) {
+            for (const next of head.links) {
                 affectedNodes.add(next);
             }
         }
@@ -132,10 +132,10 @@ export class RawStateSynchronizer {
     public updateNodeChange(
         state: RawGraphState,
         node: GraphNode,
-        oldNext: GraphNode[],
-        newNext: GraphNode[],
+        oldLinks: GraphNode[],
+        newLinks: GraphNode[],
     ) {
-        const allNodes = new Set([...oldNext, ...newNext]);
+        const allNodes = new Set([...oldLinks, ...newLinks]);
 
         this.updater.fullNodeStateCalculate(state, node);
         for (const edgeNode of allNodes) {

@@ -95,9 +95,9 @@ export class GraphDebug {
             if (node.type === ArrowType.EMPTY) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             let hash = 0;
-            node.previous.forEach((prevNode) => {
-                if (prevNode.type === ArrowType.EMPTY) return;
-                hash += prevNode.type;
+            node.backLinks.forEach((backLinkedNode) => {
+                if (backLinkedNode.type === ArrowType.EMPTY) return;
+                hash += backLinkedNode.type;
             });
             const index = hash % colors.length;
             const [r, g, b] = colors[index];
@@ -130,13 +130,13 @@ export class GraphDebug {
             if (current === undefined) {
                 break;
             }
-            for (const nextNode of current.next) {
+            for (const linkedNode of current.links) {
                 if (
-                    nextNode.type !== ArrowType.EMPTY &&
-                    !reachableNodes.has(nextNode)
+                    linkedNode.type !== ArrowType.EMPTY &&
+                    !reachableNodes.has(linkedNode)
                 ) {
-                    reachableNodes.add(nextNode);
-                    reachQueue.push(nextNode);
+                    reachableNodes.add(linkedNode);
+                    reachQueue.push(linkedNode);
                 }
             }
         }
@@ -150,3 +150,4 @@ export class GraphDebug {
         });
     }
 }
+// TODO: incremental??

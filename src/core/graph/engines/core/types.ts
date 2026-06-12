@@ -26,11 +26,7 @@ export interface IEngine {
     onCycleBuild(cycle: GraphCycle): void;
     onCycleDismantle(cycle: GraphCycle): void;
 
-    updateNodeChange(
-        node: GraphNode,
-        oldNextFull: GraphNode[],
-        next: GraphNode[],
-    ): void;
+    updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void;
 
     updateNodeState(node: GraphNode, resetSignal?: boolean): void;
     updateChunk(chunk: Chunk): void;

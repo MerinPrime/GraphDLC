@@ -106,12 +106,13 @@ export class RawEngine implements IEngine {
         this.synchronizer.onCycleDismantle(this.state, cycle);
     }
 
-    public updateNodeChange(
-        node: GraphNode,
-        oldNextFull: GraphNode[],
-        next: GraphNode[],
-    ): void {
-        this.synchronizer.updateNodeChange(this.state, node, oldNextFull, next);
+    public updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void {
+        this.synchronizer.updateNodeChange(
+            this.state,
+            node,
+            oldLinks,
+            node.links,
+        );
     }
 
     public updateNodeState(
@@ -130,7 +131,7 @@ export class RawEngine implements IEngine {
         astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
         this.updater.markNodeAsChanged(this.state, astState);
         this.state.changedNodes.push(astState);
-        this.state.makeDirtyChunk(astState.node.chunkIdx);
+        this.state.makeDirtyChunk(astState.chunkIdx);
     }
 
     public clear(): void {

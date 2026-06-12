@@ -194,7 +194,7 @@ export class PathFindingTask implements ITask<PathStep[] | null> {
                         arrow.astIndex !== null
                     ) {
                         const node = gameMap.graph.getNode(arrow.astIndex);
-                        if (node.previous.length !== 0) {
+                        if (node.backLinks.length !== 0) {
                             continue;
                         }
                     }
@@ -219,8 +219,8 @@ export class PathFindingTask implements ITask<PathStep[] | null> {
                     const parentPacked = currNode.parent[dir];
 
                     if (parentPacked !== -1) {
-                        const prevNode = this.grid.getNode(parentPacked);
-                        if (prevNode.arrowRotation[dir] !== rotation) {
+                        const backLinkedNode = this.grid.getNode(parentPacked);
+                        if (backLinkedNode.arrowRotation[dir] !== rotation) {
                             stepWeight += 0.05;
                         }
                     }
