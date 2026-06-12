@@ -274,7 +274,7 @@ export class Graph {
         node.setType(type);
         this.updateNodeRelations(node);
         this.cycleManager.onChangeType(this, node);
-        this.engine.updateNodeState(node);
+        this.engine.updateNodeState(node, true);
     }
 
     private setNodeRotation(node: GraphNode, rotation: number) {

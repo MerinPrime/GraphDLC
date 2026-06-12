@@ -114,8 +114,11 @@ export class RawEngine implements IEngine {
         this.synchronizer.updateNodeChange(this.state, node, oldNextFull, next);
     }
 
-    public updateNodeState(node: GraphNode): void {
-        this.state.updateNodeState(node);
+    public updateNodeState(
+        node: GraphNode,
+        resetSignal: boolean = false,
+    ): void {
+        this.state.updateNodeState(node, resetSignal);
     }
 
     public updateChunk(chunk: Chunk): void {

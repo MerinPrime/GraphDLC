@@ -67,7 +67,7 @@ export class RawGraphState {
         return this.nodes[nodeIdx];
     }
 
-    public updateNodeState(node: GraphNode) {
+    public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
         if (this.nodes[node.nodeIdx] === undefined) {
             this.nodes[node.nodeIdx] = new RawNodeState(
                 node,
