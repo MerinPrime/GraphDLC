@@ -240,6 +240,7 @@ export class RawGraphState {
             this.makeDirtyChunk(chunkIdx);
         });
 
+        const visitedChanged: Set<number> = new Set();
         const updatedNodes = this.changedNodes.filter(
             (nodeState) => nodeState.isUpdated,
         );
@@ -248,12 +249,17 @@ export class RawGraphState {
         });
         this.changedNodes.length = 0;
         snapshot.changedNodes.forEach((nodeIdx) => {
+            if (visitedChanged.has(nodeIdx)) return;
+            visitedChanged.add(nodeIdx);
             this.markNodeChanged(this.getNode(nodeIdx));
         });
         updatedNodes.forEach((nodeState) => {
+            if (visitedChanged.has(nodeState.nodeIdx)) return;
+            visitedChanged.add(nodeState.nodeIdx);
             this.markNodeChanged(nodeState);
         });
 
+        visitedChanged.clear();
         const updatedTempNodes = this.tempChangedNodes.filter(
             (nodeState) => nodeState.isUpdated,
         );
@@ -262,9 +268,13 @@ export class RawGraphState {
         });
         this.tempChangedNodes.length = 0;
         snapshot.tempChangedNodes.forEach((nodeIdx) => {
+            if (visitedChanged.has(nodeIdx)) return;
+            visitedChanged.add(nodeIdx);
             this.markNodeTempChanged(this.getNode(nodeIdx));
         });
         updatedTempNodes.forEach((nodeState) => {
+            if (visitedChanged.has(nodeState.nodeIdx)) return;
+            visitedChanged.add(nodeState.nodeIdx);
             this.markNodeTempChanged(nodeState);
         });
 
@@ -279,12 +289,11 @@ export class RawGraphState {
     }
 
     public markNodeChanged(nodeState: RawNodeState) {
-        if (nodeState.isChanged) return;
-        nodeState.isChanged = true;
         this.changedNodes.push(nodeState);
     }
 
     public markNodeTempChanged(nodeState: RawNodeState) {
+        nodeState.isChanged = true;
         this.tempChangedNodes.push(nodeState);
     }
 }
