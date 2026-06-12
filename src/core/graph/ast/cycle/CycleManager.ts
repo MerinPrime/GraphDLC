@@ -1,4 +1,5 @@
 import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
+import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
 import { CycleHeadType, type GraphCycle } from '../CycleTypes';
 import type { Graph } from '../Graph';
@@ -7,87 +8,9 @@ import { CycleSearchTask } from './CycleSearchTask';
 import { canBeInCycle } from './utils';
 
 export class CycleManager {
-    private tasksQueue: CycleSearchTask[] = [];
-    private queueHead = 0;
-    private activeTasksByNode = new Map<GraphNode, CycleSearchTask>();
-    private isSchedulerRunning = false;
-
-    private cancelTaskForNode(node: GraphNode) {
-        const task = this.activeTasksByNode.get(node);
-        if (task) {
-            task.isCanceled = true;
-            this.activeTasksByNode.delete(node);
-        }
-    }
-
-    private ensureSchedulerStarted(graph: Graph) {
-        if (this.isSchedulerRunning) return;
-        this.isSchedulerRunning = true;
-
-        const tick = () => {
-            const budget = CycleBudgetSetting.value;
-
-            if (budget === 0) {
-                this.tasksQueue.length = 0;
-                this.queueHead = 0;
-                this.activeTasksByNode.clear();
-                this.isSchedulerRunning = false;
-                return;
-            }
-
-            while (
-                this.queueHead < this.tasksQueue.length &&
-                this.tasksQueue[this.queueHead].isCanceled
-            ) {
-                this.queueHead++;
-            }
-
-            if (this.queueHead >= this.tasksQueue.length) {
-                this.tasksQueue.length = 0;
-                this.queueHead = 0;
-                this.isSchedulerRunning = false;
-                return;
-            }
-
-            const startTime = performance.now();
-            const timeBudget = budget;
-
-            while (this.queueHead < this.tasksQueue.length) {
-                if (performance.now() - startTime > timeBudget) {
-                    break;
-                }
-
-                const currentTask = this.tasksQueue[this.queueHead];
-                if (currentTask.isCanceled) {
-                    this.queueHead++;
-                    continue;
-                }
-
-                const isFinished = currentTask.step(50);
-
-                if (isFinished) {
-                    this.queueHead++;
-                    this.activeTasksByNode.delete(currentTask.startNode);
-
-                    const path = currentTask.getResult();
-                    if (path !== null && this.isValidCycle(path)) {
-                        graph.addCycle(path);
-                    }
-                }
-            }
-
-            if (this.queueHead > 1000) {
-                this.tasksQueue = this.tasksQueue.slice(this.queueHead);
-                this.queueHead = 0;
-            }
-
-            if (this.isSchedulerRunning) {
-                requestAnimationFrame(tick);
-            }
-        };
-
-        requestAnimationFrame(tick);
-    }
+    private readonly scheduler = new AsyncScheduler(
+        () => CycleBudgetSetting.value,
+    );
 
     public resetHead(head: GraphNode) {
         head.ioCycle = null;
@@ -181,13 +104,17 @@ export class CycleManager {
             return;
         }
 
-        this.cancelTaskForNode(startNode);
-
         const task = new CycleSearchTask(startNode, startNode);
-        this.tasksQueue.push(task);
-        this.activeTasksByNode.set(startNode, task);
 
-        this.ensureSchedulerStarted(graph);
+        this.scheduler.schedule(
+            task,
+            (path) => {
+                if (path !== null && this.isValidCycle(path)) {
+                    graph.addCycle(path);
+                }
+            },
+            startNode,
+        );
     }
 
     public reevaluateParentCycles(graph: Graph, node: GraphNode) {
@@ -361,13 +288,16 @@ export class CycleManager {
                     return;
                 }
             } else {
-                this.cancelTaskForNode(target);
-
                 const task = new CycleSearchTask(target, node);
-                this.tasksQueue.push(task);
-                this.activeTasksByNode.set(target, task);
-
-                this.ensureSchedulerStarted(graph);
+                this.scheduler.schedule(
+                    task,
+                    (path) => {
+                        if (path !== null && this.isValidCycle(path)) {
+                            graph.addCycle(path);
+                        }
+                    },
+                    target,
+                );
                 return;
             }
         }
@@ -396,8 +326,8 @@ export class CycleManager {
     }
 
     public onRemoveNext(graph: Graph, node: GraphNode, target: GraphNode) {
-        this.cancelTaskForNode(node);
-        this.cancelTaskForNode(target);
+        this.scheduler.cancel(node);
+        this.scheduler.cancel(target);
 
         if (node.cycleRef !== null && target.cycleRef === node.cycleRef) {
             graph.removeCycle(node.cycleRef);
@@ -420,9 +350,9 @@ export class CycleManager {
     }
 
     public onClearNext(graph: Graph, node: GraphNode, oldNext: GraphNode[]) {
-        this.cancelTaskForNode(node);
+        this.scheduler.cancel(node);
         for (const oldNode of oldNext) {
-            this.cancelTaskForNode(oldNode);
+            this.scheduler.cancel(oldNode);
         }
 
         if (node.cycleRef !== null) {
@@ -455,12 +385,12 @@ export class CycleManager {
     }
 
     public onChangeType(graph: Graph, node: GraphNode) {
-        this.cancelTaskForNode(node);
+        this.scheduler.cancel(node);
         for (const prev of node.previous) {
-            this.cancelTaskForNode(prev);
+            this.scheduler.cancel(prev);
         }
         for (const next of node.next) {
-            this.cancelTaskForNode(next);
+            this.scheduler.cancel(next);
         }
 
         if (node.cycleRef !== null) {

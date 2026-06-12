@@ -1,7 +1,8 @@
+import type { ITask } from 'src/core/task/ITask';
 import type { GraphNode } from '../GraphNode';
 import { canBeInCycle } from './utils';
 
-export class CycleSearchTask {
+export class CycleSearchTask implements ITask<GraphNode[] | null> {
     public readonly startNode: GraphNode;
     public readonly targetNode: GraphNode;
 
@@ -9,8 +10,8 @@ export class CycleSearchTask {
 
     private queue: GraphNode[] = [];
     private head = 0;
-    private visited = new Set<GraphNode>();
-    private parentMap = new Map<GraphNode, GraphNode>();
+    private readonly visited = new Set<GraphNode>();
+    private readonly parentMap = new Map<GraphNode, GraphNode>();
 
     private isDone = false;
     private resultPath: GraphNode[] | null = null;
@@ -34,37 +35,24 @@ export class CycleSearchTask {
     }
 
     public step(maxStepsCount: number): boolean {
-        if (this.isDone || this.isCanceled) return true;
+        if (this.isDone || this.isCanceled) {
+            return true;
+        }
 
         let stepsRun = 0;
+
         while (this.head < this.queue.length && stepsRun < maxStepsCount) {
             const current = this.queue[this.head++];
             stepsRun++;
 
-            if (!canBeInCycle(current) && current !== this.startNode) {
-                continue;
-            }
-
             for (const child of current.next) {
                 if (child === this.targetNode) {
-                    const path: GraphNode[] = [this.targetNode];
-                    let curr: GraphNode | undefined = current;
-
-                    while (curr !== undefined && curr !== this.startNode) {
-                        path.push(curr);
-                        curr = this.parentMap.get(curr);
-                    }
-                    if (this.startNode !== this.targetNode) {
-                        path.push(this.startNode);
-                    }
-                    this.resultPath = path.reverse();
-                    this.isDone = true;
+                    this.buildPath(current);
+                    this.complete(this.resultPath);
                     return true;
                 }
 
-                if (!canBeInCycle(child)) continue;
-
-                if (!this.visited.has(child)) {
+                if (canBeInCycle(child) && !this.visited.has(child)) {
                     this.visited.add(child);
                     this.parentMap.set(child, current);
                     this.queue.push(child);
@@ -73,8 +61,7 @@ export class CycleSearchTask {
         }
 
         if (this.head >= this.queue.length) {
-            this.isDone = true;
-            this.resultPath = null;
+            this.complete(null);
             return true;
         }
 
@@ -83,5 +70,30 @@ export class CycleSearchTask {
 
     public getResult(): GraphNode[] | null {
         return this.resultPath;
+    }
+
+    private buildPath(lastNode: GraphNode): void {
+        const path: GraphNode[] = [this.targetNode];
+        let curr: GraphNode | undefined = lastNode;
+
+        while (curr !== undefined && curr !== this.startNode) {
+            path.push(curr);
+            curr = this.parentMap.get(curr);
+        }
+
+        if (this.startNode !== this.targetNode) {
+            path.push(this.startNode);
+        }
+
+        this.resultPath = path.reverse();
+    }
+
+    private complete(result: GraphNode[] | null): void {
+        this.resultPath = result;
+        this.isDone = true;
+
+        this.queue = [];
+        this.visited.clear();
+        this.parentMap.clear();
     }
 }
