@@ -10,6 +10,11 @@ export class MinHeap {
         return this.scores.length > 0 ? this.scores[0] : Infinity;
     }
 
+    public clear() {
+        this.data.length = 0;
+        this.scores.length = 0;
+    }
+
     public push(element: number, score: number): void {
         this.data.push(element);
         this.scores.push(score);

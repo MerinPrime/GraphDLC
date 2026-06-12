@@ -125,22 +125,21 @@ export const PatchPlayerControls: IPatcher = (
                     super.update();
 
                     const _this = this as any as PrivatePlayerControls;
+                    const taskKey = 'player-drag-path';
 
                     if (isRightMouseDown) {
                         const [x, y] = _this.getPositionByMousePosition();
+
                         if (this.pathData === null) {
                             this.pathData = {
-                                startPathX: 0,
-                                startPathY: 0,
-                                endPathX: 0,
-                                endPathY: 0,
+                                startPathX: x,
+                                startPathY: y,
+                                endPathX: x,
+                                endPathY: y,
                                 path: [],
                             };
-                            this.pathData.startPathX = x;
-                            this.pathData.startPathY = y;
-                            this.pathData.endPathX = x;
-                            this.pathData.endPathY = y;
                         }
+
                         if (
                             this.pathData &&
                             (this.pathData.endPathX !== x ||
@@ -148,18 +147,28 @@ export const PatchPlayerControls: IPatcher = (
                         ) {
                             this.pathData.endPathX = x;
                             this.pathData.endPathY = y;
-                            this.pathData.path =
-                                graphDLC.pathFinder.findPath(
-                                    _this.game.gameMap,
-                                    this.pathData.startPathX,
-                                    this.pathData.startPathY,
-                                    this.pathData.endPathX,
-                                    this.pathData.endPathY,
-                                ) ?? [];
-                            _this.game.path = this.pathData.path;
+
+                            graphDLC.pathFinder.cancelPathSearch(taskKey);
+
+                            graphDLC.pathFinder.findPathAsync(
+                                taskKey,
+                                _this.game.gameMap,
+                                this.pathData.startPathX,
+                                this.pathData.startPathY,
+                                this.pathData.endPathX,
+                                this.pathData.endPathY,
+                                (newPath) => {
+                                    if (this.pathData) {
+                                        this.pathData.path = newPath ?? [];
+                                        _this.game.path = this.pathData.path;
+                                    }
+                                },
+                            );
                         }
                     } else {
                         if (this.pathData) {
+                            graphDLC.pathFinder.forceCompletePath(taskKey);
+
                             this.pathData.path.forEach(
                                 ({ x, y, type, rotation, flipped }) => {
                                     const arrowOld = _ArrowData.def.fromArrow(
