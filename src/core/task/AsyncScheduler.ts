@@ -123,7 +123,6 @@ export class AsyncScheduler {
             return undefined;
         }
 
-        entry.task.isCanceled = true;
         this.activeTasksByKey.delete(key);
 
         let isFinished = false;
