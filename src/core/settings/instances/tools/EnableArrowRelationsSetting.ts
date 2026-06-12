@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { BoolSetting } from '../../types/BoolSetting';
-import { OtherSettingGroup } from './OtherGroup';
+import { ToolsSettingGroup } from './ToolsGroup';
 
 const NameLocale = new I18nText(
     'Enable Arrow Relations',
@@ -25,7 +25,7 @@ export const EnableArrowRelationsSetting = new BoolSetting(
         name: NameLocale,
         description: DescriptionLocale,
         isMapSetting: false,
-        group: OtherSettingGroup,
+        group: ToolsSettingGroup,
         order: 2,
     },
 );

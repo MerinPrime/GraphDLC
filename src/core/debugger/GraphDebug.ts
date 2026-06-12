@@ -4,7 +4,7 @@ import type { GraphNode } from '../graph/ast/GraphNode';
 import {
     DebugMode,
     DebugModeSetting,
-} from '../settings/instances/other/DebugModeSetting';
+} from '../settings/instances/tools/DebugModeSetting';
 import { ArrowType, IsArrowEntryPoint } from '../utils/ArrowType';
 import type { Bounds } from '../utils/Bounds';
 

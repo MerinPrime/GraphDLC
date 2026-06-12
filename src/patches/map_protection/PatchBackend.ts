@@ -2,7 +2,7 @@ import type { MapInfo } from '@logic-arrows/game-logic/map-info';
 import type { Backend } from '@logic-arrows/utils/backend';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import { MapProtectionSetting } from 'src/core/settings/instances/other/MapProtectionSetting';
+import { MapProtectionSetting } from 'src/core/settings/instances/tools/MapProtectionSetting';
 import type { IPatcher } from '../Patcher';
 
 export const PatchBackend: IPatcher = (

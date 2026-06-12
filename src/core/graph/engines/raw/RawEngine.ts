@@ -1,4 +1,4 @@
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/other/EnableSnapshotsSetting';
+import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import type { RawCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';

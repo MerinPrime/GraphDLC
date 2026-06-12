@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { BoolSetting } from '../../types/BoolSetting';
-import { OtherSettingGroup } from './OtherGroup';
+import { ToolsSettingGroup } from './ToolsGroup';
 
 const NameLocale = new I18nText(
     'Map Protection',
@@ -22,6 +22,6 @@ export const MapProtectionSetting = new BoolSetting('MapProtection', false, {
     name: NameLocale,
     description: DescriptionLocale,
     isMapSetting: true,
-    group: OtherSettingGroup,
+    group: ToolsSettingGroup,
     order: 4,
 });

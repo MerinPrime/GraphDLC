@@ -1,24 +1,29 @@
-import { DebugModeSetting } from './instances/other/DebugModeSetting';
-import { EnableArrowRelationsSetting } from './instances/other/EnableArrowRelationsSetting';
-import { EnableBreakpointSetting } from './instances/other/EnableBreakpointSetting';
-import { EnableSnapshotsSetting } from './instances/other/EnableSnapshotsSetting';
-import { MapProtectionSetting } from './instances/other/MapProtectionSetting';
-import { ShowArrowConnectionsSetting } from './instances/other/ShowArrowConnectionsSetting';
-import { TargetFPSSetting } from './instances/other/TargetFPSSetting';
+import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
+import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
 import { DarkThemeSetting } from './instances/redesign/DarkThemeSetting';
 import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
 import { QoLReDesignSetting } from './instances/redesign/QoLReDesignSetting';
+import { DebugModeSetting } from './instances/tools/DebugModeSetting';
+import { EnableArrowRelationsSetting } from './instances/tools/EnableArrowRelationsSetting';
+import { EnableBreakpointSetting } from './instances/tools/EnableBreakpointSetting';
+import { MapProtectionSetting } from './instances/tools/MapProtectionSetting';
+import { ShowArrowConnectionsSetting } from './instances/tools/ShowArrowConnectionsSetting';
 import type { BaseSetting } from './types/BaseSetting';
 
 const settings: BaseSetting<any>[] = [
+    // Performance
     TargetFPSSetting,
-    EnableBreakpointSetting,
+    EnableSnapshotsSetting,
+    // TODO: cycle time budget
+
+    // Tools
     EnableArrowRelationsSetting,
     ShowArrowConnectionsSetting,
     MapProtectionSetting,
     DebugModeSetting,
-    EnableSnapshotsSetting,
+    EnableBreakpointSetting,
 
+    // Visuals
     QoLReDesignSetting,
     GraphDLCDesignSetting,
     DarkThemeSetting,

@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { NumberSetting } from '../../types/NumberSetting';
-import { OtherSettingGroup } from './OtherGroup';
+import { PerformanceSettingGroup } from './PerformanceGroup';
 
 const NameLocale = new I18nText(
     'Target FPS',
@@ -29,7 +29,7 @@ export const TargetFPSSetting = new NumberSetting(
         name: NameLocale,
         description: DescriptionLocale,
         isMapSetting: false,
-        group: OtherSettingGroup,
+        group: PerformanceSettingGroup,
         order: 0,
     },
     {

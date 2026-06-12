@@ -3,11 +3,11 @@ import { BoolSetting } from '../../types/BoolSetting';
 import { ReDesignSettingGroup } from './ReDesignGroup';
 
 const NameLocale = new I18nText(
-    'GraphDLC Design',
-    'Дизайн GraphDLC',
-    'Дизайн GraphDLC',
-    'Дызайн GraphDLC',
-    'Design GraphDLC',
+    'GraphDLC',
+    'GraphDLC',
+    'GraphDLC',
+    'GraphDLC',
+    'GraphDLC',
 );
 
 const DescriptionLocale = new I18nText(

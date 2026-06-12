@@ -3,11 +3,11 @@ import type { SettingGroup } from '../../types/SettingGroup';
 
 export const ReDesignSettingGroup: SettingGroup = {
     text: new I18nText(
-        'Redesign',
-        'Редизайн',
-        'Редизайн',
-        'Рэдызайн',
-        'Redesign',
+        'Visuals',
+        'Внешний вид',
+        'Зовнішній вигляд',
+        'Знешні выгляд',
+        'Visuels',
     ),
-    order: 0,
+    order: 2,
 };

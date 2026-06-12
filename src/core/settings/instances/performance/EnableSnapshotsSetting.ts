@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { BoolSetting } from '../../types/BoolSetting';
-import { OtherSettingGroup } from './OtherGroup';
+import { PerformanceSettingGroup } from './PerformanceGroup';
 
 const NameLocale = new I18nText(
     'Enable History',
@@ -22,6 +22,6 @@ export const EnableSnapshotsSetting = new BoolSetting('EnableSnapshots', true, {
     name: NameLocale,
     description: DescriptionLocale,
     isMapSetting: true,
-    group: OtherSettingGroup,
-    order: 6,
+    group: PerformanceSettingGroup,
+    order: 1,
 });
