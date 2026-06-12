@@ -1,28 +1,94 @@
+import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
 import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
-import { CycleHeadType, type RawCycle } from './CycleTypes';
-import type { Graph } from './Graph';
-import type { GraphNode } from './GraphNode';
-
-// TODO: maybe async cycle finding?
-
-const ALLOWED_IN_CYCLE = new Set([
-    ArrowType.ARROW,
-    ArrowType.SPLITTER_UP_DOWN,
-    ArrowType.SPLITTER_UP_RIGHT,
-    ArrowType.SPLITTER_UP_RIGHT_LEFT,
-    ArrowType.BLUE_ARROW,
-    ArrowType.DIAGONAL_ARROW,
-    ArrowType.SPLITTER_UP_UP,
-    ArrowType.SPLITTER_RIGHT_UP,
-    ArrowType.SPLITTER_UP_DIAGONAL,
-    ArrowType.LOGIC_XOR,
-]);
-
-function canBeInCycle(node: GraphNode): boolean {
-    return ALLOWED_IN_CYCLE.has(node.type);
-}
+import { CycleHeadType, type RawCycle } from '../CycleTypes';
+import type { Graph } from '../Graph';
+import type { GraphNode } from '../GraphNode';
+import { CycleSearchTask } from './CycleSearchTask';
+import { canBeInCycle } from './utils';
 
 export class CycleManager {
+    private tasksQueue: CycleSearchTask[] = [];
+    private queueHead = 0;
+    private activeTasksByNode = new Map<GraphNode, CycleSearchTask>();
+    private isSchedulerRunning = false;
+
+    private cancelTaskForNode(node: GraphNode) {
+        const task = this.activeTasksByNode.get(node);
+        if (task) {
+            task.isCanceled = true;
+            this.activeTasksByNode.delete(node);
+        }
+    }
+
+    private ensureSchedulerStarted(graph: Graph) {
+        if (this.isSchedulerRunning) return;
+        this.isSchedulerRunning = true;
+
+        const tick = () => {
+            const budget = CycleBudgetSetting.value;
+
+            if (budget === 0) {
+                this.tasksQueue.length = 0;
+                this.queueHead = 0;
+                this.activeTasksByNode.clear();
+                this.isSchedulerRunning = false;
+                return;
+            }
+
+            while (
+                this.queueHead < this.tasksQueue.length &&
+                this.tasksQueue[this.queueHead].isCanceled
+            ) {
+                this.queueHead++;
+            }
+
+            if (this.queueHead >= this.tasksQueue.length) {
+                this.tasksQueue.length = 0;
+                this.queueHead = 0;
+                this.isSchedulerRunning = false;
+                return;
+            }
+
+            const startTime = performance.now();
+            const timeBudget = budget;
+
+            while (this.queueHead < this.tasksQueue.length) {
+                if (performance.now() - startTime > timeBudget) {
+                    break;
+                }
+
+                const currentTask = this.tasksQueue[this.queueHead];
+                if (currentTask.isCanceled) {
+                    this.queueHead++;
+                    continue;
+                }
+
+                const isFinished = currentTask.step(50);
+
+                if (isFinished) {
+                    this.queueHead++;
+                    this.activeTasksByNode.delete(currentTask.startNode);
+
+                    const path = currentTask.getResult();
+                    if (path !== null && this.isValidCycle(path)) {
+                        graph.addCycle(path);
+                    }
+                }
+            }
+
+            if (this.queueHead > 1000) {
+                this.tasksQueue = this.tasksQueue.slice(this.queueHead);
+                this.queueHead = 0;
+            }
+
+            if (this.isSchedulerRunning) {
+                requestAnimationFrame(tick);
+            }
+        };
+
+        requestAnimationFrame(tick);
+    }
+
     public resetHead(head: GraphNode) {
         head.ioCycle = null;
         head.headType = CycleHeadType.NONE;
@@ -106,10 +172,22 @@ export class CycleManager {
             return;
         }
 
-        const cyclePath = this.findCyclePath(startNode, startNode);
-        if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-            graph.addCycle(cyclePath);
+        const budget = CycleBudgetSetting.value;
+        if (budget === 0) {
+            const cyclePath = this.findCyclePathSync(startNode, startNode);
+            if (cyclePath !== null && this.isValidCycle(cyclePath)) {
+                graph.addCycle(cyclePath);
+            }
+            return;
         }
+
+        this.cancelTaskForNode(startNode);
+
+        const task = new CycleSearchTask(startNode, startNode);
+        this.tasksQueue.push(task);
+        this.activeTasksByNode.set(startNode, task);
+
+        this.ensureSchedulerStarted(graph);
     }
 
     public reevaluateParentCycles(graph: Graph, node: GraphNode) {
@@ -184,7 +262,7 @@ export class CycleManager {
         return true;
     }
 
-    public findCyclePath(
+    private findCyclePathSync(
         startNode: GraphNode,
         targetNode: GraphNode,
     ): GraphNode[] | null {
@@ -239,7 +317,7 @@ export class CycleManager {
 
     public updateCycleStatusAfterRemoval(startNode: GraphNode) {
         const isStillInCycle =
-            this.findCyclePath(startNode, startNode) !== null;
+            this.findCyclePathSync(startNode, startNode) !== null;
 
         if (!isStillInCycle) {
             const queue: GraphNode[] = [startNode];
@@ -255,7 +333,8 @@ export class CycleManager {
                         if (neighbor.isCycle && !visited.has(neighbor)) {
                             visited.add(neighbor);
                             const neighborStillInCycle =
-                                this.findCyclePath(neighbor, neighbor) !== null;
+                                this.findCyclePathSync(neighbor, neighbor) !==
+                                null;
 
                             if (!neighborStillInCycle) {
                                 neighbor.isCycle = false;
@@ -274,10 +353,21 @@ export class CycleManager {
 
     public onAddNext(graph: Graph, node: GraphNode, target: GraphNode) {
         if (canBeInCycle(node) && canBeInCycle(target)) {
-            const cyclePath = this.findCyclePath(target, node);
+            const budget = CycleBudgetSetting.value;
+            if (budget === 0) {
+                const cyclePath = this.findCyclePathSync(target, node);
+                if (cyclePath !== null && this.isValidCycle(cyclePath)) {
+                    graph.addCycle(cyclePath);
+                    return;
+                }
+            } else {
+                this.cancelTaskForNode(target);
 
-            if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                graph.addCycle(cyclePath);
+                const task = new CycleSearchTask(target, node);
+                this.tasksQueue.push(task);
+                this.activeTasksByNode.set(target, task);
+
+                this.ensureSchedulerStarted(graph);
                 return;
             }
         }
@@ -306,6 +396,9 @@ export class CycleManager {
     }
 
     public onRemoveNext(graph: Graph, node: GraphNode, target: GraphNode) {
+        this.cancelTaskForNode(node);
+        this.cancelTaskForNode(target);
+
         if (node.cycleRef !== null && target.cycleRef === node.cycleRef) {
             graph.removeCycle(node.cycleRef);
         }
@@ -327,6 +420,11 @@ export class CycleManager {
     }
 
     public onClearNext(graph: Graph, node: GraphNode, oldNext: GraphNode[]) {
+        this.cancelTaskForNode(node);
+        for (const oldNode of oldNext) {
+            this.cancelTaskForNode(oldNode);
+        }
+
         if (node.cycleRef !== null) {
             graph.removeCycle(node.cycleRef);
         }
@@ -357,6 +455,14 @@ export class CycleManager {
     }
 
     public onChangeType(graph: Graph, node: GraphNode) {
+        this.cancelTaskForNode(node);
+        for (const prev of node.previous) {
+            this.cancelTaskForNode(prev);
+        }
+        for (const next of node.next) {
+            this.cancelTaskForNode(next);
+        }
+
         if (node.cycleRef !== null) {
             if (
                 !canBeInCycle(node) ||

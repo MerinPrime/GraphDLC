@@ -23,5 +23,5 @@ export const EnableSnapshotsSetting = new BoolSetting('EnableSnapshots', true, {
     description: DescriptionLocale,
     isMapSetting: true,
     group: PerformanceSettingGroup,
-    order: 1,
+    order: 2,
 });

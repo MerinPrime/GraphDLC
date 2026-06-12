@@ -9,8 +9,8 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import type { IEngine } from '../engines/core/types';
 import { RawEngine } from '../engines/raw/RawEngine';
 import type { RawGraphState } from '../engines/raw/RawState';
-import { CycleManager } from './CycleManager';
 import type { RawCycle } from './CycleTypes';
+import { CycleManager } from './cycle/CycleManager';
 import { GraphNode } from './GraphNode';
 
 interface PrivateGameMap {

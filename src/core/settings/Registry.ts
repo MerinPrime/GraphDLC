@@ -1,3 +1,4 @@
+import { CycleBudgetSetting } from './instances/performance/CycleBudgetSetting';
 import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
 import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
 import { DarkThemeSetting } from './instances/redesign/DarkThemeSetting';
@@ -13,8 +14,8 @@ import type { BaseSetting } from './types/BaseSetting';
 const settings: BaseSetting<any>[] = [
     // Performance
     TargetFPSSetting,
+    CycleBudgetSetting,
     EnableSnapshotsSetting,
-    // TODO: cycle time budget
 
     // Tools
     EnableArrowRelationsSetting,
