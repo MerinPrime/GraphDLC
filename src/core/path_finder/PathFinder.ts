@@ -154,7 +154,7 @@ export class PathFinder {
                         arrow.astIndex !== undefined &&
                         arrow.astIndex !== null
                     ) {
-                        const node = gameMap.rawGraph.getNode(arrow.astIndex);
+                        const node = gameMap.graph.getNode(arrow.astIndex);
                         if (node.previous.length !== 0) {
                             continue;
                         }

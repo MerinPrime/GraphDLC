@@ -12,12 +12,12 @@ export const PatchChunkUpdates: IPatcher = (
         'ChunkUpdates',
         (_module: typeof ChunkUpdates) => {
             _module.update = function GraphUpdate(gameMap: GameMap) {
-                const rawGraph = gameMap.rawGraph;
-                rawGraph.engine.runTick();
+                const graph = gameMap.graph;
+                graph.engine.runTick();
             };
 
             _module.clearSignals = function clearSignals(gameMap: GameMap) {
-                gameMap.rawGraph.engine.reset();
+                gameMap.graph.engine.reset();
             };
         },
     );

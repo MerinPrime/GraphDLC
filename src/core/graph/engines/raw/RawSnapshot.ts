@@ -1,10 +1,10 @@
 export class RawNodeSnapshot {
-    public readonly nodeIdx: number = 0;
+    public nodeIdx: number = 0;
 
-    public readonly signal: number = 0;
-    public readonly lastSignal: number = 0;
-    public readonly signalsCount: number = 0;
-    public readonly blockedCount: number = 0;
+    public signal: number = 0;
+    public lastSignal: number = 0;
+    public signalsCount: number = 0;
+    public blockedCount: number = 0;
 }
 
 export class RawCycleSnapshot {
@@ -20,13 +20,13 @@ export class RawCycleSnapshot {
 }
 
 export class RawSnapshot {
-    public readonly tick: number = 0;
-    public readonly breakPoint: boolean = false;
+    public tick: number = 0;
+    public breakPoint: boolean = false;
 
-    public readonly nodes: RawNodeSnapshot[] = [];
-    public readonly chunks: number[] = [];
+    public nodes: RawNodeSnapshot[] = [];
+    public chunks: number[] = [];
 
-    public readonly changedNodes: number[] = [];
-    public readonly tempChangedNodes: number[] = [];
-    public readonly cycles: RawCycleSnapshot[] = [];
+    public changedNodes: number[] = [];
+    public tempChangedNodes: number[] = [];
+    public cycles: RawCycleSnapshot[] = [];
 }

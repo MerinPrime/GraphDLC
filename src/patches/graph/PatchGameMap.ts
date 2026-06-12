@@ -17,12 +17,12 @@ export const PatchGameMap: IPatcher = (
 ) => {
     patchLoader.addDefinitionPatch('GameMap', (_module: typeof GameMap) => {
         return class GameMap extends _module {
-            public rawGraph: Graph;
+            public graph: Graph;
             public isMain: boolean = false;
 
             public constructor(isMain: boolean = false) {
                 super();
-                this.rawGraph = new Graph(this);
+                this.graph = new Graph(this);
                 this.isMain = isMain;
             }
 
@@ -44,7 +44,7 @@ export const PatchGameMap: IPatcher = (
                 if (oldType === arrow.type) return;
                 const newType = arrow.type;
                 if (this.isMain)
-                    this.rawGraph.updateArrowType(
+                    this.graph.updateArrowType(
                         arrow,
                         chunk,
                         globalX,
@@ -72,7 +72,7 @@ export const PatchGameMap: IPatcher = (
                 if (oldRotation === arrow.rotation) return;
                 const newRotation = arrow.rotation;
                 if (this.isMain)
-                    this.rawGraph.updateArrowRotation(
+                    this.graph.updateArrowRotation(
                         arrow,
                         chunk,
                         globalX,
@@ -99,7 +99,7 @@ export const PatchGameMap: IPatcher = (
                 if (oldFlipped === arrow.flipped) return;
                 const newFlipped = arrow.flipped;
                 if (this.isMain)
-                    this.rawGraph.updateArrowFlipped(
+                    this.graph.updateArrowFlipped(
                         arrow,
                         chunk,
                         globalX,
@@ -125,7 +125,7 @@ export const PatchGameMap: IPatcher = (
                 if (oldType === arrow.type) return;
                 const newType = arrow.type;
                 if (this.isMain)
-                    this.rawGraph.updateArrowType(
+                    this.graph.updateArrowType(
                         arrow,
                         chunk,
                         globalX,
@@ -142,12 +142,7 @@ export const PatchGameMap: IPatcher = (
                 chunkY: number,
             ) {
                 if (this.isMain)
-                    this.rawGraph.updateArrowState(
-                        arrow,
-                        chunk,
-                        chunkX,
-                        chunkY,
-                    );
+                    this.graph.updateArrowState(arrow, chunk, chunkX, chunkY);
             }
 
             public clearChunkIfEmpty(chunk: Chunk): void {
@@ -162,7 +157,7 @@ export const PatchGameMap: IPatcher = (
                     });
                 });
                 super.clear();
-                if (this.isMain) this.rawGraph.clear();
+                if (this.isMain) this.graph.clear();
             }
         };
     });

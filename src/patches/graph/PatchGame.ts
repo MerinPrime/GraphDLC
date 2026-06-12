@@ -123,9 +123,7 @@ export const PatchGame: IPatcher = (
                 )
                     return;
 
-                const astNode = gameMap.rawGraph.getNode(
-                    arrowAtCursor.astIndex,
-                );
+                const astNode = gameMap.graph.getNode(arrowAtCursor.astIndex);
                 const isEmpty = arrowAtCursor.type === 0;
 
                 render.setSolidColor(0.8, 0.2, 0.2, 0.25);
@@ -238,16 +236,16 @@ export const PatchGame: IPatcher = (
             public draw() {
                 const renderStart = performance.now();
 
-                const rawGraph = this.gameMap.rawGraph;
-                const graphState = rawGraph.graphState;
+                const graph = this.gameMap.graph;
+                const engine = graph.engine;
 
                 const bounds = this.getViewportBounds();
 
-                rawGraph.markCyclesChunksDirty();
+                graph.markCyclesChunksDirty();
 
-                const dirtyChunksIdx = graphState.getDirtyChunks(false);
+                const dirtyChunksIdx = engine.getDirtyChunks(false);
                 dirtyChunksIdx.forEach((dirtyChunkIdx) => {
-                    const chunk = rawGraph.getChunkByIdx(dirtyChunkIdx);
+                    const chunk = graph.getChunkByIdx(dirtyChunkIdx);
                     if (
                         !bounds.InBounds(
                             chunk.x * CHUNK_SIZE,
@@ -263,9 +261,7 @@ export const PatchGame: IPatcher = (
                             arrow.signal = ArrowSignal.NONE;
                             return;
                         }
-                        const signal = rawGraph.graphState.getNodeSignal(
-                            arrow.astIndex,
-                        );
+                        const signal = engine.getNodeSignal(arrow.astIndex);
                         if (signal === NodeSignal.ACTIVE)
                             arrow.signal = ACTIVE_SIGNALS[arrow.type];
                         else if (signal === NodeSignal.PENDING)
@@ -273,7 +269,7 @@ export const PatchGame: IPatcher = (
                         else arrow.signal = ArrowSignal.NONE;
                     });
                     chunk.markRenderDirty();
-                    graphState.makeUndirtyChunk(dirtyChunkIdx);
+                    engine.makeUndirtyChunk(dirtyChunkIdx);
                 });
 
                 super.draw();
@@ -304,7 +300,7 @@ export const PatchGame: IPatcher = (
                 this.drawPath(render, offsetX, offsetY);
 
                 graphDLC.debugger.colorizeDebug(
-                    gameMap.rawGraph,
+                    gameMap.graph,
                     bounds,
                     (node, r, g, b, a) => {
                         render.setSolidColor(r, g, b, a);
@@ -371,9 +367,7 @@ export const PatchGame: IPatcher = (
                     accumulator = skip;
                 }
 
-                if (
-                    this.gameMap.rawGraph.graphState.changedNodes.length !== 0
-                ) {
+                if (this.gameMap.graph.engine.isChanged()) {
                     if (isMaxTPS) {
                         const frameBudget = 1000 / TargetFPSSetting.value;
 
@@ -398,7 +392,7 @@ export const PatchGame: IPatcher = (
                             const startBatch = performance.now();
 
                             payload();
-                            this.gameMap.rawGraph.engine.runManyTicks(
+                            this.gameMap.graph.engine.runManyTicks(
                                 currentBatch,
                             );
 
@@ -441,7 +435,7 @@ export const PatchGame: IPatcher = (
                     } else {
                         while (accumulator >= skip) {
                             payload();
-                            this.gameMap.rawGraph.engine.runManyTicks(ticks);
+                            this.gameMap.graph.engine.runManyTicks(ticks);
                             _this.tick += ticks;
                             _this.updatesPerSecond += ticks;
                             accumulator -= skip;
@@ -449,9 +443,8 @@ export const PatchGame: IPatcher = (
                     }
                     if (
                         EnableBreakpointSetting.value &&
-                        this.gameMap.rawGraph.graphState.breakPoint
+                        this.gameMap.graph.engine.resetBreakpoint()
                     ) {
-                        this.gameMap.rawGraph.graphState.breakPoint = false;
                         this.playing = false;
                         patchLoader
                             .getInstance<UIPauseSign>('UIPauseSign')

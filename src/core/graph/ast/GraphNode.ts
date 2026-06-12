@@ -1,6 +1,6 @@
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
-import { CycleHeadType, type RawCycle } from './CycleTypes';
+import { CycleHeadType, type GraphCycle } from './CycleTypes';
 
 export class GraphNode {
     public readonly nodeIdx: number;
@@ -22,8 +22,8 @@ export class GraphNode {
     public isBreakpoint: boolean = false;
 
     public isCycle: boolean = false;
-    public cycleRef: RawCycle | null = null;
-    public ioCycle: RawCycle | null = null;
+    public cycleRef: GraphCycle | null = null;
+    public ioCycle: GraphCycle | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
     public cycleOffset: number = 0;
     public origCycleOffset: number = 0;

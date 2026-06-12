@@ -1,4 +1,4 @@
-import { CycleHeadType, type RawCycle } from '../graph/ast/CycleTypes';
+import { CycleHeadType, type GraphCycle } from '../graph/ast/CycleTypes';
 import type { Graph } from '../graph/ast/Graph';
 import type { GraphNode } from '../graph/ast/GraphNode';
 import {
@@ -10,7 +10,7 @@ import type { Bounds } from '../utils/Bounds';
 
 export class GraphDebug {
     public colorizeDebug(
-        rawGraph: Graph,
+        graph: Graph,
         bounds: Bounds,
         renderColor: (
             node: GraphNode,
@@ -24,13 +24,13 @@ export class GraphDebug {
             case DebugMode.OFF:
                 break;
             case DebugMode.SHOW_RINGS:
-                this.showRings(rawGraph, bounds, renderColor);
+                this.showRings(graph, bounds, renderColor);
                 break;
             case DebugMode.SHOW_SIGNAL_PROPAGATION:
-                this.showSignalPropagation(rawGraph, bounds, renderColor);
+                this.showSignalPropagation(graph, bounds, renderColor);
                 break;
             case DebugMode.SHOW_UNUSED_ARROWS:
-                this.showDeadNodes(rawGraph, bounds, renderColor);
+                this.showDeadNodes(graph, bounds, renderColor);
                 break;
             default:
                 throw new Error('Method not implemented.');
@@ -38,7 +38,7 @@ export class GraphDebug {
     }
 
     private showRings(
-        rawGraph: Graph,
+        graph: Graph,
         bounds: Bounds,
         renderColor: (
             node: GraphNode,
@@ -48,8 +48,8 @@ export class GraphDebug {
             a: number,
         ) => void,
     ) {
-        const cycles = new Set<RawCycle>();
-        rawGraph.getNodes().forEach((node) => {
+        const cycles = new Set<GraphCycle>();
+        graph.getNodes().forEach((node) => {
             if (!node.cycleRef) return;
             cycles.add(node.cycleRef);
         });
@@ -73,7 +73,7 @@ export class GraphDebug {
     }
 
     private showSignalPropagation(
-        rawGraph: Graph,
+        graph: Graph,
         bounds: Bounds,
         renderColor: (
             node: GraphNode,
@@ -91,7 +91,7 @@ export class GraphDebug {
             [0.8, 0.2, 0.8],
             [0.2, 0.8, 0.8],
         ];
-        rawGraph.getNodes().forEach((node) => {
+        graph.getNodes().forEach((node) => {
             if (node.type === ArrowType.EMPTY) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             let hash = 0;
@@ -106,7 +106,7 @@ export class GraphDebug {
     }
 
     private showDeadNodes(
-        rawGraph: Graph,
+        graph: Graph,
         bounds: Bounds,
         renderColor: (
             node: GraphNode,
@@ -116,7 +116,7 @@ export class GraphDebug {
             a: number,
         ) => void,
     ) {
-        const entryPoints: GraphNode[] = rawGraph
+        const entryPoints: GraphNode[] = graph
             .getNodes()
             .filter((node) => IsArrowEntryPoint(node.type));
         const reachableNodes = new Set<GraphNode>();
@@ -141,7 +141,7 @@ export class GraphDebug {
             }
         }
 
-        rawGraph.getNodes().forEach((node) => {
+        graph.getNodes().forEach((node) => {
             if (node.type === ArrowType.EMPTY) return;
             if (!bounds.InBounds(node.globalX, node.globalY)) return;
             if (!reachableNodes.has(node)) {

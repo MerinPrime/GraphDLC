@@ -1,5 +1,7 @@
-import type { RawCycle } from '../../ast/CycleTypes';
+import type { Chunk } from '@logic-arrows/game-logic/chunk';
+import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
+import type { NodeSignal } from './NodeSignal';
 
 export interface ISnapshot {
     tick: number;
@@ -11,11 +13,18 @@ export interface IEngine {
     rewindToTick(targetTick: number): void;
 
     getTick(): number;
+    resetBreakpoint(): boolean;
+    isChanged(): boolean;
+
+    getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]];
+    makeDirtyChunk(chunkIdx: number): void;
+    makeUndirtyChunk(chunkIdx: number): void;
+    getNodeSignal(nodeIdx: number): NodeSignal;
 
     reset(): void;
 
-    onCycleBuild(cycle: RawCycle): void;
-    onCycleDismantle(cycle: RawCycle): void;
+    onCycleBuild(cycle: GraphCycle): void;
+    onCycleDismantle(cycle: GraphCycle): void;
 
     updateNodeChange(
         node: GraphNode,
@@ -23,5 +32,10 @@ export interface IEngine {
         next: GraphNode[],
     ): void;
 
+    updateNodeState(node: GraphNode): void;
+    updateChunk(chunk: Chunk): void;
+
     doPressButton(astIdx: number, state: boolean): void;
+
+    clear(): void;
 }

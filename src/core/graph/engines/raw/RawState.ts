@@ -1,5 +1,5 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { RawCycle } from '../../ast/CycleTypes';
+import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
@@ -7,6 +7,9 @@ import { RawCycleState } from './RawCycleState';
 import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
 export class RawNodeState {
+    public readonly nodeIdx;
+    public readonly chunkIdx;
+
     public type: NodeType = NodeType.EMPTY;
 
     public signal: number = 0;
@@ -22,7 +25,14 @@ export class RawNodeState {
     public isChanged: boolean = false;
     public isTempChanged: boolean = false;
 
-    public constructor(public node: GraphNode) {}
+    public constructor(
+        public node: GraphNode,
+        nodeIdx: number,
+        chunkIdx: number,
+    ) {
+        this.nodeIdx = nodeIdx;
+        this.chunkIdx = chunkIdx;
+    }
 }
 
 export class RawChunkState {
@@ -57,9 +67,13 @@ export class RawGraphState {
         return this.nodes[nodeIdx];
     }
 
-    public updateNode(node: GraphNode) {
+    public updateNodeState(node: GraphNode) {
         if (this.nodes[node.nodeIdx] === undefined) {
-            this.nodes[node.nodeIdx] = new RawNodeState(node);
+            this.nodes[node.nodeIdx] = new RawNodeState(
+                node,
+                node.nodeIdx,
+                node.chunkIdx,
+            );
         }
         const nodeState = this.nodes[node.nodeIdx];
         nodeState.type = NodeTypes.fromArrowType(node.type);
@@ -148,7 +162,7 @@ export class RawGraphState {
         else return NodeSignal.ACTIVE;
     }
 
-    public addCycle(rawCycle: RawCycle) {
+    public addCycle(rawCycle: GraphCycle) {
         if (this.cycles[rawCycle.index]) return;
 
         this.cycles[rawCycle.index] = new RawCycleState(rawCycle.nodes.length);
@@ -160,7 +174,7 @@ export class RawGraphState {
         }
     }
 
-    public removeCycle(rawCycle: RawCycle) {
+    public removeCycle(rawCycle: GraphCycle) {
         this.cycles[rawCycle.index] = null;
     }
 

@@ -1,6 +1,6 @@
 import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
 import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
-import { CycleHeadType, type RawCycle } from '../CycleTypes';
+import { CycleHeadType, type GraphCycle } from '../CycleTypes';
 import type { Graph } from '../Graph';
 import type { GraphNode } from '../GraphNode';
 import { CycleSearchTask } from './CycleSearchTask';
@@ -97,7 +97,7 @@ export class CycleManager {
 
     private assignCycleHead(
         headNode: GraphNode,
-        cycle: RawCycle,
+        cycle: GraphCycle,
         headType: CycleHeadType,
         offset: number,
     ) {
@@ -107,7 +107,7 @@ export class CycleManager {
         cycle.heads.push(headNode);
     }
 
-    private validateOrDismantle(graph: Graph, cycle: RawCycle | null) {
+    private validateOrDismantle(graph: Graph, cycle: GraphCycle | null) {
         if (!cycle) return;
         if (!this.isValidCycle(cycle.nodes)) {
             graph.removeCycle(cycle);
@@ -122,7 +122,7 @@ export class CycleManager {
         }
     }
 
-    public refreshCycleIO(cycle: RawCycle) {
+    public refreshCycleIO(cycle: GraphCycle) {
         cycle.heads.forEach((head) => {
             this.resetHead(head);
         });
@@ -378,7 +378,7 @@ export class CycleManager {
             this.validateOrDismantle(graph, target.cycleRef);
         }
 
-        const refreshExternalCycle = (ref: RawCycle | null) => {
+        const refreshExternalCycle = (ref: GraphCycle | null) => {
             if (ref && ref !== node.cycleRef && ref !== target.cycleRef) {
                 this.refreshCycleIO(ref);
             }
@@ -503,7 +503,7 @@ export class CycleManager {
         }
     }
 
-    public attachNodesToCycle(cycle: RawCycle, nodes: GraphNode[]) {
+    public attachNodesToCycle(cycle: GraphCycle, nodes: GraphNode[]) {
         for (const node of nodes) {
             node.isCycle = true;
             node.cycleRef = cycle;
@@ -511,7 +511,7 @@ export class CycleManager {
         this.refreshCycleIO(cycle);
     }
 
-    public detachNodesFromCycle(cycle: RawCycle) {
+    public detachNodesFromCycle(cycle: GraphCycle) {
         for (const node of cycle.nodes) {
             node.isCycle = false;
             node.cycleRef = null;

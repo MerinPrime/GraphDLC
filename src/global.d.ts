@@ -39,7 +39,7 @@ declare module '@logic-arrows/game-logic/arrow' {
 
 declare module '@logic-arrows/game-logic/game-map' {
     export interface GameMap {
-        rawGraph: Graph;
+        graph: Graph;
         isMain: boolean;
 
         updateArrowState(
@@ -48,12 +48,6 @@ declare module '@logic-arrows/game-logic/game-map' {
             chunkX: number,
             chunkY: number,
         );
-    }
-}
-
-declare module '@logic-arrows/player/player-ui' {
-    export interface PlayerUI {
-        updateDevDebugInfo(): void;
     }
 }
 

@@ -1,5 +1,5 @@
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
-import { CycleHeadType, type RawCycle } from '../../ast/CycleTypes';
+import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import type { RawGraphState } from './RawState';
@@ -12,38 +12,38 @@ export class RawStateSynchronizer {
         this.updater = updater;
     }
 
-    public onCycleBuild(graphState: RawGraphState, cycle: RawCycle) {
-        graphState.addCycle(cycle);
-        const cycleState = graphState.cycles[cycle.index];
+    public onCycleBuild(state: RawGraphState, cycle: GraphCycle) {
+        state.addCycle(cycle);
+        const cycleState = state.cycles[cycle.index];
         if (!cycleState) return;
 
         for (const node of cycle.nodes) {
-            const nodeState = graphState.getNode(node.nodeIdx);
+            const nodeState = state.getNode(node.nodeIdx);
 
             if (nodeState.signal === NodeSignal.ACTIVE) {
-                cycleState.writeBit(graphState.tick, node.origCycleOffset);
+                cycleState.writeBit(state.tick, node.origCycleOffset);
             }
 
             nodeState.signal = NodeSignal.NONE;
             nodeState.lastSignal = NodeSignal.NONE;
-            graphState.makeDirtyChunk(node.chunkIdx);
+            state.makeDirtyChunk(node.chunkIdx);
         }
 
         for (const node of cycle.nodes) {
-            const nodeState = graphState.getNode(node.nodeIdx);
+            const nodeState = state.getNode(node.nodeIdx);
             const isHead =
                 node.headType !== CycleHeadType.NONE &&
                 node.headType !== CycleHeadType.READ;
 
             if (!isHead) {
                 if (nodeState.isChanged) {
-                    removeWithSwap(graphState.changedNodes, nodeState);
-                    removeWithSwap(graphState.tempChangedNodes, nodeState);
+                    removeWithSwap(state.changedNodes, nodeState);
+                    removeWithSwap(state.tempChangedNodes, nodeState);
                     nodeState.isChanged = false;
                 }
             } else {
-                this.updater.markNodeAsChangedNonTemp(graphState, nodeState);
-                this.updater.markNodeAsChanged(graphState, nodeState);
+                this.updater.markNodeAsChangedNonTemp(state, nodeState);
+                this.updater.markNodeAsChanged(state, nodeState);
             }
         }
 
@@ -52,10 +52,10 @@ export class RawStateSynchronizer {
                 continue;
             }
 
-            const nodeState = graphState.getNode(headNode.nodeIdx);
+            const nodeState = state.getNode(headNode.nodeIdx);
             if (headNode.headType !== CycleHeadType.NONE) {
-                this.updater.markNodeAsChangedNonTemp(graphState, nodeState);
-                this.updater.markNodeAsChanged(graphState, nodeState);
+                this.updater.markNodeAsChangedNonTemp(state, nodeState);
+                this.updater.markNodeAsChanged(state, nodeState);
             }
         }
 
@@ -74,39 +74,39 @@ export class RawStateSynchronizer {
         }
 
         for (const affectedNode of affectedNodes) {
-            this.updater.fullNodeStateCalculate(graphState, affectedNode);
+            this.updater.fullNodeStateCalculate(state, affectedNode);
         }
     }
 
-    public onCycleDismantle(graphState: RawGraphState, cycle: RawCycle) {
-        const cycleState = graphState.cycles[cycle.index];
+    public onCycleDismantle(state: RawGraphState, cycle: GraphCycle) {
+        const cycleState = state.cycles[cycle.index];
 
         for (const node of cycle.nodes) {
-            const nodeState = graphState.getNode(node.nodeIdx);
+            const nodeState = state.getNode(node.nodeIdx);
 
             if (cycleState) {
                 const isActive = cycleState.getBit(
-                    graphState.tick,
+                    state.tick,
                     node.origCycleOffset,
                 );
 
                 if (isActive) {
                     nodeState.signal = NodeSignal.ACTIVE;
                     nodeState.lastSignal = nodeState.signal;
-                    graphState.makeDirtyChunk(node.chunkIdx);
+                    state.makeDirtyChunk(node.chunkIdx);
                 } else {
                     if (nodeState.signal !== NodeSignal.ACTIVE)
                         nodeState.signal = NodeSignal.NONE;
                     nodeState.lastSignal = nodeState.signal;
-                    graphState.makeDirtyChunk(node.chunkIdx);
+                    state.makeDirtyChunk(node.chunkIdx);
                 }
             }
 
             nodeState.nodeInCycleOffset = 0;
             nodeState.isUpdated = true;
 
-            this.updater.markNodeAsChangedNonTemp(graphState, nodeState);
-            this.updater.markNodeAsChanged(graphState, nodeState);
+            this.updater.markNodeAsChangedNonTemp(state, nodeState);
+            this.updater.markNodeAsChanged(state, nodeState);
         }
 
         const affectedNodes = new Set<GraphNode>();
@@ -124,22 +124,22 @@ export class RawStateSynchronizer {
         }
 
         for (const affectedNode of affectedNodes) {
-            this.updater.fullNodeStateCalculate(graphState, affectedNode);
+            this.updater.fullNodeStateCalculate(state, affectedNode);
         }
-        graphState.removeCycle(cycle);
+        state.removeCycle(cycle);
     }
 
     public updateNodeChange(
-        graphState: RawGraphState,
+        state: RawGraphState,
         node: GraphNode,
         oldNext: GraphNode[],
         newNext: GraphNode[],
     ) {
         const allNodes = new Set([...oldNext, ...newNext]);
 
-        this.updater.fullNodeStateCalculate(graphState, node);
+        this.updater.fullNodeStateCalculate(state, node);
         for (const edgeNode of allNodes) {
-            this.updater.fullNodeStateCalculate(graphState, edgeNode);
+            this.updater.fullNodeStateCalculate(state, edgeNode);
         }
     }
 }

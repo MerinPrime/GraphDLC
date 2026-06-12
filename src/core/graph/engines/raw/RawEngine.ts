@@ -1,5 +1,6 @@
+import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
-import type { RawCycle } from '../../ast/CycleTypes';
+import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { StateRewinder } from '../core/StateRewinder';
@@ -66,16 +67,42 @@ export class RawEngine implements IEngine {
         return this.state.tick;
     }
 
+    public resetBreakpoint(): boolean {
+        const oldBreakpoint = this.state.breakPoint;
+        this.state.breakPoint = false;
+        return oldBreakpoint;
+    }
+
+    public isChanged(): boolean {
+        return this.state.changedNodes.length !== 0;
+    }
+
+    public getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]] {
+        return this.state.getDirtyChunks(markUndirty);
+    }
+
+    public makeDirtyChunk(chunkIdx: number): void {
+        this.state.makeDirtyChunk(chunkIdx);
+    }
+
+    public makeUndirtyChunk(chunkIdx: number): void {
+        this.state.makeUndirtyChunk(chunkIdx);
+    }
+
+    public getNodeSignal(nodeIdx: number): NodeSignal {
+        return this.state.getNodeSignal(nodeIdx);
+    }
+
     public reset(): void {
         this.state.reset();
         this.rewinder.reset();
     }
 
-    public onCycleBuild(cycle: RawCycle): void {
+    public onCycleBuild(cycle: GraphCycle): void {
         this.synchronizer.onCycleBuild(this.state, cycle);
     }
 
-    public onCycleDismantle(cycle: RawCycle): void {
+    public onCycleDismantle(cycle: GraphCycle): void {
         this.synchronizer.onCycleDismantle(this.state, cycle);
     }
 
@@ -87,11 +114,23 @@ export class RawEngine implements IEngine {
         this.synchronizer.updateNodeChange(this.state, node, oldNextFull, next);
     }
 
+    public updateNodeState(node: GraphNode): void {
+        this.state.updateNodeState(node);
+    }
+
+    public updateChunk(chunk: Chunk): void {
+        this.state.updateChunk(chunk);
+    }
+
     public doPressButton(astIdx: number, state: boolean): void {
         const astState = this.state.getNode(astIdx);
         astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
         this.updater.markNodeAsChanged(this.state, astState);
         this.state.changedNodes.push(astState);
         this.state.makeDirtyChunk(astState.node.chunkIdx);
+    }
+
+    public clear(): void {
+        this.state.clear();
     }
 }

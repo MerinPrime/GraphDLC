@@ -24,6 +24,14 @@ interface PrivatePlayerControls {
     getPositionByMousePosition(): [x: number, y: number];
 }
 
+interface PathData {
+    startPathX: number;
+    startPathY: number;
+    endPathX: number;
+    endPathY: number;
+    path: PathStep[];
+}
+
 export const PatchPlayerControls: IPatcher = (
     patchLoader: PatchLoader,
     graphDLC: GraphDLC,
@@ -53,11 +61,7 @@ export const PatchPlayerControls: IPatcher = (
         'PlayerControls',
         (_module: typeof PlayerControls) => {
             return class PlayerControls extends _module {
-                private startPathX: number | null = null;
-                private startPathY: number | null = null;
-                private endPathX: number | null = null;
-                private endPathY: number | null = null;
-                private path: PathStep[] | null = null;
+                private pathData: PathData | null = null;
 
                 public constructor(
                     cnv: HTMLCanvasElement,
@@ -89,7 +93,7 @@ export const PatchPlayerControls: IPatcher = (
                             if (arrow.type === 21 || arrow.type === 24) {
                                 if (arrow.astIndex != null) {
                                     const engine =
-                                        _this.game.gameMap.rawGraph.engine;
+                                        _this.game.gameMap.graph.engine;
                                     const state = arrow.signal !== 0;
                                     engine.doPressButton(arrow.astIndex, state);
                                 }
@@ -107,7 +111,7 @@ export const PatchPlayerControls: IPatcher = (
                             _this.keyboardHandler.getShiftPressed() &&
                             code === 'Enter'
                         ) {
-                            const engine = _this.game.gameMap.rawGraph.engine;
+                            const engine = _this.game.gameMap.graph.engine;
                             engine.rewindToTick(
                                 Math.max(engine.getTick() - 1, 0),
                             );
@@ -124,34 +128,39 @@ export const PatchPlayerControls: IPatcher = (
 
                     if (isRightMouseDown) {
                         const [x, y] = _this.getPositionByMousePosition();
-                        if (
-                            this.startPathX === null ||
-                            this.startPathY === null
-                        ) {
-                            this.startPathX = x;
-                            this.startPathY = y;
+                        if (this.pathData === null) {
+                            this.pathData = {
+                                startPathX: 0,
+                                startPathY: 0,
+                                endPathX: 0,
+                                endPathY: 0,
+                                path: [],
+                            };
+                            this.pathData.startPathX = x;
+                            this.pathData.startPathY = y;
+                            this.pathData.endPathX = x;
+                            this.pathData.endPathY = y;
                         }
-                        if (this.endPathX !== x || this.endPathY !== y) {
-                            this.endPathX = x;
-                            this.endPathY = y;
-                            this.path = graphDLC.pathFinder.findPath(
-                                _this.game.gameMap,
-                                this.startPathX,
-                                this.startPathY,
-                                this.endPathX,
-                                this.endPathY,
-                            );
-                            _this.game.path = this.path;
+                        if (
+                            this.pathData &&
+                            (this.pathData.endPathX !== x ||
+                                this.pathData.endPathY !== y)
+                        ) {
+                            this.pathData.endPathX = x;
+                            this.pathData.endPathY = y;
+                            this.pathData.path =
+                                graphDLC.pathFinder.findPath(
+                                    _this.game.gameMap,
+                                    this.pathData.startPathX,
+                                    this.pathData.startPathY,
+                                    this.pathData.endPathX,
+                                    this.pathData.endPathY,
+                                ) ?? [];
+                            _this.game.path = this.pathData.path;
                         }
                     } else {
-                        if (
-                            this.startPathX !== null &&
-                            this.startPathY !== null &&
-                            this.endPathX !== null &&
-                            this.endPathY !== null &&
-                            this.path !== null
-                        ) {
-                            this.path.forEach(
+                        if (this.pathData) {
+                            this.pathData.path.forEach(
                                 ({ x, y, type, rotation, flipped }) => {
                                     const arrowOld = _ArrowData.def.fromArrow(
                                         _this.game.gameMap.getArrow(x, y),
@@ -183,14 +192,9 @@ export const PatchPlayerControls: IPatcher = (
                                 },
                             );
                         }
-                        this.startPathX = null;
-                        this.startPathY = null;
-                        this.endPathX = null;
-                        this.endPathY = null;
-                        this.path = null;
+                        this.pathData = null;
                         _this.game.path = null;
                     }
-                    _this.playerUI.updateDevDebugInfo();
                 }
             };
         },

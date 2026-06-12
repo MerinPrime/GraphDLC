@@ -8,7 +8,7 @@ export const enum CycleHeadType {
     XOR_WRITE = 4,
 }
 
-export interface RawCycle {
+export interface GraphCycle {
     index: number;
     nodes: GraphNode[];
     heads: GraphNode[];
