@@ -6,6 +6,7 @@ import { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
+import { GraphDebugger } from '../debugger/GraphDebugger';
 import type { IEngine } from '../engines/core/types';
 import { RawEngine } from '../engines/raw/RawEngine';
 import type { GraphCycle } from './CycleTypes';
@@ -25,8 +26,9 @@ export class Graph {
     private freeCycleIndices: number[] = [];
 
     private readonly cycleManager: CycleManager = new CycleManager();
+    public readonly debugger: GraphDebugger = new GraphDebugger(this);
 
-    private listeners: IGraphListener[] = [this.cycleManager];
+    private listeners: IGraphListener[] = [this.cycleManager, this.debugger];
 
     public engine: IEngine;
 
@@ -55,6 +57,10 @@ export class Graph {
 
     public getNodes(): readonly GraphNode[] {
         return this.nodes;
+    }
+
+    public getChunks(): readonly Chunk[] {
+        return this.chunks;
     }
 
     public getNode(nodeIdx: number): GraphNode {
@@ -165,8 +171,12 @@ export class Graph {
         if (arrow.astIndex != null) return this.getNode(arrow.astIndex);
 
         if (chunk.astIndex == null) {
-            chunk.astIndex = this.chunks.length;
+            const chunkIdx = this.chunks.length;
+            chunk.astIndex = chunkIdx;
             this.chunks.push(chunk);
+            this.listeners.forEach((listener) => {
+                listener.onChunkAdded(this, chunk, chunkIdx);
+            });
             this.engine.updateChunk(chunk);
         }
 

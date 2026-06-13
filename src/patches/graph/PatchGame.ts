@@ -299,19 +299,15 @@ export const PatchGame: IPatcher = (
 
                 this.drawPath(render, offsetX, offsetY);
 
-                graphDLC.debugger.colorizeDebug(
-                    gameMap.graph,
-                    bounds,
-                    (node, r, g, b, a) => {
-                        render.setSolidColor(r, g, b, a);
-                        render.drawSolidColorRect(
-                            node.globalX * this.scale + offsetX,
-                            node.globalY * this.scale + offsetY,
-                            this.scale,
-                            this.scale,
-                        );
-                    },
-                );
+                graph.debugger.render(bounds, (x, y, [r, g, b, a]) => {
+                    render.setSolidColor(r, g, b, a);
+                    render.drawSolidColorRect(
+                        x * this.scale + offsetX,
+                        y * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
 
                 render.setShowBorder(true);
 

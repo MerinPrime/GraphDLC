@@ -1,3 +1,4 @@
+import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
@@ -437,4 +438,12 @@ export class CycleManager implements IGraphListener {
     public onCycleAdded(_graph: Graph, _cycle: GraphCycle): void {}
 
     public onCycleRemoved(_graph: Graph, _cycle: GraphCycle): void {}
+
+    public onChunkAdded(
+        _graph: Graph,
+        _chunk: Chunk,
+        _chunkIdx: number,
+    ): void {}
+
+    public onNodeAdded(_graph: Graph, _node: GraphNode): void {}
 }

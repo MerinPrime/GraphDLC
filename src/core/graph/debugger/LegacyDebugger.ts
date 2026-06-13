@@ -1,12 +1,11 @@
-import { CycleHeadType, type GraphCycle } from '../graph/ast/CycleTypes';
-import type { Graph } from '../graph/ast/Graph';
-import type { GraphNode } from '../graph/ast/GraphNode';
 import {
     DebugMode,
     DebugModeSetting,
-} from '../settings/instances/tools/DebugModeSetting';
-import { ArrowType, IsArrowEntryPoint } from '../utils/ArrowType';
-import type { Bounds } from '../utils/Bounds';
+} from 'src/core/settings/instances/tools/DebugModeSetting';
+import type { Bounds } from 'src/core/utils/Bounds';
+import { CycleHeadType, type GraphCycle } from '../ast/CycleTypes';
+import type { Graph } from '../ast/Graph';
+import type { GraphNode } from '../ast/GraphNode';
 
 export class GraphDebug {
     public colorizeDebug(

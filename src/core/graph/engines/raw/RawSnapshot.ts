@@ -30,3 +30,5 @@ export class RawSnapshot {
     public tempChangedNodes: number[] = [];
     public cycles: RawCycleSnapshot[] = [];
 }
+
+// TODO: store random arrow states
