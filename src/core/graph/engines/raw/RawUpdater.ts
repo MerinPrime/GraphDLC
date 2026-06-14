@@ -72,7 +72,7 @@ export class RawGraphUpdater {
                     continue;
 
                 const cycleIdx = nodeState.cycleIdx;
-                if (!cycleIdx) continue;
+                if (cycleIdx === null) continue;
 
                 const cycleState = state.cycles[cycleIdx];
                 if (!cycleState) continue;
@@ -199,7 +199,7 @@ export class RawGraphUpdater {
             if (nodeState.signalsCount === 0) return NodeSignal.NONE;
 
             const cycleIdx = nodeState.cycleIdx;
-            if (!cycleIdx) return NodeSignal.KEEP_SIGNAL;
+            if (cycleIdx === null) return NodeSignal.KEEP_SIGNAL;
 
             const cycleState = state.cycles[cycleIdx];
             if (!cycleState) return NodeSignal.KEEP_SIGNAL;

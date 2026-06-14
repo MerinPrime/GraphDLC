@@ -179,7 +179,7 @@ export class RawGraphState {
     public getNodeSignal(nodeIdx: number): NodeSignal {
         const nodeState = this.getNode(nodeIdx);
         const cycleIdx = nodeState.cycleIdx;
-        if (cycleIdx && nodeState.headType === CycleHeadType.NONE) {
+        if (cycleIdx !== null && nodeState.headType === CycleHeadType.NONE) {
             const cycleState = this.cycles[cycleIdx];
             if (!cycleState) return NodeSignal.NONE;
             const isActive = cycleState.getBit(

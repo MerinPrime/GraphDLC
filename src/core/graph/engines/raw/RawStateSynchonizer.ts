@@ -53,7 +53,7 @@ export class RawStateSynchronizer {
             }
 
             const nodeState = state.getNode(headNode.nodeIdx);
-            if (headNode.headType !== CycleHeadType.NONE) {
+            if (nodeState.headType !== CycleHeadType.NONE) {
                 this.updater.markNodeAsChangedNonTemp(state, nodeState);
                 this.updater.markNodeAsChanged(state, nodeState);
             }

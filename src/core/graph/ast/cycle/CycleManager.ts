@@ -105,7 +105,9 @@ export class CycleManager implements IGraphListener {
         if (budget === 0) {
             const cyclePath = this.findCyclePathSync(startNode, startNode);
             if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                graph.addCycle(cyclePath);
+                if (cyclePath.every((node) => node.cycleRef === null)) {
+                    graph.addCycle(cyclePath);
+                }
             }
             return;
         }
@@ -116,7 +118,9 @@ export class CycleManager implements IGraphListener {
             task,
             (path) => {
                 if (path !== null && this.isValidCycle(path)) {
-                    graph.addCycle(path);
+                    if (path.every((node) => node.cycleRef === null)) {
+                        graph.addCycle(path);
+                    }
                 }
             },
             startNode,
@@ -291,7 +295,9 @@ export class CycleManager implements IGraphListener {
             if (budget === 0) {
                 const cyclePath = this.findCyclePathSync(target, node);
                 if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                    graph.addCycle(cyclePath);
+                    if (cyclePath.every((n) => n.cycleRef === null)) {
+                        graph.addCycle(cyclePath);
+                    }
                     return;
                 }
             } else {
@@ -300,7 +306,9 @@ export class CycleManager implements IGraphListener {
                     task,
                     (path) => {
                         if (path !== null && this.isValidCycle(path)) {
-                            graph.addCycle(path);
+                            if (path.every((n) => n.cycleRef === null)) {
+                                graph.addCycle(path);
+                            }
                         }
                     },
                     target,
@@ -383,10 +391,6 @@ export class CycleManager implements IGraphListener {
             }
         }
 
-        if (node.cycleRef !== null) {
-            this.refreshCycleIO(node.cycleRef);
-        }
-
         this.reevaluateParentCycles(graph, node);
 
         for (const next of node.links) {
@@ -396,9 +400,7 @@ export class CycleManager implements IGraphListener {
         }
 
         this.tryRebuildCycle(graph, node);
-        for (const prev of node.backLinks) {
-            this.tryRebuildCycle(graph, prev);
-        }
+
         for (const next of node.links) {
             this.tryRebuildCycle(graph, next);
         }
