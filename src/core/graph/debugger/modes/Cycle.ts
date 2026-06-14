@@ -29,7 +29,7 @@ class UpdateCycleTask implements ITask<void> {
     ) {}
 
     public step(_batchSize: number): boolean {
-        let color: DebugColor | null = null;
+        let color: DebugColor | null = [0, 0, 0, 0];
 
         if (
             this.node.headType !== null &&
@@ -40,9 +40,8 @@ class UpdateCycleTask implements ITask<void> {
             color = CYCLE_COLOR;
         }
 
-        if (color) {
-            this.debugChunk.setColor(this.node.localX, this.node.localY, color);
-        }
+        this.debugChunk.setColor(this.node.localX, this.node.localY, color);
+
         return true;
     }
 

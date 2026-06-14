@@ -29,7 +29,12 @@ class UpdateSignalTask implements ITask<void> {
     public step(_batchSize: number): boolean {
         const chunk = this.debugChunk;
 
-        let hash = 0;
+        if (this.node.type === ArrowType.EMPTY) {
+            chunk.setColor(this.node.localX, this.node.localY, [0, 0, 0, 0]);
+            return true;
+        }
+
+        let hash = this.node.type;
         this.node.backLinks.forEach((link) => {
             if (link.type !== ArrowType.EMPTY) hash += link.type;
         });
@@ -51,10 +56,10 @@ export class SignalPropagationDebuggerMode extends DebuggerMode<INodeDebugData> 
 
     protected doRunTask(
         _graph: Graph,
-        node: GraphNode,
+        _node: GraphNode,
         _data: INodeDebugData,
     ): boolean {
-        return node.type !== ArrowType.EMPTY;
+        return true;
     }
 
     protected runUpdateTask(
