@@ -43,7 +43,7 @@ export const CycleBudgetSetting = new NumberSetting(
         description: DescriptionLocale,
         isMapSetting: false,
         group: PerformanceSettingGroup,
-        order: 1,
+        order: 3,
     },
     {
         min: 0,

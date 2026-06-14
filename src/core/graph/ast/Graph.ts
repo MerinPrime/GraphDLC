@@ -2,6 +2,10 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
+import {
+    GraphEngine,
+    GraphEngineSetting,
+} from 'src/core/settings/instances/performance/GraphEngineSetting';
 import type { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
@@ -36,7 +40,21 @@ export class Graph {
     public constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
 
-        this.engine = new RawEngine();
+        let engine: IEngine;
+
+        switch (GraphEngineSetting.value) {
+            case GraphEngine.STANDARD:
+                engine = new RawEngine();
+                break;
+            case GraphEngine.ENHANCED:
+                engine = new RawEngine();
+                break;
+            case GraphEngine.NATIVE:
+                engine = new RawEngine();
+                break;
+        }
+
+        this.engine = engine;
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {

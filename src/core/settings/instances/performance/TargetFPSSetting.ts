@@ -30,7 +30,7 @@ export const TargetFPSSetting = new NumberSetting(
         description: DescriptionLocale,
         isMapSetting: false,
         group: PerformanceSettingGroup,
-        order: 0,
+        order: 1,
     },
     {
         min: 10,

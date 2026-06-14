@@ -1,5 +1,6 @@
 import { CycleBudgetSetting } from './instances/performance/CycleBudgetSetting';
 import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
+import { GraphEngineSetting } from './instances/performance/GraphEngineSetting';
 import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
 import { DarkThemeSetting } from './instances/redesign/DarkThemeSetting';
 import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
@@ -13,9 +14,10 @@ import type { BaseSetting } from './types/BaseSetting';
 
 const settings: BaseSetting<any>[] = [
     // Performance
+    GraphEngineSetting,
     TargetFPSSetting,
-    CycleBudgetSetting,
     EnableSnapshotsSetting,
+    CycleBudgetSetting,
 
     // Tools
     EnableArrowRelationsSetting,
