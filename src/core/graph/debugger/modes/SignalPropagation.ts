@@ -1,8 +1,8 @@
 import type { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import type { ITask } from 'src/core/task/ITask';
-import { ArrowType } from 'src/core/utils/ArrowType';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
+import { NodeType } from '../../engines/core/NodeType';
 import type { DebugChunk } from '../DebugChunk';
 import { DebuggerMode } from '../DebuggerMode';
 import type { DebugColor, INodeDebugData } from '../types';
@@ -29,14 +29,14 @@ class UpdateSignalTask implements ITask<void> {
     public step(_batchSize: number): boolean {
         const chunk = this.debugChunk;
 
-        if (this.node.type === ArrowType.EMPTY) {
+        if (this.node.type === NodeType.EMPTY) {
             chunk.setColor(this.node.localX, this.node.localY, [0, 0, 0, 0]);
             return true;
         }
 
         let hash = this.node.type;
         this.node.backLinks.forEach((link) => {
-            if (link.type !== ArrowType.EMPTY) hash += link.type;
+            if (link.type !== NodeType.EMPTY) hash += link.type;
         });
 
         const color = HASH_COLORS[hash % HASH_COLORS.length];

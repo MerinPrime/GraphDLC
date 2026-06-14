@@ -2,11 +2,12 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import { ArrowType } from 'src/core/utils/ArrowType';
+import type { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
+import { NodeType } from '../engines/core/NodeType';
 import type { IEngine } from '../engines/core/types';
 import { RawEngine } from '../engines/raw/RawEngine';
 import type { GraphCycle } from './CycleTypes';
@@ -76,7 +77,7 @@ export class Graph {
         }
 
         const newTargets: GraphNode[] = [];
-        const relations = getArrowRelations(node.type);
+        const relations = getArrowRelations(node.arrowType);
         const chunk = (
             this.gameMap as any as PrivateGameMap
         ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
@@ -136,7 +137,7 @@ export class Graph {
         }
 
         let detectorLink: GraphNode | null = null;
-        if (node.type === ArrowType.DETECTOR) {
+        if (node.type === NodeType.DETECTOR) {
             const { x: backX, y: backY } = getRelativePosition(
                 node.globalX,
                 node.globalY,

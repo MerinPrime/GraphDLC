@@ -1,4 +1,3 @@
-import { ArrowType } from 'src/core/utils/ArrowType';
 import { CycleHeadType } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -13,7 +12,7 @@ export class RawGraphUpdater {
         let signalsCount = 0;
         let blockedCount = 0;
 
-        const isDetector = node.type === ArrowType.DETECTOR;
+        const isDetector = node.type === NodeType.DETECTOR;
 
         if (isDetector) {
             if (node.detectedLink) {
@@ -35,7 +34,7 @@ export class RawGraphUpdater {
                 if (isBypassedHead) continue;
 
                 if (prevState.lastSignal === NodeSignal.ACTIVE) {
-                    const isBlocker = prev.type === ArrowType.BLOCKER;
+                    const isBlocker = prev.type === NodeType.BLOCKER;
                     if (isBlocker) {
                         blockedCount++;
                     } else {

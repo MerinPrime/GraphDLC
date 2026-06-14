@@ -1,5 +1,4 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import { ArrowType } from 'src/core/utils/ArrowType';
 import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -85,15 +84,15 @@ export class RawGraphState {
         }
         const nodeState = this.nodes[node.nodeIdx];
 
-        nodeState.type = NodeTypes.fromArrowType(node.type);
+        nodeState.type = node.type;
         nodeState.links = node.links
-            .filter((linkedNode) => linkedNode.type !== ArrowType.DETECTOR)
+            .filter((linkedNode) => linkedNode.type !== NodeType.DETECTOR)
             .map((linkedNode) => this.getNode(linkedNode.nodeIdx));
 
         nodeState.detectorLinks = node.links
             .filter(
                 (linkedNode) =>
-                    linkedNode.type === ArrowType.DETECTOR &&
+                    linkedNode.type === NodeType.DETECTOR &&
                     linkedNode.detectedLink === nodeState.node,
             )
             .map((node) => this.getNode(node.nodeIdx));

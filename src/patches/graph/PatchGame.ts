@@ -6,6 +6,7 @@ import type { Game } from '@logic-arrows/player/game';
 import type { UIPauseSign } from '@logic-arrows/ui/components/ui-pause-sign';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
+import { NodeType } from 'src/core/graph/engines/core/NodeType';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import { TargetFPSSetting } from 'src/core/settings/instances/performance/TargetFPSSetting';
@@ -129,7 +130,7 @@ export const PatchGame: IPatcher = (
                 render.setSolidColor(0.8, 0.2, 0.2, 0.25);
                 astNode.backLinks.forEach((previousNode) => {
                     if (
-                        astNode.type === ArrowType.DETECTOR &&
+                        astNode.type === NodeType.DETECTOR &&
                         astNode.detectedLink !== previousNode
                     )
                         return;
@@ -153,7 +154,7 @@ export const PatchGame: IPatcher = (
 
                 astNode.links.forEach((linkedNode) => {
                     if (
-                        linkedNode.type === ArrowType.DETECTOR &&
+                        linkedNode.type === NodeType.DETECTOR &&
                         linkedNode.detectedLink !== astNode
                     )
                         return;

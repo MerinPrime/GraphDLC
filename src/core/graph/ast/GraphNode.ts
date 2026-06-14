@@ -1,12 +1,14 @@
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
+import { NodeType, NodeTypes } from '../engines/core/NodeType';
 import { CycleHeadType, type GraphCycle } from './CycleTypes';
 
 export class GraphNode {
     public readonly nodeIdx: number;
     public readonly chunkIdx: number;
 
-    public type: ArrowType = ArrowType.EMPTY;
+    public arrowType: ArrowType = ArrowType.EMPTY;
+    public type: NodeType = NodeType.EMPTY;
     public rotation: number = 0;
     public flipped: boolean = false;
 
@@ -45,7 +47,8 @@ export class GraphNode {
     }
 
     public setType(type: ArrowType) {
-        this.type = type;
+        this.arrowType = type;
+        this.type = NodeTypes.fromArrowType(type);
         this.onUpdate();
     }
 
@@ -74,9 +77,9 @@ export class GraphNode {
     }
 
     private onUpdate() {
-        if (this.type === ArrowType.BLOCKER) {
+        if (this.type === NodeType.BLOCKER) {
             const isBreakpoint = this.links.some(
-                (linkedNode) => linkedNode.type === ArrowType.BLOCKER,
+                (linkedNode) => linkedNode.type === NodeType.BLOCKER,
             );
             this.isBreakpoint = isBreakpoint;
         } else {

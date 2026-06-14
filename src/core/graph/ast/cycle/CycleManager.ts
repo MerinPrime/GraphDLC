@@ -1,7 +1,7 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
-import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
+import { NodeType, NodeTypes } from '../../engines/core/NodeType';
 import { CycleHeadType, type GraphCycle } from '../CycleTypes';
 import type { Graph } from '../Graph';
 import type { GraphNode } from '../GraphNode';
@@ -62,7 +62,7 @@ export class CycleManager implements IGraphListener {
 
             for (const linkedNode of node.links) {
                 if (
-                    linkedNode.type === ArrowType.LOGIC_AND &&
+                    linkedNode.type === NodeType.LOGIC_AND &&
                     !cycleSet.has(linkedNode)
                 ) {
                     this.assignCycleHead(
@@ -79,9 +79,9 @@ export class CycleManager implements IGraphListener {
                     const offset = (i + 1) % cycleLen;
                     let headType = CycleHeadType.WRITE;
 
-                    if (backLinkedNode.type === ArrowType.BLOCKER) {
+                    if (backLinkedNode.type === NodeType.BLOCKER) {
                         headType = CycleHeadType.CLEAR;
-                    } else if (node.type === ArrowType.LOGIC_XOR) {
+                    } else if (node.type === NodeType.LOGIC_XOR) {
                         headType = CycleHeadType.XOR_WRITE;
                     }
 
@@ -147,8 +147,7 @@ export class CycleManager implements IGraphListener {
 
             const hasExternalLinks = cycleNode.links.some(
                 (neighbor) =>
-                    !cycleSet.has(neighbor) &&
-                    neighbor.type !== ArrowType.EMPTY,
+                    !cycleSet.has(neighbor) && neighbor.type !== NodeType.EMPTY,
             );
 
             if (hasExternalLinks) {
@@ -165,8 +164,8 @@ export class CycleManager implements IGraphListener {
             for (const neighbor of cycleNode.links) {
                 if (!cycleSet.has(neighbor)) {
                     if (
-                        neighbor.type !== ArrowType.EMPTY &&
-                        neighbor.type !== ArrowType.LOGIC_AND
+                        neighbor.type !== NodeType.EMPTY &&
+                        neighbor.type !== NodeType.LOGIC_AND
                     ) {
                         return false;
                     }
@@ -182,11 +181,11 @@ export class CycleManager implements IGraphListener {
                     if (neighbor.links.length !== 1) return false;
 
                     const isInvalidEntryPoint =
-                        IsArrowEntryPoint(neighbor.type) ||
-                        neighbor.type === ArrowType.RANDOM ||
-                        neighbor.type === ArrowType.DELAY ||
-                        neighbor.type === ArrowType.LATCH ||
-                        neighbor.type === ArrowType.FLIP_FLOP;
+                        NodeTypes.isEntryPoint(neighbor.type) ||
+                        neighbor.type === NodeType.RANDOM ||
+                        neighbor.type === NodeType.DELAY ||
+                        neighbor.type === NodeType.LATCH ||
+                        neighbor.type === NodeType.FLIP_FLOP;
 
                     if (isInvalidEntryPoint) return false;
                     if (hasWriteLink) return false;

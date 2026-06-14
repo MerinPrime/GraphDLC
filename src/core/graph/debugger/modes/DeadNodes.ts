@@ -1,8 +1,8 @@
 import type { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import type { ITask } from 'src/core/task/ITask';
-import { ArrowType, IsArrowEntryPoint } from 'src/core/utils/ArrowType';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
+import { NodeType, NodeTypes } from '../../engines/core/NodeType';
 import { DebuggerMode } from '../DebuggerMode';
 import type { DebugColor, INodeDebugData } from '../types';
 
@@ -77,7 +77,6 @@ class DeadNodeUpdateTask implements ITask<void> {
         while (stepsRemaining > 0) {
             switch (this.phase) {
                 case 0: {
-                    // init_bfs: Находим точки входа
                     const allNodes = this.graph.getNodes();
                     const len = allNodes.length;
 
@@ -94,10 +93,8 @@ class DeadNodeUpdateTask implements ITask<void> {
 
                     for (let i = this.initIndex; i < limit; i++) {
                         const node = allNodes[i];
-                        if (IsArrowEntryPoint(node.type)) {
-                            // Детектор на старте может быть активен только если его цель
-                            // уже была помечена как посещенная (например, это другая точка входа) [1]
-                            if (node.type === ArrowType.DETECTOR) {
+                        if (NodeTypes.isEntryPoint(node.type)) {
+                            if (node.type === NodeType.DETECTOR) {
                                 if (
                                     node.detectedLink !== null &&
                                     this.visited[node.detectedLink.nodeIdx] ===
@@ -118,7 +115,6 @@ class DeadNodeUpdateTask implements ITask<void> {
                 }
 
                 case 1: {
-                    // run_bfs: Основной цикл BFS
                     if (this.reachHead >= this.reachQueue.length) {
                         this.phase = 2;
                         break;
@@ -133,14 +129,13 @@ class DeadNodeUpdateTask implements ITask<void> {
                         const linkedNode = links[i];
 
                         if (
-                            linkedNode.type === ArrowType.EMPTY ||
+                            linkedNode.type === NodeType.EMPTY ||
                             this.visited[linkedNode.nodeIdx] === true
                         ) {
                             continue;
                         }
 
-                        // Детектор валиден только если узел, который он детектирует, достижим [1]
-                        if (linkedNode.type === ArrowType.DETECTOR) {
+                        if (linkedNode.type === NodeType.DETECTOR) {
                             if (
                                 linkedNode.detectedLink === null ||
                                 this.visited[
@@ -152,8 +147,8 @@ class DeadNodeUpdateTask implements ITask<void> {
                         }
 
                         const isLogicGate =
-                            linkedNode.type === ArrowType.LOGIC_AND ||
-                            linkedNode.type === ArrowType.LATCH;
+                            linkedNode.type === NodeType.LOGIC_AND ||
+                            linkedNode.type === NodeType.LATCH;
 
                         if (isLogicGate) {
                             const backLinks = linkedNode.backLinks;
@@ -194,7 +189,6 @@ class DeadNodeUpdateTask implements ITask<void> {
                 }
 
                 case 2: {
-                    // apply_colors: Расчет и вывод цветов в DebugChunk
                     const allNodes = this.graph.getNodes();
                     const len = allNodes.length;
 
@@ -213,7 +207,7 @@ class DeadNodeUpdateTask implements ITask<void> {
                         const node = allNodes[i];
                         const data = this.mode.getNodeData(node.nodeIdx);
 
-                        if (node.type === ArrowType.EMPTY) {
+                        if (node.type === NodeType.EMPTY) {
                             data.isReachable = false;
                             this.mode.setChunkColor(
                                 node.chunkIdx,
