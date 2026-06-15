@@ -17,16 +17,25 @@ export namespace SoALayout {
             export const IsBreakpoint = 1 << 2;
             export const IsUpdated = 1 << 3;
             export const IsChanged = 1 << 4;
-            export const _UNUSED_5 = 1 << 5;
+            export const IsReadHead = 1 << 5;
             export const IsCycleHead = 1 << 6;
             export const IsInCycle = 1 << 7;
         }
     }
 
-    export namespace ExtraNode {
-        export const CHUNK_IDX = 0;
+    export namespace Extra8Node {
+        export const HEAD_TYPE = 0;
 
         export const STRIDE = 1;
+    }
+
+    export namespace Extra32Node {
+        export const CHUNK_IDX = 0;
+        export const CYCLE_IDX = 1;
+        export const CYCLE_OFFSET = 2;
+        export const _PADDING_4 = 3;
+
+        export const STRIDE = 4;
     }
 
     export namespace Links {

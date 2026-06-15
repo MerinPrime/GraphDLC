@@ -63,10 +63,9 @@ export class SoAStateSynchronizer {
                 continue;
             }
 
-            const nodeState = state.getNode(headNode.nodeIdx);
-            if (nodeState.headType !== CycleHeadType.NONE) {
-                this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
-                this.updater.markNodeAsChanged(state, nodeState.nodeIdx);
+            if (headNode.headType !== CycleHeadType.NONE) {
+                this.updater.markNodeAsChangedNonTemp(state, headNode.nodeIdx);
+                this.updater.markNodeAsChanged(state, headNode.nodeIdx);
             }
         }
 
@@ -94,10 +93,15 @@ export class SoAStateSynchronizer {
 
         for (const node of cycle.nodes) {
             const nodeState = state.getNode(node.nodeIdx);
-            const nodeOffset = nodeState.nodeIdx;
+            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+            const extra32Offset =
+                nodeState.nodeIdx * SoALayout.Extra32Node.STRIDE;
+
             const signalOffset = nodeOffset + SoALayout.Node.SIGNAL;
             const lastSignalOffset = nodeOffset + SoALayout.Node.LAST_SIGNAL;
             const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
+            const cycleOffsetOffset =
+                extra32Offset + SoALayout.Extra32Node.CYCLE_OFFSET;
 
             if (cycleState) {
                 const isActive = cycleState.getBit(
@@ -119,7 +123,7 @@ export class SoAStateSynchronizer {
                 }
             }
 
-            nodeState.cycleOffset = 0;
+            state.extra32NodeData[cycleOffsetOffset] = 0;
             state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
             this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);

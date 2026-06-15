@@ -11,10 +11,6 @@ import { SoACycleSnapshot, SoANodeSnapshot, SoASnapshot } from './SoASnapshot';
 export class SoANodeState {
     public readonly nodeIdx;
 
-    public cycleIdx: number | null = null;
-    public headType: CycleHeadType = CycleHeadType.NONE;
-    public cycleOffset: number = 0;
-
     public constructor(
         public node: GraphNode,
         nodeIdx: number,
@@ -48,8 +44,11 @@ export class SoAGraphState {
     public nodeData: Uint8Array = new Uint8Array(
         INIT_NODE_COUNT * SoALayout.Node.STRIDE,
     );
-    public extraNodeData: Uint8Array = new Uint8Array(
-        INIT_NODE_COUNT * SoALayout.ExtraNode.STRIDE,
+    public extra8NodeData: Uint8Array = new Uint8Array(
+        INIT_NODE_COUNT * SoALayout.Extra8Node.STRIDE,
+    );
+    public extra32NodeData: Uint32Array = new Uint32Array(
+        INIT_NODE_COUNT * SoALayout.Extra32Node.STRIDE,
     );
     public linkIndices: Uint32Array = new Uint32Array(
         INIT_NODE_COUNT * SoALayout.Links.STRIDE,
@@ -100,11 +99,17 @@ export class SoAGraphState {
         tempNodeData.set(this.nodeData);
         this.nodeData = tempNodeData;
 
-        const tempExtraNodeData = new Uint8Array(
-            newCapacity * SoALayout.ExtraNode.STRIDE,
+        const tempExtra8NodeData = new Uint8Array(
+            newCapacity * SoALayout.Extra8Node.STRIDE,
         );
-        tempExtraNodeData.set(this.extraNodeData);
-        this.extraNodeData = tempExtraNodeData;
+        tempExtra8NodeData.set(this.extra8NodeData);
+        this.extra8NodeData = tempExtra8NodeData;
+
+        const tempExtra32NodeData = new Uint32Array(
+            newCapacity * SoALayout.Extra32Node.STRIDE,
+        );
+        tempExtra32NodeData.set(this.extra32NodeData);
+        this.extra32NodeData = tempExtra32NodeData;
 
         const tempLinkIndices = new Uint32Array(
             newCapacity * SoALayout.Links.STRIDE,
@@ -184,21 +189,48 @@ export class SoAGraphState {
             this.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsBreakpoint;
         else this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsBreakpoint;
 
+        const extra8NodeOffset = node.nodeIdx * SoALayout.Extra8Node.STRIDE;
+        const extra32NodeOffset = node.nodeIdx * SoALayout.Extra32Node.STRIDE;
+
+        const cycleOffsetOffset =
+            extra32NodeOffset + SoALayout.Extra32Node.CYCLE_OFFSET;
+        const cycleIdxOffset =
+            extra32NodeOffset + SoALayout.Extra32Node.CYCLE_IDX;
+        const headTypeOffset =
+            extra8NodeOffset + SoALayout.Extra8Node.HEAD_TYPE;
+
         if (node.cycleRef) {
-            nodeState.cycleIdx = node.cycleRef.index;
-            nodeState.headType = node.headType;
-            nodeState.cycleOffset = node.cycleOffset;
+            this.extra32NodeData[cycleIdxOffset] = node.cycleRef.index;
+            this.extra32NodeData[cycleOffsetOffset] = node.cycleOffset;
+            this.extra8NodeData[headTypeOffset] = node.headType;
+            if (
+                node.headType !== CycleHeadType.NONE &&
+                node.headType !== CycleHeadType.READ
+            )
+                this.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsCycleHead;
+            else
+                this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsCycleHead;
+            this.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsInCycle;
+            if (node.headType === CycleHeadType.READ)
+                this.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsReadHead;
+            else this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsReadHead;
         } else {
-            nodeState.cycleIdx = null;
-            nodeState.headType = CycleHeadType.NONE;
-            nodeState.cycleOffset = 0;
+            this.extra32NodeData[cycleIdxOffset] = 0;
+            this.extra32NodeData[cycleOffsetOffset] = 0;
+            this.extra8NodeData[headTypeOffset] = CycleHeadType.NONE;
+            this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsCycleHead;
+            this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsInCycle;
+            this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsReadHead;
         }
+
+        this.extra32NodeData[
+            extra32NodeOffset + SoALayout.Extra32Node.CHUNK_IDX
+        ] = node.chunkIdx;
+
         if (resetSignal) {
             this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = 0;
             this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;
         }
-
-        nodeState.cycleOffset = node.cycleOffset;
 
         this.changedNodes.add(nodeState.nodeIdx);
     }
@@ -279,15 +311,29 @@ export class SoAGraphState {
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
         const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-        const nodeState = this.getNode(nodeIdx);
-        const cycleIdx = nodeState.cycleIdx;
-        if (cycleIdx !== null && nodeState.headType === CycleHeadType.NONE) {
+        const extra32Offset = nodeIdx * SoALayout.Extra32Node.STRIDE;
+        const extra8Offset = nodeIdx * SoALayout.Extra8Node.STRIDE;
+
+        const cycleIdx =
+            this.extra32NodeData[
+                extra32Offset + SoALayout.Extra32Node.CYCLE_IDX
+            ];
+        const cycleOffset =
+            this.extra32NodeData[
+                extra32Offset + SoALayout.Extra32Node.CYCLE_OFFSET
+            ];
+        const headType = this.nodeData[
+            extra8Offset + SoALayout.Extra8Node.HEAD_TYPE
+        ] as CycleHeadType;
+        const isInCycle =
+            (this.nodeData[nodeOffset + SoALayout.Node.FLAGS] &
+                SoALayout.Node.Flags.IsInCycle) !==
+            0;
+
+        if (isInCycle && headType === CycleHeadType.NONE) {
             const cycleState = this.cycles[cycleIdx];
             if (!cycleState) return NodeSignal.NONE;
-            const isActive = cycleState.getBit(
-                this.tick,
-                nodeState.cycleOffset,
-            );
+            const isActive = cycleState.getBit(this.tick, cycleOffset);
             if (isActive) return NodeSignal.ACTIVE;
             return NodeSignal.NONE;
         }
@@ -417,8 +463,8 @@ export class SoAGraphState {
 
         visitedChanged.clear();
         const updatedTempNodes = Array.from(
-            { length: this.changedNodes.length },
-            (_, i) => this.changedNodes.buffer[i],
+            { length: this.tempChangedNodes.length },
+            (_, i) => this.tempChangedNodes.buffer[i],
         ).filter((nodeIdx) => {
             const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
             return (
