@@ -132,3 +132,12 @@ dist
 .pnp.*
 
 archive
+
+**/target/
+
+**/*.rs.bk
+
+**/*.wasm
+**/*.wasm.base64
+**/*.wasm.base64.txt
+
