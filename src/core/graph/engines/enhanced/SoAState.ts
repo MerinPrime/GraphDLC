@@ -1,4 +1,5 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
+import { DynamicU32Array } from 'src/core/utils/DynamicU32Array';
 import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -35,8 +36,10 @@ const INIT_NODE_COUNT = 1024;
 const INIT_CHUNK_COUNT = 4;
 
 export class SoAGraphState {
-    public changedNodes: SoANodeState[] = [];
-    public tempChangedNodes: SoANodeState[] = [];
+    public changedNodes: DynamicU32Array = new DynamicU32Array(INIT_NODE_COUNT);
+    public tempChangedNodes: DynamicU32Array = new DynamicU32Array(
+        INIT_NODE_COUNT,
+    );
 
     private nodes: SoANodeState[] = [];
 
@@ -67,8 +70,8 @@ export class SoAGraphState {
     public clear() {
         this.nodeCount = 0;
         this.chunkCount = 0;
-        this.changedNodes.length = 0;
-        this.tempChangedNodes.length = 0;
+        this.changedNodes.clear();
+        this.tempChangedNodes.clear();
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.tick = 0;
@@ -195,7 +198,7 @@ export class SoAGraphState {
 
         nodeState.cycleOffset = node.cycleOffset;
 
-        this.changedNodes.push(nodeState);
+        this.changedNodes.add(nodeState.nodeIdx);
     }
 
     public updateChunk(chunk: Chunk) {
@@ -205,10 +208,11 @@ export class SoAGraphState {
     }
 
     public reset() {
-        this.changedNodes.length = 0;
-        this.tempChangedNodes.length = 0;
-        for (let i = 0; i < this.nodeCount; i++) {
-            const nodeOffset = i * SoALayout.Node.STRIDE;
+        this.changedNodes.clear();
+        this.tempChangedNodes.clear();
+
+        for (let nodeIdx = 0; nodeIdx < this.nodeCount; nodeIdx++) {
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
             this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = NodeSignal.NONE;
             this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
                 NodeSignal.NONE;
@@ -222,12 +226,12 @@ export class SoAGraphState {
             const isEntryPoint =
                 (flags & SoALayout.Node.Flags.IsEntryPoint) !== 0;
             if (isEntryPoint) {
-                this.changedNodes.push(this.nodes[i]);
+                this.changedNodes.add(nodeIdx);
             }
         }
 
-        for (let i = 0; i < this.chunkCount; i++) {
-            const chunkOffset = i * SoALayout.Chunk.STRIDE;
+        for (let chunkIdx = 0; chunkIdx < this.chunkCount; chunkIdx++) {
+            const chunkOffset = chunkIdx * SoALayout.Chunk.STRIDE;
             this.chunks[chunkOffset + SoALayout.Chunk.FLAGS] |=
                 SoALayout.Chunk.Flags.IsDirty;
         }
@@ -235,6 +239,7 @@ export class SoAGraphState {
         this.cycles.forEach((cycle) => {
             if (cycle) cycle.clear();
         });
+
         this.tick = 0;
     }
 
@@ -330,12 +335,13 @@ export class SoAGraphState {
 
         snapshot.chunks = Array.from({ length: this.chunkCount }, (_, i) => i);
 
-        snapshot.changedNodes = this.changedNodes.map(
-            (nodeState) => nodeState.nodeIdx,
+        snapshot.changedNodes = Array.from(
+            { length: this.changedNodes.length },
+            (_, i) => this.changedNodes.buffer[i],
         );
-
-        snapshot.tempChangedNodes = this.tempChangedNodes.map(
-            (nodeState) => nodeState.nodeIdx,
+        snapshot.tempChangedNodes = Array.from(
+            { length: this.tempChangedNodes.length },
+            (_, i) => this.tempChangedNodes.buffer[i],
         );
 
         snapshot.cycles = this.cycles
@@ -378,50 +384,57 @@ export class SoAGraphState {
         });
 
         const visitedChanged: Set<number> = new Set();
-        const updatedNodes = this.changedNodes.filter((nodeState) => {
-            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+        const updatedNodes = Array.from(
+            { length: this.changedNodes.length },
+            (_, i) => this.changedNodes.buffer[i],
+        ).filter((nodeIdx) => {
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
             return (
                 (this.nodeData[nodeOffset + SoALayout.Node.FLAGS] &
                     SoALayout.Node.Flags.IsUpdated) !==
                 0
             );
         });
-        this.changedNodes.forEach((nodeState) => {
-            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+        for (let i = 0; i < this.changedNodes.length; i++) {
+            const nodeIdx = this.changedNodes.buffer[i];
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
             this.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
                 ~SoALayout.Node.Flags.IsChanged;
-        });
-        this.changedNodes.length = 0;
+        }
+        this.changedNodes.clear();
         snapshot.changedNodes.forEach((nodeIdx) => {
             if (visitedChanged.has(nodeIdx)) return;
             visitedChanged.add(nodeIdx);
-            this.markNodeChanged(this.getNode(nodeIdx));
+            this.markNodeChanged(nodeIdx);
         });
-        updatedNodes.forEach((nodeState) => {
-            if (visitedChanged.has(nodeState.nodeIdx)) return;
-            visitedChanged.add(nodeState.nodeIdx);
-            this.markNodeChanged(nodeState);
+        updatedNodes.forEach((nodeIdx) => {
+            if (visitedChanged.has(nodeIdx)) return;
+            visitedChanged.add(nodeIdx);
+            this.markNodeChanged(nodeIdx);
         });
 
         visitedChanged.clear();
-        const updatedTempNodes = this.tempChangedNodes.filter((nodeState) => {
-            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+        const updatedTempNodes = Array.from(
+            { length: this.changedNodes.length },
+            (_, i) => this.changedNodes.buffer[i],
+        ).filter((nodeIdx) => {
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
             return (
                 (this.nodeData[nodeOffset + SoALayout.Node.FLAGS] &
                     SoALayout.Node.Flags.IsUpdated) !==
                 0
             );
         });
-        this.tempChangedNodes.length = 0;
+        this.tempChangedNodes.clear();
         snapshot.tempChangedNodes.forEach((nodeIdx) => {
             if (visitedChanged.has(nodeIdx)) return;
             visitedChanged.add(nodeIdx);
-            this.markNodeTempChanged(this.getNode(nodeIdx));
+            this.markNodeTempChanged(nodeIdx);
         });
-        updatedTempNodes.forEach((nodeState) => {
-            if (visitedChanged.has(nodeState.nodeIdx)) return;
-            visitedChanged.add(nodeState.nodeIdx);
-            this.markNodeTempChanged(nodeState);
+        updatedTempNodes.forEach((nodeIdx) => {
+            if (visitedChanged.has(nodeIdx)) return;
+            visitedChanged.add(nodeIdx);
+            this.markNodeTempChanged(nodeIdx);
         });
 
         snapshot.cycles.forEach((cycleSnapshot) => {
@@ -434,14 +447,14 @@ export class SoAGraphState {
         return snapshot;
     }
 
-    public markNodeChanged(nodeState: SoANodeState) {
-        this.changedNodes.push(nodeState);
+    public markNodeChanged(nodeIdx: number) {
+        this.changedNodes.add(nodeIdx);
     }
 
-    public markNodeTempChanged(nodeState: SoANodeState) {
-        const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+    public markNodeTempChanged(nodeIdx: number) {
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
         this.nodeData[nodeOffset + SoALayout.Node.FLAGS] |=
             SoALayout.Node.Flags.IsChanged;
-        this.tempChangedNodes.push(nodeState);
+        this.tempChangedNodes.add(nodeIdx);
     }
 }

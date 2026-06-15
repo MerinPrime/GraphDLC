@@ -45,6 +45,14 @@ export class DynamicU32Array {
         this.data[index] = this.data[this.size];
     }
 
+    public removeElement(value: number): void {
+        for (let i = 0; i < this.size; i++) {
+            if (this.data[i] === value) {
+                this.remove(i--);
+            }
+        }
+    }
+
     public clear(): void {
         this.size = 0;
     }

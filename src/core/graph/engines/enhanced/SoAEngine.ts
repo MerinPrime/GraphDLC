@@ -133,7 +133,7 @@ export class SoAEngine implements IEngine {
         const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
         this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = newSignal;
         this.updater.markNodeAsChanged(this.state, astState);
-        this.state.changedNodes.push(astState);
+        this.state.changedNodes.add(nodeIdx);
         this.state.makeDirtyChunk(astState.chunkIdx);
     }
 

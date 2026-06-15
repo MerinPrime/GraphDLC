@@ -1,4 +1,3 @@
-import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -48,14 +47,14 @@ export class SoAStateSynchronizer {
                         SoALayout.Node.Flags.IsChanged) !==
                     0;
                 if (isChanged) {
-                    removeWithSwap(state.changedNodes, nodeState);
-                    removeWithSwap(state.tempChangedNodes, nodeState);
+                    state.changedNodes.removeElement(nodeState.nodeIdx);
+                    state.tempChangedNodes.removeElement(nodeState.nodeIdx);
                     state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
                         ~SoALayout.Node.Flags.IsChanged;
                 }
             } else {
-                this.updater.markNodeAsChangedNonTemp(state, nodeState);
-                this.updater.markNodeAsChanged(state, nodeState);
+                this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
+                this.updater.markNodeAsChanged(state, nodeState.nodeIdx);
             }
         }
 
@@ -66,8 +65,8 @@ export class SoAStateSynchronizer {
 
             const nodeState = state.getNode(headNode.nodeIdx);
             if (nodeState.headType !== CycleHeadType.NONE) {
-                this.updater.markNodeAsChangedNonTemp(state, nodeState);
-                this.updater.markNodeAsChanged(state, nodeState);
+                this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
+                this.updater.markNodeAsChanged(state, nodeState.nodeIdx);
             }
         }
 
@@ -123,8 +122,8 @@ export class SoAStateSynchronizer {
             nodeState.cycleOffset = 0;
             state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
-            this.updater.markNodeAsChangedNonTemp(state, nodeState);
-            this.updater.markNodeAsChanged(state, nodeState);
+            this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
+            this.updater.markNodeAsChanged(state, nodeState.nodeIdx);
         }
 
         const affectedNodes = new Set<GraphNode>();
