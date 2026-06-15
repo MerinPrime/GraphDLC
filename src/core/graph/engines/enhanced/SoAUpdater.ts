@@ -213,7 +213,12 @@ export class SoAGraphUpdater {
             if (blockedCount > 0) {
                 state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
                     NodeSignal.NONE;
-                state.makeDirtyChunk(nodeState.chunkIdx);
+                const extraNodeOffset = nodeIdx * SoALayout.ExtraNode.STRIDE;
+                const chunkIdx =
+                    state.extraNodeData[
+                        extraNodeOffset + SoALayout.ExtraNode.CHUNK_IDX
+                    ];
+                state.makeDirtyChunk(chunkIdx);
             } else {
                 const signal = this.updateNodeSignal(
                     state,
@@ -222,7 +227,13 @@ export class SoAGraphUpdater {
                 );
                 if (signal !== NodeSignal.KEEP_SIGNAL) {
                     state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
-                    state.makeDirtyChunk(nodeState.chunkIdx);
+                    const extraNodeOffset =
+                        nodeIdx * SoALayout.ExtraNode.STRIDE;
+                    const chunkIdx =
+                        state.extraNodeData[
+                            extraNodeOffset + SoALayout.ExtraNode.CHUNK_IDX
+                        ];
+                    state.makeDirtyChunk(chunkIdx);
                     const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
                     const isBreakpoint =
                         (state.nodeData[nodeOffset + flagsOffset] &

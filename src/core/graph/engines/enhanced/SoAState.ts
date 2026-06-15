@@ -10,7 +10,6 @@ import { SoACycleSnapshot, SoANodeSnapshot, SoASnapshot } from './SoASnapshot';
 
 export class SoANodeState {
     public readonly nodeIdx;
-    public readonly chunkIdx;
 
     public cycleIdx: number | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
@@ -19,10 +18,8 @@ export class SoANodeState {
     public constructor(
         public node: GraphNode,
         nodeIdx: number,
-        chunkIdx: number,
     ) {
         this.nodeIdx = nodeIdx;
-        this.chunkIdx = chunkIdx;
     }
 }
 
@@ -50,6 +47,9 @@ export class SoAGraphState {
 
     public nodeData: Uint8Array = new Uint8Array(
         INIT_NODE_COUNT * SoALayout.Node.STRIDE,
+    );
+    public extraNodeData: Uint8Array = new Uint8Array(
+        INIT_NODE_COUNT * SoALayout.ExtraNode.STRIDE,
     );
     public linkIndices: Uint32Array = new Uint32Array(
         INIT_NODE_COUNT * SoALayout.Links.STRIDE,
@@ -100,6 +100,12 @@ export class SoAGraphState {
         tempNodeData.set(this.nodeData);
         this.nodeData = tempNodeData;
 
+        const tempExtraNodeData = new Uint8Array(
+            newCapacity * SoALayout.ExtraNode.STRIDE,
+        );
+        tempExtraNodeData.set(this.extraNodeData);
+        this.extraNodeData = tempExtraNodeData;
+
         const tempLinkIndices = new Uint32Array(
             newCapacity * SoALayout.Links.STRIDE,
         );
@@ -132,11 +138,7 @@ export class SoAGraphState {
 
     public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
         if (this.nodes[node.nodeIdx] === undefined) {
-            this.nodes[node.nodeIdx] = new SoANodeState(
-                node,
-                node.nodeIdx,
-                node.chunkIdx,
-            );
+            this.nodes[node.nodeIdx] = new SoANodeState(node, node.nodeIdx);
         }
         this.ensureNodeCapacity(node.nodeIdx + 1);
 

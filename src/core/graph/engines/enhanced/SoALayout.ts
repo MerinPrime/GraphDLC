@@ -23,6 +23,12 @@ export namespace SoALayout {
         }
     }
 
+    export namespace ExtraNode {
+        export const CHUNK_IDX = 0;
+
+        export const STRIDE = 1;
+    }
+
     export namespace Links {
         export const STRIDE = 4;
     }
