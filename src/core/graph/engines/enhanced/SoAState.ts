@@ -14,9 +14,6 @@ export class SoANodeState {
     public links: SoANodeState[] = [];
     public detectorLinks: SoANodeState[] = [];
 
-    public signalsCount: number = 0;
-    public blockedCount: number = 0;
-
     public cycleIdx: number | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
     public cycleOffset: number = 0;
@@ -164,15 +161,13 @@ export class SoAGraphState {
     public reset() {
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;
-        this.nodes.forEach((node) => {
-            node.signalsCount = 0;
-            node.blockedCount = 0;
-        });
         for (let i = 0; i < this.nodeCount; i++) {
             const nodeOffset = i * SoALayout.Node.STRIDE;
             this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = NodeSignal.NONE;
             this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
                 NodeSignal.NONE;
+            this.nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT] = 0;
+            this.nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT] = 0;
             let flags = this.nodeData[nodeOffset + SoALayout.Node.FLAGS];
             flags &= ~SoALayout.Node.Flags.IsChanged;
             flags &= ~SoALayout.Node.Flags.IsUpdated;
@@ -251,24 +246,27 @@ export class SoAGraphState {
         snapshot.tick = this.tick;
         snapshot.breakPoint = this.breakPoint;
 
-        snapshot.nodes = this.nodes.map((nodeState, nodeIdx) => {
-            const nodeSnapshot = new SoANodeSnapshot();
-            nodeSnapshot.nodeIdx = nodeIdx;
+        snapshot.nodes = Array.from(
+            { length: this.nodeCount },
+            (_, nodeIdx) => {
+                const nodeSnapshot = new SoANodeSnapshot();
+                const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
 
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+                nodeSnapshot.nodeIdx = nodeIdx;
+                nodeSnapshot.signal = this.nodeData[
+                    nodeOffset + SoALayout.Node.SIGNAL
+                ] as NodeSignal;
+                nodeSnapshot.lastSignal = this.nodeData[
+                    nodeOffset + SoALayout.Node.LAST_SIGNAL
+                ] as NodeSignal;
+                nodeSnapshot.signalsCount =
+                    this.nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT];
+                nodeSnapshot.blockedCount =
+                    this.nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT];
 
-            nodeSnapshot.signal = this.nodeData[
-                nodeOffset + SoALayout.Node.SIGNAL
-            ] as NodeSignal;
-            nodeSnapshot.lastSignal = this.nodeData[
-                nodeOffset + SoALayout.Node.LAST_SIGNAL
-            ] as NodeSignal;
-
-            nodeSnapshot.signalsCount = nodeState.signalsCount;
-            nodeSnapshot.blockedCount = nodeState.blockedCount;
-
-            return nodeSnapshot;
-        });
+                return nodeSnapshot;
+            },
+        );
 
         snapshot.chunks = this.chunks.map((chunk) => chunk.chunkIdx);
 
@@ -303,17 +301,16 @@ export class SoAGraphState {
         this.breakPoint = snapshot.breakPoint;
 
         snapshot.nodes.forEach((nodeSnapshot) => {
-            const nodeState = this.getNode(nodeSnapshot.nodeIdx);
-
             const nodeOffset = nodeSnapshot.nodeIdx * SoALayout.Node.STRIDE;
 
             this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
                 nodeSnapshot.signal;
             this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
                 nodeSnapshot.lastSignal;
-
-            nodeState.signalsCount = nodeSnapshot.signalsCount;
-            nodeState.blockedCount = nodeSnapshot.blockedCount;
+            this.nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT] =
+                nodeSnapshot.signalsCount;
+            this.nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT] =
+                nodeSnapshot.blockedCount;
         });
 
         snapshot.chunks.forEach((chunkIdx) => {

@@ -11,6 +11,10 @@ export class SoAGraphUpdater {
         if (!nodeState) return;
         const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
 
+        const signalsCountOffset = nodeOffset + SoALayout.Node.SIGNALS_COUNT;
+        const blockedCountOffset = nodeOffset + SoALayout.Node.BLOCKED_COUNT;
+        const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
+
         let signalsCount = 0;
         let blockedCount = 0;
 
@@ -50,9 +54,9 @@ export class SoAGraphUpdater {
             }
         }
 
-        nodeState.signalsCount = signalsCount;
-        nodeState.blockedCount = blockedCount;
-        state.nodeData[nodeOffset] |= SoALayout.Node.Flags.IsUpdated;
+        state.nodeData[signalsCountOffset] = signalsCount;
+        state.nodeData[blockedCountOffset] = blockedCount;
+        state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
         this.markNodeAsChangedNonTemp(state, nodeState);
         this.markNodeAsChanged(state, nodeState);
@@ -84,10 +88,12 @@ export class SoAGraphUpdater {
                 nodeState.headType !== CycleHeadType.READ;
 
             if (isCycleHead) {
+                const blockedCount =
+                    state.nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT];
                 if (
                     !isActive &&
                     (nodeState.headType !== CycleHeadType.CLEAR ||
-                        nodeState.blockedCount === 0)
+                        blockedCount === 0)
                 )
                     continue;
 
@@ -126,12 +132,18 @@ export class SoAGraphUpdater {
                 if (!isDelayed) {
                     for (let i = 0; i < linkedNodes.length; i++) {
                         const edgeState = linkedNodes[i];
+                        const edgeIdx = edgeState.nodeIdx;
+                        const edgeOffset = edgeIdx * SoALayout.Node.STRIDE;
 
                         if (isBlocker) {
-                            edgeState.blockedCount += delta;
+                            state.nodeData[
+                                edgeOffset + SoALayout.Node.BLOCKED_COUNT
+                            ] += delta;
                             this.markNodeAsChanged(state, edgeState);
                         } else {
-                            edgeState.signalsCount += delta;
+                            state.nodeData[
+                                edgeOffset + SoALayout.Node.SIGNALS_COUNT
+                            ] += delta;
                             this.markNodeAsChanged(state, edgeState);
                         }
                     }
@@ -139,15 +151,21 @@ export class SoAGraphUpdater {
 
                 for (let i = 0; i < detectorNodes.length; i++) {
                     const detectorState = detectorNodes[i];
+                    const detectorIdx = detectorState.nodeIdx;
+                    const detectorOffset = detectorIdx * SoALayout.Node.STRIDE;
 
-                    detectorState.signalsCount =
-                        signal !== NodeSignal.NONE ? 1 : 0;
+                    state.nodeData[
+                        detectorOffset + SoALayout.Node.SIGNALS_COUNT
+                    ] = signal !== NodeSignal.NONE ? 1 : 0;
                     this.markNodeAsChanged(state, detectorState);
                 }
 
                 state.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
                     signal;
             }
+
+            const signalsCount =
+                state.nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT];
 
             if (
                 (flags & SoALayout.Node.Flags.IsUpdated) !== 0 ||
@@ -156,10 +174,10 @@ export class SoAGraphUpdater {
                 (state.tick === 0 &&
                     (flags & SoALayout.Node.Flags.IsEntryPoint) !== 0) ||
                 (signal !== NodeSignal.NONE &&
-                    nodeState.signalsCount === 0 &&
+                    signalsCount === 0 &&
                     (type === NodeType.BUTTON ||
                         type === NodeType.DIRECTIONAL_BUTTON)) ||
-                (nodeState.signalsCount > 0 &&
+                (signalsCount > 0 &&
                     (type === NodeType.RANDOM ||
                         nodeState.headType === CycleHeadType.READ))
             ) {
@@ -179,7 +197,9 @@ export class SoAGraphUpdater {
             state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
                 ~SoALayout.Node.Flags.IsChanged;
 
-            if (nodeState.blockedCount > 0) {
+            const blockedCount =
+                state.nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT];
+            if (blockedCount > 0) {
                 state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
                     NodeSignal.NONE;
                 state.makeDirtyChunk(nodeState.chunkIdx);
@@ -229,9 +249,12 @@ export class SoAGraphUpdater {
         nodeState: SoANodeState,
         nodeOffset: number,
     ): NodeSignal {
+        const signalsCount =
+            state.nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT];
+
         if (nodeState.headType === CycleHeadType.READ) {
-            if (nodeState.signalsCount > 1) return NodeSignal.ACTIVE;
-            if (nodeState.signalsCount === 0) return NodeSignal.NONE;
+            if (signalsCount > 1) return NodeSignal.ACTIVE;
+            if (signalsCount === 0) return NodeSignal.NONE;
 
             const cycleIdx = nodeState.cycleIdx;
             if (cycleIdx === null) return NodeSignal.KEEP_SIGNAL;
@@ -245,17 +268,17 @@ export class SoAGraphUpdater {
             );
             return cycleActive ? NodeSignal.ACTIVE : NodeSignal.NONE;
         }
+
         const type = state.nodeData[
             nodeOffset + SoALayout.Node.TYPE
         ] as NodeType;
+
         switch (type) {
             case NodeType.PATH:
             case NodeType.BLOCKER:
             case NodeType.DETECTOR:
             case NodeType.DIRECTIONAL_BUTTON:
-                return nodeState.signalsCount > 0
-                    ? NodeSignal.ACTIVE
-                    : NodeSignal.NONE;
+                return signalsCount > 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
             case NodeType.SOURCE:
                 return NodeSignal.ACTIVE;
             case NodeType.DELAY: {
@@ -264,7 +287,7 @@ export class SoAGraphUpdater {
                 ] as NodeSignal;
                 if (signal === NodeSignal.PENDING) {
                     return NodeSignal.ACTIVE;
-                } else if (nodeState.signalsCount > 0) {
+                } else if (signalsCount > 0) {
                     if (signal === NodeSignal.NONE) {
                         return NodeSignal.PENDING;
                     }
@@ -281,23 +304,19 @@ export class SoAGraphUpdater {
                 return NodeSignal.PENDING;
             }
             case NodeType.LOGIC_NOT:
-                return nodeState.signalsCount === 0
-                    ? NodeSignal.ACTIVE
-                    : NodeSignal.NONE;
+                return signalsCount === 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
             case NodeType.LOGIC_AND:
-                return nodeState.signalsCount > 1
-                    ? NodeSignal.ACTIVE
-                    : NodeSignal.NONE;
+                return signalsCount > 1 ? NodeSignal.ACTIVE : NodeSignal.NONE;
             case NodeType.LOGIC_XOR:
-                return nodeState.signalsCount % 2 === 1
+                return signalsCount % 2 === 1
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
             case NodeType.LATCH:
-                if (nodeState.signalsCount > 1) return NodeSignal.ACTIVE;
-                else if (nodeState.signalsCount === 1) return NodeSignal.NONE;
+                if (signalsCount > 1) return NodeSignal.ACTIVE;
+                else if (signalsCount === 1) return NodeSignal.NONE;
                 return NodeSignal.KEEP_SIGNAL;
             case NodeType.FLIP_FLOP:
-                if (nodeState.signalsCount > 0) {
+                if (signalsCount > 0) {
                     const signal = state.nodeData[
                         nodeOffset + SoALayout.Node.SIGNAL
                     ] as NodeSignal;
@@ -309,7 +328,7 @@ export class SoAGraphUpdater {
                 }
                 return NodeSignal.KEEP_SIGNAL;
             case NodeType.RANDOM:
-                return nodeState.signalsCount > 0 && Math.random() > 0.5
+                return signalsCount > 0 && Math.random() > 0.5
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
             case NodeType.BUTTON:
