@@ -18,7 +18,8 @@ export class SoAGraphUpdater {
 
         if (isDetector) {
             if (node.detectedLink) {
-                const detectedOffset = node.detectedLink.nodeIdx;
+                const detectedOffset =
+                    node.detectedLink.nodeIdx * SoALayout.Node.STRIDE;
                 const detectedSignal = state.nodeData[
                     detectedOffset + SoALayout.Node.SIGNAL
                 ] as NodeSignal;
