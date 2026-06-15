@@ -3,17 +3,17 @@ import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
-import { RawCycleState } from './RawCycleState';
-import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
+import { SoACycleState } from './SoACycleState';
+import { SoACycleSnapshot, SoANodeSnapshot, SoASnapshot } from './SoASnapshot';
 
-export class RawNodeState {
+export class SoANodeState {
     public readonly nodeIdx;
     public readonly chunkIdx;
 
     public type: NodeType = NodeType.EMPTY;
 
-    public links: RawNodeState[] = [];
-    public detectorLinks: RawNodeState[] = [];
+    public links: SoANodeState[] = [];
+    public detectorLinks: SoANodeState[] = [];
 
     public signal: number = 0;
     public lastSignal: number = 0;
@@ -42,20 +42,20 @@ export class RawNodeState {
     }
 }
 
-export class RawChunkState {
+export class SoAChunkState {
     public isDirty: boolean = false;
 
     public constructor(public readonly chunkIdx: number) {}
 }
 
-export class RawGraphState {
-    public changedNodes: RawNodeState[] = [];
-    public tempChangedNodes: RawNodeState[] = [];
+export class SoAGraphState {
+    public changedNodes: SoANodeState[] = [];
+    public tempChangedNodes: SoANodeState[] = [];
 
-    private nodes: RawNodeState[] = [];
-    private chunks: RawChunkState[] = [];
+    private nodes: SoANodeState[] = [];
+    private chunks: SoAChunkState[] = [];
 
-    public cycles: (RawCycleState | null)[] = [];
+    public cycles: (SoACycleState | null)[] = [];
 
     public tick: number = 0;
     public breakPoint: boolean = false;
@@ -70,13 +70,13 @@ export class RawGraphState {
         this.breakPoint = false;
     }
 
-    public getNode(nodeIdx: number): RawNodeState {
+    public getNode(nodeIdx: number): SoANodeState {
         return this.nodes[nodeIdx];
     }
 
     public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
         if (this.nodes[node.nodeIdx] === undefined) {
-            this.nodes[node.nodeIdx] = new RawNodeState(
+            this.nodes[node.nodeIdx] = new SoANodeState(
                 node,
                 node.nodeIdx,
                 node.chunkIdx,
@@ -124,7 +124,7 @@ export class RawGraphState {
     public updateChunk(chunk: Chunk) {
         if (chunk.astIndex === undefined || chunk.astIndex === null) return;
         if (this.chunks[chunk.astIndex] === undefined) {
-            this.chunks[chunk.astIndex] = new RawChunkState(chunk.astIndex);
+            this.chunks[chunk.astIndex] = new SoAChunkState(chunk.astIndex);
         }
     }
 
@@ -197,7 +197,7 @@ export class RawGraphState {
     public addCycle(cycle: GraphCycle) {
         if (this.cycles[cycle.index]) return;
 
-        this.cycles[cycle.index] = new RawCycleState(
+        this.cycles[cycle.index] = new SoACycleState(
             cycle.index,
             cycle.nodes.length,
         );
@@ -207,14 +207,14 @@ export class RawGraphState {
         this.cycles[cycle.index] = null;
     }
 
-    public makeSnapshot(): RawSnapshot {
-        const snapshot = new RawSnapshot();
+    public makeSnapshot(): SoASnapshot {
+        const snapshot = new SoASnapshot();
 
         snapshot.tick = this.tick;
         snapshot.breakPoint = this.breakPoint;
 
         snapshot.nodes = this.nodes.map((nodeState, nodeIdx) => {
-            const nodeSnapshot = new RawNodeSnapshot();
+            const nodeSnapshot = new SoANodeSnapshot();
             nodeSnapshot.nodeIdx = nodeIdx;
 
             nodeSnapshot.signal = nodeState.signal;
@@ -240,7 +240,7 @@ export class RawGraphState {
                 if (cycleState === null || cycleState === undefined)
                     return null;
 
-                const cycleSnapshot = new RawCycleSnapshot(
+                const cycleSnapshot = new SoACycleSnapshot(
                     cycleIdx,
                     cycleState.length,
                 );
@@ -253,7 +253,7 @@ export class RawGraphState {
         return snapshot;
     }
 
-    public loadSnapshot(snapshot: RawSnapshot) {
+    public loadSnapshot(snapshot: SoASnapshot) {
         this.tick = snapshot.tick;
         this.breakPoint = snapshot.breakPoint;
 
@@ -317,11 +317,11 @@ export class RawGraphState {
         return snapshot;
     }
 
-    public markNodeChanged(nodeState: RawNodeState) {
+    public markNodeChanged(nodeState: SoANodeState) {
         this.changedNodes.push(nodeState);
     }
 
-    public markNodeTempChanged(nodeState: RawNodeState) {
+    public markNodeTempChanged(nodeState: SoANodeState) {
         nodeState.isChanged = true;
         this.tempChangedNodes.push(nodeState);
     }
