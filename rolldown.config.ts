@@ -1,4 +1,5 @@
 import { defineConfig, type RolldownOptions, type RolldownPlugin } from 'rolldown';
+import terser from '@rollup/plugin-terser';
 import fs from 'node:fs';
 import path from 'node:path';
 import * as sass from 'sass';
@@ -154,41 +155,66 @@ const baseInputConfig = {
     },
 };
 
+const terserPlugin = terser({
+    ecma: 2022,
+    toplevel: true,
+    module: true,
+    compress: {
+        defaults: true,
+        passes: 5,
+        toplevel: true,
+        hoist_funs: true,
+        unsafe: true,
+        unsafe_comps: true,
+        unsafe_math: true,
+        unsafe_methods: true,
+        unsafe_arrows: true,
+        unsafe_undefined: true,
+        pure_getters: true,
+    },
+    mangle: {
+        toplevel: true,
+    },
+    format: {
+        comments: /==UserScript==|==\/UserScript==|@name|@version|@author|@description|@match|@grant|@run-at|@namespace/i,
+    }
+});
+
 const configs: RolldownOptions[] = [];
 
 if (isProduction) {
     configs.push(
         {
             ...baseInputConfig,
-            plugins: [rawPlugin(), scssInjectPlugin(), chromeExtensionPlugin('newchrome')],
+            plugins: [rawPlugin(), scssInjectPlugin(), chromeExtensionPlugin('newchrome'), terserPlugin],
             output: {
                 file: 'dist/newchrome/index.js',
                 format: 'iife' as const,
                 name: 'graphdlc',
                 sourcemap: 'hidden' as const,
-                minify: true,
+                minify: false,
             },
         },
         {
             ...baseInputConfig,
-            plugins: [rawPlugin(), scssInjectPlugin(), chromeExtensionPlugin('oldchrome')],
+            plugins: [rawPlugin(), scssInjectPlugin(), chromeExtensionPlugin('oldchrome'), terserPlugin],
             output: {
                 file: 'dist/oldchrome/index.js',
                 format: 'iife' as const,
                 name: 'graphdlc',
                 sourcemap: 'hidden' as const,
-                minify: true,
+                minify: false,
             },
         },
         {
             ...baseInputConfig,
-            plugins: [rawPlugin(), scssInjectPlugin(), tampermonkeyPlugin()],
+            plugins: [rawPlugin(), scssInjectPlugin(), tampermonkeyPlugin(), terserPlugin],
             output: {
                 file: 'dist/tampermonkey/tampermonkey.js',
                 format: 'iife' as const,
                 name: 'graphdlc',
                 sourcemap: 'hidden' as const,
-                minify: true,
+                minify: false,
             },
         },
     );
