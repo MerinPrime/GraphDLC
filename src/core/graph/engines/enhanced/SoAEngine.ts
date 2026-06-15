@@ -5,19 +5,20 @@ import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { StateRewinder } from '../core/StateRewinder';
 import type { IEngine } from '../core/types';
-import type { RawSnapshot } from './RawSnapshot';
-import { RawGraphState } from './RawState';
-import { RawStateSynchronizer } from './RawStateSynchonizer';
-import { RawGraphUpdater } from './RawUpdater';
+import { SoALayout } from './SoALayout';
+import type { SoASnapshot } from './SoASnapshot';
+import { SoAGraphState } from './SoAState';
+import { SoAStateSynchronizer } from './SoAStateSynchonizer';
+import { SoAGraphUpdater } from './SoAUpdater';
 
 const SNAPSHOT_INTERVAL = 1000;
 
-export class RawEngine implements IEngine {
-    private readonly state: RawGraphState = new RawGraphState();
-    private readonly updater: RawGraphUpdater = new RawGraphUpdater();
-    private readonly synchronizer: RawStateSynchronizer =
-        new RawStateSynchronizer(this.updater);
-    private readonly rewinder: StateRewinder<RawSnapshot> = new StateRewinder(
+export class SoAEngine implements IEngine {
+    private readonly state: SoAGraphState = new SoAGraphState();
+    private readonly updater: SoAGraphUpdater = new SoAGraphUpdater();
+    private readonly synchronizer: SoAStateSynchronizer =
+        new SoAStateSynchronizer(this.updater);
+    private readonly rewinder: StateRewinder<SoASnapshot> = new StateRewinder(
         SNAPSHOT_INTERVAL,
     );
 
@@ -127,11 +128,18 @@ export class RawEngine implements IEngine {
     }
 
     public doPressButton(nodeIdx: number, state: boolean): void {
-        const astState = this.state.getNode(nodeIdx);
-        astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-        this.updater.markNodeAsChanged(this.state, astState);
-        this.state.changedNodes.push(astState);
-        this.state.makeDirtyChunk(astState.chunkIdx);
+        const newSignal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+        const extraNodeOffset = nodeIdx * SoALayout.Extra8Node.STRIDE;
+        const chunkIdx =
+            this.state.extra32NodeData[
+                extraNodeOffset + SoALayout.Extra32Node.CHUNK_IDX
+            ];
+
+        this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = newSignal;
+        this.updater.markNodeAsChanged(this.state, nodeIdx);
+        this.state.changedNodes.add(nodeIdx);
+        this.state.makeDirtyChunk(chunkIdx);
     }
 
     public clear(): void {

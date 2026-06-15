@@ -194,17 +194,17 @@ export class RawGraphState {
         else return NodeSignal.ACTIVE;
     }
 
-    public addCycle(rawCycle: GraphCycle) {
-        if (this.cycles[rawCycle.index]) return;
+    public addCycle(cycle: GraphCycle) {
+        if (this.cycles[cycle.index]) return;
 
-        this.cycles[rawCycle.index] = new RawCycleState(
-            rawCycle.index,
-            rawCycle.nodes.length,
+        this.cycles[cycle.index] = new RawCycleState(
+            cycle.index,
+            cycle.nodes.length,
         );
     }
 
-    public removeCycle(rawCycle: GraphCycle) {
-        this.cycles[rawCycle.index] = null;
+    public removeCycle(cycle: GraphCycle) {
+        this.cycles[cycle.index] = null;
     }
 
     public makeSnapshot(): RawSnapshot {
