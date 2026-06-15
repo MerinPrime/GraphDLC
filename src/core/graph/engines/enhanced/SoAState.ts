@@ -4,6 +4,7 @@ import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
 import { SoACycleState } from './SoACycleState';
+import { SoALayout } from './SoALayout';
 import { SoACycleSnapshot, SoANodeSnapshot, SoASnapshot } from './SoASnapshot';
 
 export class SoANodeState {
@@ -15,8 +16,6 @@ export class SoANodeState {
     public links: SoANodeState[] = [];
     public detectorLinks: SoANodeState[] = [];
 
-    public signal: number = 0;
-    public lastSignal: number = 0;
     public signalsCount: number = 0;
     public blockedCount: number = 0;
 
@@ -48,6 +47,8 @@ export class SoAChunkState {
     public constructor(public readonly chunkIdx: number) {}
 }
 
+const INIT_NODE_COUNT = 1024;
+
 export class SoAGraphState {
     public changedNodes: SoANodeState[] = [];
     public tempChangedNodes: SoANodeState[] = [];
@@ -60,7 +61,16 @@ export class SoAGraphState {
     public tick: number = 0;
     public breakPoint: boolean = false;
 
+    public nodeData: Uint8Array = new Uint8Array(
+        INIT_NODE_COUNT * SoALayout.Node.STRIDE,
+    );
+
+    private nodeCount: number = 0;
+    private nodeCapacity: number = INIT_NODE_COUNT;
+
     public clear() {
+        this.nodeCount = 0;
+
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;
         this.nodes.length = 0;
@@ -74,6 +84,23 @@ export class SoAGraphState {
         return this.nodes[nodeIdx];
     }
 
+    public ensureNodeCapacity(count: number) {
+        this.nodeCount = Math.max(this.nodeCount, count);
+
+        if (this.nodeCapacity >= count) return;
+
+        let newCapacity = this.nodeCapacity || 2;
+        while (newCapacity < count) {
+            newCapacity *= 2;
+        }
+
+        this.nodeCapacity = newCapacity;
+
+        const temp = new Uint8Array(newCapacity * SoALayout.Node.STRIDE);
+        temp.set(this.nodeData);
+        this.nodeData = temp;
+    }
+
     public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
         if (this.nodes[node.nodeIdx] === undefined) {
             this.nodes[node.nodeIdx] = new SoANodeState(
@@ -82,6 +109,10 @@ export class SoAGraphState {
                 node.chunkIdx,
             );
         }
+        this.ensureNodeCapacity(node.nodeIdx);
+
+        const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
+
         const nodeState = this.nodes[node.nodeIdx];
 
         nodeState.type = node.type;
@@ -112,8 +143,8 @@ export class SoAGraphState {
             nodeState.cycleOffset = 0;
         }
         if (resetSignal) {
-            nodeState.lastSignal = 0;
-            nodeState.signal = 0;
+            this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = 0;
+            this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;
         }
 
         nodeState.cycleOffset = node.cycleOffset;
@@ -129,15 +160,12 @@ export class SoAGraphState {
     }
 
     public reset() {
-        this.tick = 0;
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;
         this.nodes.forEach((nodeState) => {
             if (nodeState.isEntryPoint) this.changedNodes.push(nodeState);
         });
         this.nodes.forEach((node) => {
-            node.signal = 0;
-            node.lastSignal = 0;
             node.signalsCount = 0;
             node.blockedCount = 0;
             node.isUpdated = false;
@@ -152,6 +180,13 @@ export class SoAGraphState {
             if (cycle) cycle.clear();
         });
         this.tick = 0;
+
+        for (let i = 0; i < this.nodeCount; i++) {
+            const nodeOffset = i * SoALayout.Node.STRIDE;
+            this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = NodeSignal.NONE;
+            this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
+                NodeSignal.NONE;
+        }
     }
 
     public makeDirtyChunk(chunkIdx: number) {
@@ -176,6 +211,7 @@ export class SoAGraphState {
     }
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
         const nodeState = this.getNode(nodeIdx);
         const cycleIdx = nodeState.cycleIdx;
         if (cycleIdx !== null && nodeState.headType === CycleHeadType.NONE) {
@@ -188,10 +224,7 @@ export class SoAGraphState {
             if (isActive) return NodeSignal.ACTIVE;
             return NodeSignal.NONE;
         }
-        if (nodeState.signal === NodeSignal.NONE) return NodeSignal.NONE;
-        else if (nodeState.signal === NodeSignal.PENDING)
-            return NodeSignal.PENDING;
-        else return NodeSignal.ACTIVE;
+        return this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] as NodeSignal;
     }
 
     public addCycle(cycle: GraphCycle) {
@@ -217,8 +250,15 @@ export class SoAGraphState {
             const nodeSnapshot = new SoANodeSnapshot();
             nodeSnapshot.nodeIdx = nodeIdx;
 
-            nodeSnapshot.signal = nodeState.signal;
-            nodeSnapshot.lastSignal = nodeState.lastSignal;
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+
+            nodeSnapshot.signal = this.nodeData[
+                nodeOffset + SoALayout.Node.SIGNAL
+            ] as NodeSignal;
+            nodeSnapshot.lastSignal = this.nodeData[
+                nodeOffset + SoALayout.Node.LAST_SIGNAL
+            ] as NodeSignal;
+
             nodeSnapshot.signalsCount = nodeState.signalsCount;
             nodeSnapshot.blockedCount = nodeState.blockedCount;
 
@@ -259,8 +299,14 @@ export class SoAGraphState {
 
         snapshot.nodes.forEach((nodeSnapshot) => {
             const nodeState = this.getNode(nodeSnapshot.nodeIdx);
-            nodeState.signal = nodeSnapshot.signal;
-            nodeState.lastSignal = nodeSnapshot.lastSignal;
+
+            const nodeOffset = nodeSnapshot.nodeIdx * SoALayout.Node.STRIDE;
+
+            this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
+                nodeSnapshot.signal;
+            this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
+                nodeSnapshot.lastSignal;
+
             nodeState.signalsCount = nodeSnapshot.signalsCount;
             nodeState.blockedCount = nodeSnapshot.blockedCount;
         });

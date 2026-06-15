@@ -2,6 +2,7 @@ import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
+import { SoALayout } from './SoALayout';
 import type { SoAGraphState } from './SoAState';
 import type { SoAGraphUpdater } from './SoAUpdater';
 
@@ -18,14 +19,19 @@ export class SoAStateSynchronizer {
         if (!cycleState) return;
 
         for (const node of cycle.nodes) {
-            const nodeState = state.getNode(node.nodeIdx);
+            const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
 
-            if (nodeState.signal === NodeSignal.ACTIVE) {
+            if (
+                state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] ===
+                NodeSignal.ACTIVE
+            ) {
                 cycleState.writeBit(state.tick, node.cycleOffset);
             }
 
-            nodeState.signal = NodeSignal.NONE;
-            nodeState.lastSignal = NodeSignal.NONE;
+            state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
+                NodeSignal.NONE;
+            state.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
+                NodeSignal.NONE;
             state.makeDirtyChunk(node.chunkIdx);
         }
 
@@ -83,6 +89,9 @@ export class SoAStateSynchronizer {
 
         for (const node of cycle.nodes) {
             const nodeState = state.getNode(node.nodeIdx);
+            const nodeOffset = nodeState.nodeIdx;
+            const signalOffset = nodeOffset + SoALayout.Node.SIGNAL;
+            const lastSignalOffset = nodeOffset + SoALayout.Node.LAST_SIGNAL;
 
             if (cycleState) {
                 const isActive = cycleState.getBit(
@@ -91,13 +100,15 @@ export class SoAStateSynchronizer {
                 );
 
                 if (isActive) {
-                    nodeState.signal = NodeSignal.ACTIVE;
-                    nodeState.lastSignal = nodeState.signal;
+                    state.nodeData[signalOffset] = NodeSignal.ACTIVE;
+                    state.nodeData[lastSignalOffset] = NodeSignal.ACTIVE;
                     state.makeDirtyChunk(node.chunkIdx);
                 } else {
-                    if (nodeState.signal !== NodeSignal.ACTIVE)
-                        nodeState.signal = NodeSignal.NONE;
-                    nodeState.lastSignal = nodeState.signal;
+                    if (state.nodeData[signalOffset] !== NodeSignal.ACTIVE) {
+                        state.nodeData[signalOffset] = NodeSignal.NONE;
+                    }
+                    state.nodeData[lastSignalOffset] =
+                        state.nodeData[signalOffset];
                     state.makeDirtyChunk(node.chunkIdx);
                 }
             }

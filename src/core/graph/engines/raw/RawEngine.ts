@@ -126,8 +126,8 @@ export class RawEngine implements IEngine {
         this.state.updateChunk(chunk);
     }
 
-    public doPressButton(astIdx: number, state: boolean): void {
-        const astState = this.state.getNode(astIdx);
+    public doPressButton(nodeIdx: number, state: boolean): void {
+        const astState = this.state.getNode(nodeIdx);
         astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
         this.updater.markNodeAsChanged(this.state, astState);
         this.state.changedNodes.push(astState);

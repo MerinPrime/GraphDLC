@@ -5,6 +5,7 @@ import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { StateRewinder } from '../core/StateRewinder';
 import type { IEngine } from '../core/types';
+import { SoALayout } from './SoALayout';
 import type { SoASnapshot } from './SoASnapshot';
 import { SoAGraphState } from './SoAState';
 import { SoAStateSynchronizer } from './SoAStateSynchonizer';
@@ -126,9 +127,10 @@ export class SoAEngine implements IEngine {
         this.state.updateChunk(chunk);
     }
 
-    public doPressButton(astIdx: number, state: boolean): void {
-        const astState = this.state.getNode(astIdx);
-        astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
+    public doPressButton(nodeIdx: number, state: boolean): void {
+        const astState = this.state.getNode(nodeIdx);
+        const newSignal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
+        this.state.nodeData[nodeIdx + SoALayout.Node.SIGNAL] = newSignal;
         this.updater.markNodeAsChanged(this.state, astState);
         this.state.changedNodes.push(astState);
         this.state.makeDirtyChunk(astState.chunkIdx);

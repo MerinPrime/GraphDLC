@@ -2,6 +2,7 @@ import { CycleHeadType } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType } from '../core/NodeType';
+import { SoALayout } from './SoALayout';
 import type { SoAGraphState, SoANodeState } from './SoAState';
 
 export class SoAGraphUpdater {
@@ -16,25 +17,28 @@ export class SoAGraphUpdater {
 
         if (isDetector) {
             if (node.detectedLink) {
-                const detectedState = state.getNode(node.detectedLink.nodeIdx);
-                if (detectedState) {
-                    signalsCount =
-                        detectedState.signal !== NodeSignal.NONE ? 1 : 0;
-                }
+                const detectedOffset = node.detectedLink.nodeIdx;
+                const detectedSignal = state.nodeData[
+                    detectedOffset + SoALayout.Node.SIGNAL
+                ] as NodeSignal;
+                signalsCount = detectedSignal !== NodeSignal.NONE ? 1 : 0;
             }
         } else {
-            for (const prev of node.backLinks) {
-                const prevState = state.getNode(prev.nodeIdx);
-                if (!prevState) continue;
+            for (const back of node.backLinks) {
+                const backOffset = back.nodeIdx * SoALayout.Node.STRIDE;
 
                 const isBypassedHead =
-                    prev.headType !== CycleHeadType.NONE &&
-                    prev.headType !== CycleHeadType.READ;
+                    back.headType !== CycleHeadType.NONE &&
+                    back.headType !== CycleHeadType.READ;
 
                 if (isBypassedHead) continue;
 
-                if (prevState.lastSignal === NodeSignal.ACTIVE) {
-                    const isBlocker = prev.type === NodeType.BLOCKER;
+                const backLastSignal = state.nodeData[
+                    backOffset + SoALayout.Node.LAST_SIGNAL
+                ] as NodeSignal;
+
+                if (backLastSignal === NodeSignal.ACTIVE) {
+                    const isBlocker = back.type === NodeType.BLOCKER;
                     if (isBlocker) {
                         blockedCount++;
                     } else {
@@ -54,8 +58,18 @@ export class SoAGraphUpdater {
     public updateState(state: SoAGraphState) {
         for (let i = 0; i < state.changedNodes.length; i++) {
             const nodeState = state.changedNodes[i];
-            const isActive = nodeState.signal === NodeSignal.ACTIVE;
-            const isChanged = nodeState.lastSignal !== nodeState.signal;
+            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+
+            const signal = state.nodeData[
+                nodeOffset + SoALayout.Node.SIGNAL
+            ] as NodeSignal;
+            const lastSignal = state.nodeData[
+                nodeOffset + SoALayout.Node.LAST_SIGNAL
+            ] as NodeSignal;
+
+            const isActive = signal === NodeSignal.ACTIVE;
+            const isChanged = lastSignal !== signal;
+
             const nodeType = nodeState.type;
             const isBlocker = nodeType === NodeType.BLOCKER;
             const isCycleHead =
@@ -96,8 +110,8 @@ export class SoAGraphUpdater {
                 const delta = isActive ? 1 : -1;
                 const isDelayed =
                     (nodeType === NodeType.DELAY &&
-                        nodeState.signal === NodeSignal.PENDING) ||
-                    (!isActive && nodeState.lastSignal === NodeSignal.PENDING);
+                        signal === NodeSignal.PENDING) ||
+                    (!isActive && lastSignal === NodeSignal.PENDING);
 
                 const linkedNodes = nodeState.links;
                 const detectorNodes = nodeState.detectorLinks;
@@ -120,18 +134,19 @@ export class SoAGraphUpdater {
                     const detectorState = detectorNodes[i];
 
                     detectorState.signalsCount =
-                        nodeState.signal !== NodeSignal.NONE ? 1 : 0;
+                        signal !== NodeSignal.NONE ? 1 : 0;
                     this.markNodeAsChanged(state, detectorState);
                 }
 
-                nodeState.lastSignal = nodeState.signal;
+                state.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
+                    signal;
             }
 
             if (
                 nodeState.isUpdated ||
                 (isChanged && nodeState.isAdditionalUpdate) ||
                 (state.tick === 0 && nodeState.isEntryPoint) ||
-                (nodeState.signal !== NodeSignal.NONE &&
+                (signal !== NodeSignal.NONE &&
                     nodeState.signalsCount === 0 &&
                     (nodeType === NodeType.BUTTON ||
                         nodeType === NodeType.DIRECTIONAL_BUTTON)) ||
@@ -152,15 +167,20 @@ export class SoAGraphUpdater {
             const nodeState = state.changedNodes[i];
             nodeState.isChanged = false;
 
+            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+
             if (nodeState.blockedCount > 0) {
-                if (nodeState.signal !== NodeSignal.NONE) {
-                    nodeState.signal = NodeSignal.NONE;
-                    state.makeDirtyChunk(nodeState.chunkIdx);
-                }
+                state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
+                    NodeSignal.NONE;
+                state.makeDirtyChunk(nodeState.chunkIdx);
             } else {
-                const signal = this.updateNodeSignal(state, nodeState);
+                const signal = this.updateNodeSignal(
+                    state,
+                    nodeState,
+                    nodeOffset,
+                );
                 if (signal !== NodeSignal.KEEP_SIGNAL) {
-                    nodeState.signal = signal;
+                    state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
                     state.makeDirtyChunk(nodeState.chunkIdx);
                     if (
                         signal === NodeSignal.ACTIVE &&
@@ -192,6 +212,7 @@ export class SoAGraphUpdater {
     private updateNodeSignal(
         state: SoAGraphState,
         nodeState: SoANodeState,
+        nodeOffset: number,
     ): NodeSignal {
         if (nodeState.headType === CycleHeadType.READ) {
             if (nodeState.signalsCount > 1) return NodeSignal.ACTIVE;
@@ -219,21 +240,28 @@ export class SoAGraphUpdater {
                     : NodeSignal.NONE;
             case NodeType.SOURCE:
                 return NodeSignal.ACTIVE;
-            case NodeType.DELAY:
-                if (nodeState.signal === NodeSignal.PENDING) {
+            case NodeType.DELAY: {
+                const signal = state.nodeData[
+                    nodeOffset + SoALayout.Node.SIGNAL
+                ] as NodeSignal;
+                if (signal === NodeSignal.PENDING) {
                     return NodeSignal.ACTIVE;
                 } else if (nodeState.signalsCount > 0) {
-                    if (nodeState.signal === NodeSignal.NONE) {
+                    if (signal === NodeSignal.NONE) {
                         return NodeSignal.PENDING;
                     }
                 } else {
                     return NodeSignal.NONE;
                 }
                 return NodeSignal.KEEP_SIGNAL;
-            case NodeType.IMPULSE:
-                if (nodeState.signal === NodeSignal.NONE)
-                    return NodeSignal.ACTIVE;
+            }
+            case NodeType.IMPULSE: {
+                const signal = state.nodeData[
+                    nodeOffset + SoALayout.Node.SIGNAL
+                ] as NodeSignal;
+                if (signal === NodeSignal.NONE) return NodeSignal.ACTIVE;
                 return NodeSignal.PENDING;
+            }
             case NodeType.LOGIC_NOT:
                 return nodeState.signalsCount === 0
                     ? NodeSignal.ACTIVE
@@ -252,7 +280,10 @@ export class SoAGraphUpdater {
                 return NodeSignal.KEEP_SIGNAL;
             case NodeType.FLIP_FLOP:
                 if (nodeState.signalsCount > 0) {
-                    if (nodeState.signal === NodeSignal.ACTIVE) {
+                    const signal = state.nodeData[
+                        nodeOffset + SoALayout.Node.SIGNAL
+                    ] as NodeSignal;
+                    if (signal === NodeSignal.ACTIVE) {
                         return NodeSignal.NONE;
                     } else {
                         return NodeSignal.ACTIVE;
