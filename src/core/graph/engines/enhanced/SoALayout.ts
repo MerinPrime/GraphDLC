@@ -17,7 +17,7 @@ export namespace SoALayout {
             export const IsBreakpoint = 1 << 2;
             export const IsUpdated = 1 << 3;
             export const IsChanged = 1 << 4;
-            export const IsTempChanged = 1 << 5;
+            export const UNUSED = 1 << 5;
             export const IsCycleHead = 1 << 6;
             export const IsInCycle = 1 << 7;
         }

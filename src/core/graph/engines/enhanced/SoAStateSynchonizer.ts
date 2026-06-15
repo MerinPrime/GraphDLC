@@ -37,15 +37,21 @@ export class SoAStateSynchronizer {
 
         for (const node of cycle.nodes) {
             const nodeState = state.getNode(node.nodeIdx);
+            const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
             const isHead =
                 node.headType !== CycleHeadType.NONE &&
                 node.headType !== CycleHeadType.READ;
 
             if (!isHead) {
-                if (nodeState.isChanged) {
+                const isChanged =
+                    (state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &
+                        SoALayout.Node.Flags.IsChanged) !==
+                    0;
+                if (isChanged) {
                     removeWithSwap(state.changedNodes, nodeState);
                     removeWithSwap(state.tempChangedNodes, nodeState);
-                    nodeState.isChanged = false;
+                    state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
+                        ~SoALayout.Node.Flags.IsChanged;
                 }
             } else {
                 this.updater.markNodeAsChangedNonTemp(state, nodeState);
@@ -92,6 +98,7 @@ export class SoAStateSynchronizer {
             const nodeOffset = nodeState.nodeIdx;
             const signalOffset = nodeOffset + SoALayout.Node.SIGNAL;
             const lastSignalOffset = nodeOffset + SoALayout.Node.LAST_SIGNAL;
+            const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
 
             if (cycleState) {
                 const isActive = cycleState.getBit(
@@ -114,7 +121,7 @@ export class SoAStateSynchronizer {
             }
 
             nodeState.cycleOffset = 0;
-            nodeState.isUpdated = true;
+            state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
             this.updater.markNodeAsChangedNonTemp(state, nodeState);
             this.updater.markNodeAsChanged(state, nodeState);

@@ -9,6 +9,7 @@ export class SoAGraphUpdater {
     public fullNodeStateCalculate(state: SoAGraphState, node: GraphNode) {
         const nodeState = state.getNode(node.nodeIdx);
         if (!nodeState) return;
+        const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
 
         let signalsCount = 0;
         let blockedCount = 0;
@@ -50,7 +51,8 @@ export class SoAGraphUpdater {
 
         nodeState.signalsCount = signalsCount;
         nodeState.blockedCount = blockedCount;
-        nodeState.isUpdated = true;
+        state.nodeData[nodeOffset] |= SoALayout.Node.Flags.IsUpdated;
+
         this.markNodeAsChangedNonTemp(state, nodeState);
         this.markNodeAsChanged(state, nodeState);
     }
@@ -67,11 +69,15 @@ export class SoAGraphUpdater {
                 nodeOffset + SoALayout.Node.LAST_SIGNAL
             ] as NodeSignal;
 
+            const flags = state.nodeData[nodeOffset + SoALayout.Node.FLAGS];
+
             const isActive = signal === NodeSignal.ACTIVE;
             const isChanged = lastSignal !== signal;
 
-            const nodeType = nodeState.type;
-            const isBlocker = nodeType === NodeType.BLOCKER;
+            const type = state.nodeData[
+                nodeOffset + SoALayout.Node.TYPE
+            ] as NodeType;
+            const isBlocker = type === NodeType.BLOCKER;
             const isCycleHead =
                 nodeState.headType !== CycleHeadType.NONE &&
                 nodeState.headType !== CycleHeadType.READ;
@@ -109,7 +115,7 @@ export class SoAGraphUpdater {
             if (isChanged) {
                 const delta = isActive ? 1 : -1;
                 const isDelayed =
-                    (nodeType === NodeType.DELAY &&
+                    (type === NodeType.DELAY &&
                         signal === NodeSignal.PENDING) ||
                     (!isActive && lastSignal === NodeSignal.PENDING);
 
@@ -143,18 +149,21 @@ export class SoAGraphUpdater {
             }
 
             if (
-                nodeState.isUpdated ||
-                (isChanged && nodeState.isAdditionalUpdate) ||
-                (state.tick === 0 && nodeState.isEntryPoint) ||
+                (flags & SoALayout.Node.Flags.IsUpdated) !== 0 ||
+                (isChanged &&
+                    (flags & SoALayout.Node.Flags.IsAdditionalUpdate) !== 0) ||
+                (state.tick === 0 &&
+                    (flags & SoALayout.Node.Flags.IsEntryPoint) !== 0) ||
                 (signal !== NodeSignal.NONE &&
                     nodeState.signalsCount === 0 &&
-                    (nodeType === NodeType.BUTTON ||
-                        nodeType === NodeType.DIRECTIONAL_BUTTON)) ||
+                    (type === NodeType.BUTTON ||
+                        type === NodeType.DIRECTIONAL_BUTTON)) ||
                 (nodeState.signalsCount > 0 &&
-                    (nodeType === NodeType.RANDOM ||
+                    (type === NodeType.RANDOM ||
                         nodeState.headType === CycleHeadType.READ))
             ) {
-                nodeState.isUpdated = false;
+                state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
+                    ~SoALayout.Node.Flags.IsUpdated;
                 this.markNodeAsChanged(state, nodeState);
             }
         }
@@ -165,9 +174,9 @@ export class SoAGraphUpdater {
 
         for (let i = 0; i < state.changedNodes.length; i++) {
             const nodeState = state.changedNodes[i];
-            nodeState.isChanged = false;
-
             const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+            state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
+                ~SoALayout.Node.Flags.IsChanged;
 
             if (nodeState.blockedCount > 0) {
                 state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
@@ -182,10 +191,12 @@ export class SoAGraphUpdater {
                 if (signal !== NodeSignal.KEEP_SIGNAL) {
                     state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
                     state.makeDirtyChunk(nodeState.chunkIdx);
-                    if (
-                        signal === NodeSignal.ACTIVE &&
-                        nodeState.isBreakpoint
-                    ) {
+                    const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
+                    const isBreakpoint =
+                        (state.nodeData[nodeOffset + flagsOffset] &
+                            SoALayout.Node.Flags.IsBreakpoint) !==
+                        0;
+                    if (signal === NodeSignal.ACTIVE && isBreakpoint) {
                         state.breakPoint = true;
                     }
                 }
@@ -204,8 +215,11 @@ export class SoAGraphUpdater {
     }
 
     public markNodeAsChanged(state: SoAGraphState, nodeState: SoANodeState) {
-        if (nodeState.isChanged) return;
-        nodeState.isChanged = true;
+        const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
+        const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
+        if (state.nodeData[flagsOffset] & SoALayout.Node.Flags.IsChanged)
+            return;
+        state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsChanged;
         state.tempChangedNodes.push(nodeState);
     }
 
@@ -230,7 +244,10 @@ export class SoAGraphUpdater {
             );
             return cycleActive ? NodeSignal.ACTIVE : NodeSignal.NONE;
         }
-        switch (nodeState.type) {
+        const type = state.nodeData[
+            nodeOffset + SoALayout.Node.TYPE
+        ] as NodeType;
+        switch (type) {
             case NodeType.PATH:
             case NodeType.BLOCKER:
             case NodeType.DETECTOR:
