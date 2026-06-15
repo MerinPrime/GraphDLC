@@ -13,6 +13,7 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
 import type { IEngine } from '../engines/core/types';
+import { SoAEngine } from '../engines/enhanced/SoAEngine';
 import { RawEngine } from '../engines/raw/RawEngine';
 import type { GraphCycle } from './CycleTypes';
 import { CycleManager } from './cycle/CycleManager';
@@ -47,11 +48,11 @@ export class Graph {
                 engine = new RawEngine();
                 break;
             case GraphEngine.ENHANCED:
-                engine = new RawEngine();
+                engine = new SoAEngine();
                 break;
-            case GraphEngine.NATIVE:
-                engine = new RawEngine();
-                break;
+            // case GraphEngine.NATIVE:
+            //     engine = new RawEngine();
+            //     break;
         }
 
         this.engine = engine;

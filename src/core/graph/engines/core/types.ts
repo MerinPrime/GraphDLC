@@ -31,7 +31,7 @@ export interface IEngine {
     updateNodeState(node: GraphNode, resetSignal?: boolean): void;
     updateChunk(chunk: Chunk): void;
 
-    doPressButton(astIdx: number, state: boolean): void;
+    doPressButton(nodeIdx: number, state: boolean): void;
 
     clear(): void;
 }
