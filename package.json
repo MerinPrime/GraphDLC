@@ -16,6 +16,7 @@
     "license": "ISC",
     "devDependencies": {
         "@biomejs/biome": "^2.4.16",
+        "@rollup/plugin-terser": "^1.0.0",
         "@types/archiver": "^8.0.0",
         "@types/node": "^25.9.1",
         "archiver": "^8.0.0",
