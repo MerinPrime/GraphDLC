@@ -5,7 +5,7 @@ import { PerformanceSettingGroup } from './PerformanceGroup';
 export const enum GraphEngine {
     STANDARD = 0,
     ENHANCED = 1,
-    // NATIVE = 2,
+    NATIVE = 2,
 }
 
 const NameLocale = new I18nText(
@@ -67,9 +67,9 @@ export const GraphEngineSetting = new SelectSetting<GraphEngine>(
             value: GraphEngine.ENHANCED,
             label: EnhancedLocale,
         },
-        // {
-        //     value: GraphEngine.NATIVE,
-        //     label: NativeLocale,
-        // },
+        {
+            value: GraphEngine.NATIVE,
+            label: NativeLocale,
+        },
     ],
 );

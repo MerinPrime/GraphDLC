@@ -14,6 +14,7 @@ import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
 import type { IEngine } from '../engines/core/types';
 import { SoAEngine } from '../engines/enhanced/SoAEngine';
+import { NativeEngine } from '../engines/native/NativeEngine';
 import { RawEngine } from '../engines/raw/RawEngine';
 import type { GraphCycle } from './CycleTypes';
 import { CycleManager } from './cycle/CycleManager';
@@ -50,9 +51,9 @@ export class Graph {
             case GraphEngine.ENHANCED:
                 engine = new SoAEngine();
                 break;
-            // case GraphEngine.NATIVE:
-            //     engine = new RawEngine();
-            //     break;
+            case GraphEngine.NATIVE:
+                engine = new NativeEngine();
+                break;
         }
 
         this.engine = engine;
