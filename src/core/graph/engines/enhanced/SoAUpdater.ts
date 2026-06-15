@@ -7,9 +7,8 @@ import type { SoAGraphState } from './SoAState';
 
 export class SoAGraphUpdater {
     public fullNodeStateCalculate(state: SoAGraphState, node: GraphNode) {
-        const nodeState = state.getNode(node.nodeIdx);
-        if (!nodeState) return;
-        const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
+        const nodeIdx = node.nodeIdx;
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
 
         const signalsCountOffset = nodeOffset + SoALayout.Node.SIGNALS_COUNT;
         const blockedCountOffset = nodeOffset + SoALayout.Node.BLOCKED_COUNT;
@@ -58,14 +57,13 @@ export class SoAGraphUpdater {
         state.nodeData[blockedCountOffset] = blockedCount;
         state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
-        this.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
-        this.markNodeAsChanged(state, nodeState.nodeIdx);
+        this.markNodeAsChangedNonTemp(state, nodeIdx);
+        this.markNodeAsChanged(state, nodeIdx);
     }
 
     public updateState(state: SoAGraphState) {
         for (let i = 0; i < state.changedNodes.length; i++) {
             const nodeIdx = state.changedNodes.buffer[i];
-            const nodeState = state.getNode(nodeIdx);
             const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
 
             const signal = state.nodeData[

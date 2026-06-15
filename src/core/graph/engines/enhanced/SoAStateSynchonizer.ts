@@ -35,8 +35,8 @@ export class SoAStateSynchronizer {
         }
 
         for (const node of cycle.nodes) {
-            const nodeState = state.getNode(node.nodeIdx);
-            const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
+            const nodeIdx = node.nodeIdx;
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
             const isHead =
                 node.headType !== CycleHeadType.NONE &&
                 node.headType !== CycleHeadType.READ;
@@ -47,14 +47,14 @@ export class SoAStateSynchronizer {
                         SoALayout.Node.Flags.IsChanged) !==
                     0;
                 if (isChanged) {
-                    state.changedNodes.removeElement(nodeState.nodeIdx);
-                    state.tempChangedNodes.removeElement(nodeState.nodeIdx);
+                    state.changedNodes.removeElement(nodeIdx);
+                    state.tempChangedNodes.removeElement(nodeIdx);
                     state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
                         ~SoALayout.Node.Flags.IsChanged;
                 }
             } else {
-                this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
-                this.updater.markNodeAsChanged(state, nodeState.nodeIdx);
+                this.updater.markNodeAsChangedNonTemp(state, nodeIdx);
+                this.updater.markNodeAsChanged(state, nodeIdx);
             }
         }
 
@@ -92,10 +92,9 @@ export class SoAStateSynchronizer {
         const cycleState = state.cycles[cycle.index];
 
         for (const node of cycle.nodes) {
-            const nodeState = state.getNode(node.nodeIdx);
-            const nodeOffset = nodeState.nodeIdx * SoALayout.Node.STRIDE;
-            const extra32Offset =
-                nodeState.nodeIdx * SoALayout.Extra32Node.STRIDE;
+            const nodeIdx = node.nodeIdx;
+            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+            const extra32Offset = nodeIdx * SoALayout.Extra32Node.STRIDE;
 
             const signalOffset = nodeOffset + SoALayout.Node.SIGNAL;
             const lastSignalOffset = nodeOffset + SoALayout.Node.LAST_SIGNAL;
@@ -126,8 +125,8 @@ export class SoAStateSynchronizer {
             state.extra32NodeData[cycleOffsetOffset] = 0;
             state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
-            this.updater.markNodeAsChangedNonTemp(state, nodeState.nodeIdx);
-            this.updater.markNodeAsChanged(state, nodeState.nodeIdx);
+            this.updater.markNodeAsChangedNonTemp(state, nodeIdx);
+            this.updater.markNodeAsChanged(state, nodeIdx);
         }
 
         const affectedNodes = new Set<GraphNode>();

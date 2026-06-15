@@ -8,17 +8,6 @@ import { SoACycleState } from './SoACycleState';
 import { SoALayout } from './SoALayout';
 import { SoACycleSnapshot, SoANodeSnapshot, SoASnapshot } from './SoASnapshot';
 
-export class SoANodeState {
-    public readonly nodeIdx;
-
-    public constructor(
-        public node: GraphNode,
-        nodeIdx: number,
-    ) {
-        this.nodeIdx = nodeIdx;
-    }
-}
-
 export class SoAChunkState {
     public isDirty: boolean = false;
 
@@ -33,8 +22,6 @@ export class SoAGraphState {
     public tempChangedNodes: DynamicU32Array = new DynamicU32Array(
         INIT_NODE_COUNT,
     );
-
-    private nodes: SoANodeState[] = [];
 
     public cycles: (SoACycleState | null)[] = [];
 
@@ -71,14 +58,9 @@ export class SoAGraphState {
         this.chunkCount = 0;
         this.changedNodes.clear();
         this.tempChangedNodes.clear();
-        this.nodes.length = 0;
         this.cycles.length = 0;
         this.tick = 0;
         this.breakPoint = false;
-    }
-
-    public getNode(nodeIdx: number): SoANodeState {
-        return this.nodes[nodeIdx];
     }
 
     public ensureNodeCapacity(count: number) {
@@ -142,16 +124,13 @@ export class SoAGraphState {
     }
 
     public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
-        if (this.nodes[node.nodeIdx] === undefined) {
-            this.nodes[node.nodeIdx] = new SoANodeState(node, node.nodeIdx);
-        }
-        this.ensureNodeCapacity(node.nodeIdx + 1);
+        const nodeIdx = node.nodeIdx;
 
-        const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
-        const linksOffset = node.nodeIdx * SoALayout.Links.STRIDE;
-        const detectorsOffset = node.nodeIdx * SoALayout.Detectors.STRIDE;
+        this.ensureNodeCapacity(nodeIdx + 1);
 
-        const nodeState = this.nodes[node.nodeIdx];
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+        const linksOffset = nodeIdx * SoALayout.Links.STRIDE;
+        const detectorsOffset = nodeIdx * SoALayout.Detectors.STRIDE;
 
         this.nodeData[nodeOffset + SoALayout.Node.TYPE] = node.type;
 
@@ -189,8 +168,8 @@ export class SoAGraphState {
             this.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsBreakpoint;
         else this.nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsBreakpoint;
 
-        const extra8NodeOffset = node.nodeIdx * SoALayout.Extra8Node.STRIDE;
-        const extra32NodeOffset = node.nodeIdx * SoALayout.Extra32Node.STRIDE;
+        const extra8NodeOffset = nodeIdx * SoALayout.Extra8Node.STRIDE;
+        const extra32NodeOffset = nodeIdx * SoALayout.Extra32Node.STRIDE;
 
         const cycleOffsetOffset =
             extra32NodeOffset + SoALayout.Extra32Node.CYCLE_OFFSET;
@@ -232,7 +211,7 @@ export class SoAGraphState {
             this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;
         }
 
-        this.changedNodes.add(nodeState.nodeIdx);
+        this.changedNodes.add(nodeIdx);
     }
 
     public updateChunk(chunk: Chunk) {
