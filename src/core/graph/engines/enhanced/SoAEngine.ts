@@ -130,7 +130,8 @@ export class SoAEngine implements IEngine {
     public doPressButton(nodeIdx: number, state: boolean): void {
         const astState = this.state.getNode(nodeIdx);
         const newSignal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-        this.state.nodeData[nodeIdx + SoALayout.Node.SIGNAL] = newSignal;
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+        this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = newSignal;
         this.updater.markNodeAsChanged(this.state, astState);
         this.state.changedNodes.push(astState);
         this.state.makeDirtyChunk(astState.chunkIdx);
