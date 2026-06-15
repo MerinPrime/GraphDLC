@@ -11,9 +11,6 @@ export class SoANodeState {
     public readonly nodeIdx;
     public readonly chunkIdx;
 
-    public links: SoANodeState[] = [];
-    public detectorLinks: SoANodeState[] = [];
-
     public cycleIdx: number | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
     public cycleOffset: number = 0;
@@ -51,13 +48,18 @@ export class SoAGraphState {
     public nodeData: Uint8Array = new Uint8Array(
         INIT_NODE_COUNT * SoALayout.Node.STRIDE,
     );
+    public linkIndices: Uint32Array = new Uint32Array(
+        INIT_NODE_COUNT * SoALayout.Links.STRIDE,
+    );
+    public detectorIndices: Uint32Array = new Uint32Array(
+        INIT_NODE_COUNT * SoALayout.Detectors.STRIDE,
+    );
 
     private nodeCount: number = 0;
     private nodeCapacity: number = INIT_NODE_COUNT;
 
     public clear() {
         this.nodeCount = 0;
-
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;
         this.nodes.length = 0;
@@ -83,9 +85,23 @@ export class SoAGraphState {
 
         this.nodeCapacity = newCapacity;
 
-        const temp = new Uint8Array(newCapacity * SoALayout.Node.STRIDE);
-        temp.set(this.nodeData);
-        this.nodeData = temp;
+        const tempNodeData = new Uint8Array(
+            newCapacity * SoALayout.Node.STRIDE,
+        );
+        tempNodeData.set(this.nodeData);
+        this.nodeData = tempNodeData;
+
+        const tempLinkIndices = new Uint32Array(
+            newCapacity * SoALayout.Links.STRIDE,
+        );
+        tempLinkIndices.set(this.linkIndices);
+        this.linkIndices = tempLinkIndices;
+
+        const tempDetectorIndices = new Uint32Array(
+            newCapacity * SoALayout.Detectors.STRIDE,
+        );
+        tempDetectorIndices.set(this.detectorIndices);
+        this.detectorIndices = tempDetectorIndices;
     }
 
     public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
@@ -96,24 +112,32 @@ export class SoAGraphState {
                 node.chunkIdx,
             );
         }
-        this.ensureNodeCapacity(node.nodeIdx);
+        this.ensureNodeCapacity(node.nodeIdx + 1);
 
         const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
+        const linksOffset = node.nodeIdx * SoALayout.Links.STRIDE;
+        const detectorsOffset = node.nodeIdx * SoALayout.Detectors.STRIDE;
 
         const nodeState = this.nodes[node.nodeIdx];
 
         this.nodeData[nodeOffset + SoALayout.Node.TYPE] = node.type;
-        nodeState.links = node.links
-            .filter((linkedNode) => linkedNode.type !== NodeType.DETECTOR)
-            .map((linkedNode) => this.getNode(linkedNode.nodeIdx));
 
-        nodeState.detectorLinks = node.links
+        const links = node.links
+            .filter((linkedNode) => linkedNode.type !== NodeType.DETECTOR)
+            .map((linkedNode) => linkedNode.nodeIdx);
+        this.nodeData[nodeOffset + SoALayout.Node.LINKS_COUNT] = links.length;
+        this.linkIndices.set(links, linksOffset);
+
+        const detectors = node.links
             .filter(
                 (linkedNode) =>
                     linkedNode.type === NodeType.DETECTOR &&
-                    linkedNode.detectedLink === nodeState.node,
+                    linkedNode.detectedLink === node,
             )
-            .map((node) => this.getNode(node.nodeIdx));
+            .map((node) => node.nodeIdx);
+        this.nodeData[nodeOffset + SoALayout.Node.DETECTORS_COUNT] =
+            detectors.length;
+        this.detectorIndices.set(detectors, detectorsOffset);
 
         const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
 

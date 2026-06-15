@@ -126,38 +126,50 @@ export class SoAGraphUpdater {
                         signal === NodeSignal.PENDING) ||
                     (!isActive && lastSignal === NodeSignal.PENDING);
 
-                const linkedNodes = nodeState.links;
-                const detectorNodes = nodeState.detectorLinks;
-
                 if (!isDelayed) {
-                    for (let i = 0; i < linkedNodes.length; i++) {
-                        const edgeState = linkedNodes[i];
-                        const edgeIdx = edgeState.nodeIdx;
-                        const edgeOffset = edgeIdx * SoALayout.Node.STRIDE;
+                    const linksCount =
+                        state.nodeData[nodeOffset + SoALayout.Node.LINKS_COUNT];
+                    if (linksCount !== 0) {
+                        const linksOffset =
+                            nodeState.nodeIdx * SoALayout.Links.STRIDE;
+                        for (let i = 0; i < linksCount; i++) {
+                            const edgeIdx = state.linkIndices[linksOffset + i];
+                            const edgeState = state.getNode(edgeIdx);
+                            const edgeOffset = edgeIdx * SoALayout.Node.STRIDE;
 
-                        if (isBlocker) {
-                            state.nodeData[
-                                edgeOffset + SoALayout.Node.BLOCKED_COUNT
-                            ] += delta;
-                            this.markNodeAsChanged(state, edgeState);
-                        } else {
-                            state.nodeData[
-                                edgeOffset + SoALayout.Node.SIGNALS_COUNT
-                            ] += delta;
-                            this.markNodeAsChanged(state, edgeState);
+                            if (isBlocker) {
+                                state.nodeData[
+                                    edgeOffset + SoALayout.Node.BLOCKED_COUNT
+                                ] += delta;
+                                this.markNodeAsChanged(state, edgeState);
+                            } else {
+                                state.nodeData[
+                                    edgeOffset + SoALayout.Node.SIGNALS_COUNT
+                                ] += delta;
+                                this.markNodeAsChanged(state, edgeState);
+                            }
                         }
                     }
                 }
 
-                for (let i = 0; i < detectorNodes.length; i++) {
-                    const detectorState = detectorNodes[i];
-                    const detectorIdx = detectorState.nodeIdx;
-                    const detectorOffset = detectorIdx * SoALayout.Node.STRIDE;
+                const detectorsCount =
+                    state.nodeData[nodeOffset + SoALayout.Node.DETECTORS_COUNT];
+                if (detectorsCount !== 0) {
+                    const detectorsOffset =
+                        nodeState.nodeIdx * SoALayout.Detectors.STRIDE;
 
-                    state.nodeData[
-                        detectorOffset + SoALayout.Node.SIGNALS_COUNT
-                    ] = signal !== NodeSignal.NONE ? 1 : 0;
-                    this.markNodeAsChanged(state, detectorState);
+                    for (let i = 0; i < detectorsCount; i++) {
+                        const detectorIdx =
+                            state.detectorIndices[detectorsOffset + i];
+                        const detectorState = state.getNode(detectorIdx);
+                        const detectorOffset =
+                            detectorIdx * SoALayout.Node.STRIDE;
+
+                        state.nodeData[
+                            detectorOffset + SoALayout.Node.SIGNALS_COUNT
+                        ] = signal !== NodeSignal.NONE ? 1 : 0;
+                        this.markNodeAsChanged(state, detectorState);
+                    }
                 }
 
                 state.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =

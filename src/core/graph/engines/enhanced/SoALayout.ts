@@ -6,7 +6,7 @@ export namespace SoALayout {
         export const LAST_SIGNAL = 3;
         export const SIGNALS_COUNT = 4;
         export const BLOCKED_COUNT = 5;
-        export const EDGES_COUNT = 6;
+        export const LINKS_COUNT = 6;
         export const DETECTORS_COUNT = 7;
 
         export const STRIDE = 8;
@@ -21,5 +21,13 @@ export namespace SoALayout {
             export const IsCycleHead = 1 << 6;
             export const IsInCycle = 1 << 7;
         }
+    }
+
+    export namespace Links {
+        export const STRIDE = 4;
+    }
+
+    export namespace Detectors {
+        export const STRIDE = 4;
     }
 }
