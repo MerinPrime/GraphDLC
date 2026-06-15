@@ -23,9 +23,9 @@
     },
     "include": [
         "src/**/*",
+        "rolldown.config.ts",
         "webpack.config.ts",
         "webpack/**/*"
-        // "logic-arrows/src/**/*.ts"
     ],
     "exclude": ["node_modules", "dist"]
 }
