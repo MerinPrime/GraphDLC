@@ -32,13 +32,13 @@ export class SoAChunkState {
 }
 
 const INIT_NODE_COUNT = 1024;
+const INIT_CHUNK_COUNT = 4;
 
 export class SoAGraphState {
     public changedNodes: SoANodeState[] = [];
     public tempChangedNodes: SoANodeState[] = [];
 
     private nodes: SoANodeState[] = [];
-    private chunks: SoAChunkState[] = [];
 
     public cycles: (SoACycleState | null)[] = [];
 
@@ -58,12 +58,18 @@ export class SoAGraphState {
     private nodeCount: number = 0;
     private nodeCapacity: number = INIT_NODE_COUNT;
 
+    private chunks: Uint8Array = new Uint8Array(
+        INIT_CHUNK_COUNT * SoALayout.Chunk.STRIDE,
+    );
+    private chunkCount = 0;
+    private chunkCapacity = INIT_CHUNK_COUNT;
+
     public clear() {
         this.nodeCount = 0;
+        this.chunkCount = 0;
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;
         this.nodes.length = 0;
-        this.chunks.length = 0;
         this.cycles.length = 0;
         this.tick = 0;
         this.breakPoint = false;
@@ -102,6 +108,23 @@ export class SoAGraphState {
         );
         tempDetectorIndices.set(this.detectorIndices);
         this.detectorIndices = tempDetectorIndices;
+    }
+
+    public ensureChunkCapacity(count: number) {
+        this.chunkCount = Math.max(this.chunkCount, count);
+
+        if (this.chunkCapacity >= count) return;
+
+        let newCapacity = this.chunkCapacity || 2;
+        while (newCapacity < count) {
+            newCapacity *= 2;
+        }
+
+        this.chunkCapacity = newCapacity;
+
+        const tempChunks = new Uint8Array(newCapacity * SoALayout.Chunk.STRIDE);
+        tempChunks.set(this.chunks);
+        this.chunks = tempChunks;
     }
 
     public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
@@ -177,9 +200,8 @@ export class SoAGraphState {
 
     public updateChunk(chunk: Chunk) {
         if (chunk.astIndex === undefined || chunk.astIndex === null) return;
-        if (this.chunks[chunk.astIndex] === undefined) {
-            this.chunks[chunk.astIndex] = new SoAChunkState(chunk.astIndex);
-        }
+        const chunkIdx = chunk.astIndex;
+        this.ensureChunkCapacity(chunkIdx + 1);
     }
 
     public reset() {
@@ -203,9 +225,12 @@ export class SoAGraphState {
                 this.changedNodes.push(this.nodes[i]);
             }
         }
-        this.chunks.forEach((chunk) => {
-            chunk.isDirty = true;
-        });
+
+        for (let i = 0; i < this.chunkCount; i++) {
+            const chunkOffset = i * SoALayout.Chunk.STRIDE;
+            this.chunks[chunkOffset + SoALayout.Chunk.FLAGS] |=
+                SoALayout.Chunk.Flags.IsDirty;
+        }
 
         this.cycles.forEach((cycle) => {
             if (cycle) cycle.clear();
@@ -214,24 +239,35 @@ export class SoAGraphState {
     }
 
     public makeDirtyChunk(chunkIdx: number) {
-        this.chunks[chunkIdx].isDirty = true;
+        const chunkOffset = chunkIdx * SoALayout.Chunk.STRIDE;
+        this.chunks[chunkOffset + SoALayout.Chunk.FLAGS] |=
+            SoALayout.Chunk.Flags.IsDirty;
     }
 
     public getDirtyChunks(
         markUndirty: boolean = false,
     ): [...chunkIdx: number[]] {
         const dirtyChunks: number[] = [];
-        this.chunks.forEach((chunk) => {
-            if (chunk.isDirty) {
-                if (markUndirty) chunk.isDirty = false;
-                dirtyChunks.push(chunk.chunkIdx);
+        for (let chunkIdx = 0; chunkIdx < this.chunkCount; chunkIdx++) {
+            const chunkOffset = chunkIdx * SoALayout.Chunk.STRIDE;
+            const flagsOffset = chunkOffset + SoALayout.Chunk.FLAGS;
+            if (
+                (this.chunks[flagsOffset] & SoALayout.Chunk.Flags.IsDirty) ===
+                0
+            )
+                continue;
+            if (markUndirty) {
+                this.chunks[flagsOffset] &= ~SoALayout.Chunk.Flags.IsDirty;
             }
-        });
+            dirtyChunks.push(chunkIdx);
+        }
         return dirtyChunks;
     }
 
     public makeUndirtyChunk(chunkIdx: number) {
-        this.chunks[chunkIdx].isDirty = false;
+        const chunkOffset = chunkIdx * SoALayout.Chunk.STRIDE;
+        this.chunks[chunkOffset + SoALayout.Chunk.FLAGS] &=
+            ~SoALayout.Chunk.Flags.IsDirty;
     }
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
@@ -292,7 +328,7 @@ export class SoAGraphState {
             },
         );
 
-        snapshot.chunks = this.chunks.map((chunk) => chunk.chunkIdx);
+        snapshot.chunks = Array.from({ length: this.chunkCount }, (_, i) => i);
 
         snapshot.changedNodes = this.changedNodes.map(
             (nodeState) => nodeState.nodeIdx,
