@@ -6,7 +6,7 @@ pub struct CycleState {
 
 impl CycleState {
     pub fn new(cycle_idx: u32, length: u32) -> Self {
-        let num_words = (length + 31) / 32;
+        let num_words = (length + 31) >> 5;
         CycleState {
             cycle_idx,
             length,
