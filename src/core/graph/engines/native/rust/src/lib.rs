@@ -68,7 +68,7 @@ pub extern "C" fn update_node_state(
     let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_CHANGED);
 
     let node = &mut state.nodes[node_idx as usize];
-    node.node_type = node_type;
+    node.set_type_id(node_type);
 
     if is_entry_point != 0 {
         flags |= FLAG_IS_ENTRY_POINT;
@@ -83,7 +83,7 @@ pub extern "C" fn update_node_state(
     if cycle_idx >= 0 {
         node.cycle_idx = cycle_idx as u32;
         node.cycle_offset = cycle_offset;
-        node.head_type = head_type;
+        node.set_head_type(head_type);
         if head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ {
             flags |= FLAG_IS_CYCLE_HEAD;
         }
@@ -94,7 +94,7 @@ pub extern "C" fn update_node_state(
     } else {
         node.cycle_idx = 0;
         node.cycle_offset = 0;
-        node.head_type = CYCLE_HEAD_TYPE_NONE;
+        node.set_head_type(CYCLE_HEAD_TYPE_NONE);
     }
 
     node.chunk_idx = chunk_idx;
