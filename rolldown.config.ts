@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import terser from '@rollup/plugin-terser';
 import { ZipArchive } from 'archiver';
 import {
@@ -157,8 +158,15 @@ const rawPlugin = (): RolldownPlugin => ({
         if (id.includes('?raw')) {
             const [cleanPath] = id.split('?');
 
+            this.addWatchFile(cleanPath);
+
             if (cleanPath.endsWith('.scss')) {
                 const result = sass.compile(cleanPath);
+                if (result.loadedUrls) {
+                    for (const url of result.loadedUrls) {
+                        this.addWatchFile(fileURLToPath(url));
+                    }
+                }
                 return `export default ${JSON.stringify(result.css)};`;
             }
 
@@ -171,9 +179,14 @@ const rawPlugin = (): RolldownPlugin => ({
 
 const scssInjectPlugin = (): RolldownPlugin => ({
     name: 'scss-inject-plugin',
-    transform(code, id) {
+    transform(_code, id) {
         if (id.endsWith('.scss') && !id.includes('?raw')) {
             const result = sass.compile(id);
+            if (result.loadedUrls) {
+                for (const url of result.loadedUrls) {
+                    this.addWatchFile(fileURLToPath(url));
+                }
+            }
             const css = result.css.toString();
             return {
                 code: `
