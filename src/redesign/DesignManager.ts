@@ -14,16 +14,16 @@ interface DesignSetting {
 export class DesignManager {
     private designSettings: DesignSetting[] = [
         {
-            setting: QoLReDesignSetting,
-            style: qolStyle,
-        },
-        {
             setting: GraphDLCDesignSetting,
             style: graphDLCStyle,
         },
         {
             setting: DarkThemeSetting,
             style: darkStyle,
+        },
+        {
+            setting: QoLReDesignSetting, // TIP: more priority
+            style: qolStyle,
         },
     ];
 
