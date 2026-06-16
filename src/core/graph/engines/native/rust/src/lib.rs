@@ -101,7 +101,7 @@ pub extern "C" fn update_node_state(
     }
 
     node.chunk_idx = chunk_idx;
-    node.detected_link = if detected_link >= 0 {
+    state.detected_links[node_idx as usize] = if detected_link >= 0 {
         Some(detected_link as u32)
     } else {
         None
