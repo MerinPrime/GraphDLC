@@ -53,13 +53,12 @@ impl GraphState {
     pub fn ensure_node_capacity(&mut self, count: usize) {
         if self.nodes.len() < count {
             self.nodes.resize_with(count, || Node {
-                node_type: NODE_TYPE_EMPTY,
+                packed_type: 0,
                 flags: 0,
                 signal: 0,
                 last_signal: 0,
                 signals_count: 0,
                 blocked_count: 0,
-                head_type: 0,
                 chunk_idx: 0,
                 cycle_idx: 0,
                 cycle_offset: 0,
@@ -95,7 +94,7 @@ impl GraphState {
         }
         let node = &self.nodes[node_idx as usize];
         let is_in_cycle = (node.flags & FLAG_IS_IN_CYCLE) != 0;
-        let head_type = node.head_type;
+        let head_type = node.head_type();
 
         if is_in_cycle && head_type == CYCLE_HEAD_TYPE_NONE {
             let cycle_idx = node.cycle_idx;
@@ -177,7 +176,7 @@ impl GraphState {
 
             let (signal, last_signal, flags, node_type) = {
                 let node = &self.nodes[node_idx as usize];
-                (node.signal, node.last_signal, node.flags, node.node_type)
+                (node.signal, node.last_signal, node.flags, node.type_id())
             };
 
             let is_active = signal == NODE_SIGNAL_ACTIVE;
@@ -188,7 +187,7 @@ impl GraphState {
 
             if is_cycle_head {
                 let blocked_count = self.nodes[node_idx as usize].blocked_count;
-                let cycle_head_type = self.nodes[node_idx as usize].head_type;
+                let cycle_head_type = self.nodes[node_idx as usize].head_type();
 
                 if !is_active && (cycle_head_type != CYCLE_HEAD_TYPE_CLEAR || blocked_count == 0) {
                     continue;
@@ -325,7 +324,7 @@ impl GraphState {
             return NODE_SIGNAL_KEEP_SIGNAL;
         }
 
-        let node_type = node.node_type;
+        let node_type = node.type_id();
         match node_type {
             NODE_TYPE_PATH
             | NODE_TYPE_BLOCKER
@@ -420,7 +419,7 @@ impl GraphState {
     }
 
     pub fn full_node_state_calculate(&mut self, node_idx: u32) {
-        let node_type = self.nodes[node_idx as usize].node_type;
+        let node_type = self.nodes[node_idx as usize].type_id();
         let is_detector = node_type == NODE_TYPE_DETECTOR;
 
         let mut signals_count = 0;
@@ -439,8 +438,8 @@ impl GraphState {
             let back_links = std::mem::take(&mut self.nodes[node_idx as usize].back_links);
             for &back_idx in &back_links {
                 let back_node = &self.nodes[back_idx as usize];
-                let is_bypassed_head = back_node.head_type != CYCLE_HEAD_TYPE_NONE
-                    && back_node.head_type != CYCLE_HEAD_TYPE_READ;
+                let is_bypassed_head = back_node.head_type() != CYCLE_HEAD_TYPE_NONE
+                    && back_node.head_type() != CYCLE_HEAD_TYPE_READ;
 
                 if is_bypassed_head {
                     continue;
@@ -448,7 +447,7 @@ impl GraphState {
 
                 let back_last_signal = back_node.last_signal;
                 if back_last_signal == NODE_SIGNAL_ACTIVE {
-                    let is_blocker = back_node.node_type == NODE_TYPE_BLOCKER;
+                    let is_blocker = back_node.type_id() == NODE_TYPE_BLOCKER;
                     if is_blocker {
                         blocked_count += 1;
                     } else {
@@ -501,8 +500,8 @@ impl GraphState {
 
         for &node_idx in cycle_nodes {
             let node = &self.nodes[node_idx as usize];
-            let is_head =
-                node.head_type != CYCLE_HEAD_TYPE_NONE && node.head_type != CYCLE_HEAD_TYPE_READ;
+            let is_head = node.head_type() != CYCLE_HEAD_TYPE_NONE
+                && node.head_type() != CYCLE_HEAD_TYPE_READ;
 
             if !is_head {
                 let is_changed = (node.flags & FLAG_IS_CHANGED) != 0;
@@ -523,7 +522,7 @@ impl GraphState {
                 continue;
             }
 
-            if head_node.head_type != CYCLE_HEAD_TYPE_NONE {
+            if head_node.head_type() != CYCLE_HEAD_TYPE_NONE {
                 self.mark_node_as_changed_non_temp(head_idx);
                 self.mark_node_as_changed(head_idx);
             }
