@@ -5,12 +5,17 @@ pub struct Node {
     pub last_signal: u8,
     pub signals_count: u8,
     pub blocked_count: u8,
+
+    pub links_count: u8,
+    pub detectors_count: u8,
+
     pub chunk_idx: u32,
     pub cycle_idx: u32,
     pub cycle_offset: u32,
     pub detected_link: Option<u32>,
-    pub links: Vec<u32>,
-    pub detectors: Vec<u32>,
+
+    pub links: [u32; 4],
+    pub detectors: [u32; 4],
 }
 
 impl Node {

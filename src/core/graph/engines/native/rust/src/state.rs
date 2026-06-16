@@ -61,12 +61,16 @@ impl GraphState {
                 last_signal: 0,
                 signals_count: 0,
                 blocked_count: 0,
+                links_count: 0,
+                detectors_count: 0,
+
                 chunk_idx: 0,
                 cycle_idx: 0,
                 cycle_offset: 0,
                 detected_link: None,
-                links: Vec::new(),
-                detectors: Vec::new(),
+
+                links: [0u32; 4],
+                detectors: [0u32; 4],
             });
         }
     }
@@ -145,23 +149,28 @@ impl GraphState {
     }
 
     pub fn update_node_back_links(&mut self, node_idx: u32, new_links: &[u32]) {
-        let old_links = if (node_idx as usize) < self.nodes.len() {
-            let links = std::mem::take(&mut self.nodes[node_idx as usize].links);
-            let ret = links.clone();
-            self.nodes[node_idx as usize].links = links;
-            ret
+        let (old_links, old_count) = if (node_idx as usize) < self.nodes.len() {
+            let node = &self.nodes[node_idx as usize];
+            (node.links, node.links_count as usize)
         } else {
-            Vec::new()
+            ([0u32; 4], 0)
         };
 
-        for &target_idx in &old_links {
-            if (target_idx as usize) < self.nodes.len() {
-                self.back_links[target_idx as usize].retain(|&x| x != node_idx);
+        for i in 0..old_count {
+            let target_idx = old_links[i] as usize;
+            if target_idx < self.nodes.len() && target_idx < self.back_links.len() {
+                self.back_links[target_idx].retain(|&x| x != node_idx);
             }
         }
 
         for &target_idx in new_links {
             self.ensure_node_capacity((target_idx + 1) as usize);
+
+            if (target_idx as usize) >= self.back_links.len() {
+                self.back_links
+                    .resize_with((target_idx + 1) as usize, Vec::new);
+            }
+
             let back_links = &mut self.back_links[target_idx as usize];
             if !back_links.contains(&node_idx) {
                 back_links.push(node_idx);
@@ -219,34 +228,36 @@ impl GraphState {
                     || (!is_active && last_signal == NODE_SIGNAL_PENDING);
 
                 if !is_delayed {
-                    let links = std::mem::take(&mut self.nodes[node_idx as usize].links);
-                    for &edge_idx in &links {
-                        let edge = &mut self.nodes[edge_idx as usize];
+                    let node = &self.nodes[node_idx as usize];
+                    let links = node.links;
+                    let links_count = node.links_count as usize;
+
+                    for i in 0..links_count {
+                        let edge_idx = links[i] as usize;
+                        let edge = &mut self.nodes[edge_idx];
+
                         if is_blocker {
-                            if delta > 0 {
-                                edge.blocked_count = edge.blocked_count.saturating_add(1);
-                            } else {
-                                edge.blocked_count = edge.blocked_count.saturating_sub(1);
-                            }
+                            edge.blocked_count = edge.blocked_count.saturating_add_signed(delta);
                         } else {
-                            if delta > 0 {
-                                edge.signals_count = edge.signals_count.saturating_add(1);
-                            } else {
-                                edge.signals_count = edge.signals_count.saturating_sub(1);
-                            }
+                            edge.signals_count = edge.signals_count.saturating_add_signed(delta);
                         }
-                        self.mark_node_as_changed_internal(edge_idx);
+
+                        self.mark_node_as_changed_internal(edge_idx as u32);
                     }
-                    self.nodes[node_idx as usize].links = links;
                 }
 
-                let detectors = std::mem::take(&mut self.nodes[node_idx as usize].detectors);
-                for &detector_idx in &detectors {
-                    let detector = &mut self.nodes[detector_idx as usize];
-                    detector.signals_count = if signal != NODE_SIGNAL_NONE { 1 } else { 0 };
-                    self.mark_node_as_changed_internal(detector_idx);
+                let node = &self.nodes[node_idx as usize];
+                let detectors = node.detectors;
+                let detectors_count = node.detectors_count as usize;
+
+                let sig_count = (signal != NODE_SIGNAL_NONE) as u8;
+
+                for i in 0..detectors_count {
+                    let detector_idx = detectors[i] as usize;
+                    let detector = &mut self.nodes[detector_idx];
+                    detector.signals_count = sig_count;
+                    self.mark_node_as_changed_internal(detector_idx as u32);
                 }
-                self.nodes[node_idx as usize].detectors = detectors;
 
                 self.nodes[node_idx as usize].last_signal = signal;
             }
@@ -530,15 +541,19 @@ impl GraphState {
         let mut affected_nodes = HashSet::new();
         for &node_idx in cycle_nodes {
             affected_nodes.insert(node_idx);
-            let links = self.nodes[node_idx as usize].links.clone();
-            for link_idx in links {
+            let node = &self.nodes[node_idx as usize];
+            let count = node.links_count as usize;
+            let links = &node.links[..count];
+            for &link_idx in links {
                 affected_nodes.insert(link_idx);
             }
         }
         for &head_idx in cycle_heads {
             affected_nodes.insert(head_idx);
-            let links = self.nodes[head_idx as usize].links.clone();
-            for link_idx in links {
+            let node = &self.nodes[head_idx as usize];
+            let count = node.links_count as usize;
+            let links = &node.links[..count];
+            for &link_idx in links {
                 affected_nodes.insert(link_idx);
             }
         }
@@ -585,15 +600,19 @@ impl GraphState {
         let mut affected_nodes = HashSet::new();
         for &node_idx in cycle_nodes {
             affected_nodes.insert(node_idx);
-            let links = self.nodes[node_idx as usize].links.clone();
-            for link_idx in links {
+            let node = &self.nodes[node_idx as usize];
+            let count = node.links_count as usize;
+            let links = &node.links[..count];
+            for &link_idx in links {
                 affected_nodes.insert(link_idx);
             }
         }
         for &head_idx in cycle_heads {
             affected_nodes.insert(head_idx);
-            let links = self.nodes[head_idx as usize].links.clone();
-            for link_idx in links {
+            let node = &self.nodes[head_idx as usize];
+            let count = node.links_count as usize;
+            let links = &node.links[..count];
+            for &link_idx in links {
                 affected_nodes.insert(link_idx);
             }
         }
