@@ -11,16 +11,12 @@ import { SoAGraphState } from './SoAState';
 import { SoAStateSynchronizer } from './SoAStateSynchonizer';
 import { SoAGraphUpdater } from './SoAUpdater';
 
-const SNAPSHOT_INTERVAL = 1000;
-
 export class SoAEngine implements IEngine {
     private readonly state: SoAGraphState = new SoAGraphState();
     private readonly updater: SoAGraphUpdater = new SoAGraphUpdater();
     private readonly synchronizer: SoAStateSynchronizer =
         new SoAStateSynchronizer(this.updater);
-    private readonly rewinder: StateRewinder<SoASnapshot> = new StateRewinder(
-        SNAPSHOT_INTERVAL,
-    );
+    private readonly rewinder: StateRewinder<SoASnapshot> = new StateRewinder();
 
     private saveSnapshots: boolean;
 
@@ -33,7 +29,7 @@ export class SoAEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
-            if (this.state.tick % this.rewinder.interval === 0) {
+            if (this.rewinder.canDoSnapshot()) {
                 this.rewinder.saveSnapshot(this.state.makeSnapshot());
             }
         }

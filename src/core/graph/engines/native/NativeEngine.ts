@@ -9,8 +9,6 @@ import type { IEngine, ISnapshot } from '../core/types';
 import { instantiateRustEngine } from './loader';
 import type { RustEngineExports } from './types';
 
-const SNAPSHOT_INTERVAL = 1000;
-
 export interface NativeSnapshot extends ISnapshot {
     tick: number;
     data: Uint8Array;
@@ -20,7 +18,7 @@ export class NativeEngine implements IEngine {
     private readonly exports: RustEngineExports;
     private readonly stagingBufferPtr: number;
     private readonly rewinder: StateRewinder<NativeSnapshot> =
-        new StateRewinder(SNAPSHOT_INTERVAL);
+        new StateRewinder();
     private saveSnapshots: boolean;
 
     public constructor() {
@@ -36,7 +34,7 @@ export class NativeEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
-            if (this.getTick() % this.rewinder.interval === 0) {
+            if (this.rewinder.canDoSnapshot()) {
                 this.rewinder.saveSnapshot(this.makeSnapshot());
             }
         }

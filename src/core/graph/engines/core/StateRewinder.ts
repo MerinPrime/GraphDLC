@@ -1,9 +1,14 @@
 import type { ISnapshot } from './types';
 
+interface WrappedSnapshot<TSnapshot extends ISnapshot> {
+    timestamp: number;
+    data: TSnapshot;
+}
+
 interface Tier<TSnapshot extends ISnapshot> {
     level: number;
     interval: number;
-    snapshots: TSnapshot[];
+    snapshots: WrappedSnapshot<TSnapshot>[];
 }
 
 export class StateRewinder<TSnapshot extends ISnapshot> {
@@ -12,11 +17,10 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
     public static readonly SNAPSHOTS_PER_TIER: number = 10;
     public static readonly MAX_LEVELS: number = 5;
 
-    public readonly interval: number;
+    public readonly baseInterval: number = 250;
+    private lastSavedTime: number = 0;
 
-    public constructor(interval: number) {
-        this.interval = interval;
-
+    public constructor() {
         this.initTiers();
     }
 
@@ -25,31 +29,48 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
         for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
             this.tiers.push({
                 level: l,
-                interval: this.interval * 2 ** l,
+                interval: this.baseInterval * 2 ** l,
                 snapshots: [],
             });
         }
     }
 
-    public saveSnapshot(snapshot: TSnapshot) {
-        const tick = snapshot.tick;
+    public canDoSnapshot(): boolean {
+        const now = performance.now();
 
-        if (tick % this.interval !== 0) {
-            return;
+        if (now - this.lastSavedTime < this.baseInterval) {
+            return false;
         }
 
-        this.addSnapshotToTier(0, snapshot);
+        return true;
     }
 
-    private addSnapshotToTier(level: number, snapshot: TSnapshot) {
-        if (level >= StateRewinder.MAX_LEVELS) {
+    public saveSnapshot(snapshot: TSnapshot) {
+        const now = performance.now();
+
+        if (now - this.lastSavedTime < this.baseInterval) {
             return;
         }
 
-        const tier = this.tiers[level];
-        tier.snapshots.push(snapshot);
+        this.lastSavedTime = now;
 
-        tier.snapshots.sort((a, b) => b.tick - a.tick);
+        const wrapped: WrappedSnapshot<TSnapshot> = {
+            timestamp: now,
+            data: snapshot,
+        };
+
+        this.addSnapshotToTier(0, wrapped);
+    }
+
+    private addSnapshotToTier(
+        level: number,
+        wrappedSnapshot: WrappedSnapshot<TSnapshot>,
+    ) {
+        if (level >= StateRewinder.MAX_LEVELS) return;
+
+        const tier = this.tiers[level];
+
+        tier.snapshots.unshift(wrappedSnapshot);
 
         if (tier.snapshots.length > StateRewinder.SNAPSHOTS_PER_TIER) {
             const oldest = tier.snapshots.pop();
@@ -57,34 +78,44 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
 
             const nextLevel = level + 1;
             if (nextLevel < StateRewinder.MAX_LEVELS) {
-                const nextTierInterval = this.tiers[nextLevel].interval;
+                const nextTier = this.tiers[nextLevel];
+                const lastNextTierSnap = nextTier.snapshots[0];
 
-                if (oldest.tick % nextTierInterval === 0) {
+                if (
+                    !lastNextTierSnap ||
+                    oldest.timestamp - lastNextTierSnap.timestamp >=
+                        nextTier.interval
+                ) {
                     this.addSnapshotToTier(nextLevel, oldest);
                 }
             }
         }
     }
 
-    public findClosestSnapshot(targetTick: number): TSnapshot | null {
-        let bestMatch: TSnapshot | null = null;
+    public findClosestSnapshot(targetTimestamp: number): TSnapshot | null {
+        let bestMatch: WrappedSnapshot<TSnapshot> | null = null;
 
         for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
             const snapshots = this.tiers[l].snapshots;
+
             for (let i = 0; i < snapshots.length; i++) {
                 const snap = snapshots[i];
-                if (snap.tick <= targetTick) {
-                    if (!bestMatch || snap.tick > bestMatch.tick) {
+
+                if (snap.timestamp <= targetTimestamp) {
+                    if (!bestMatch || snap.timestamp > bestMatch.timestamp) {
                         bestMatch = snap;
+
+                        break;
                     }
                 }
             }
         }
 
-        return bestMatch;
+        return bestMatch ? bestMatch.data : null;
     }
 
     public reset() {
+        this.lastSavedTime = 0;
         this.initTiers();
     }
 }

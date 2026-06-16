@@ -10,16 +10,12 @@ import { RawGraphState } from './RawState';
 import { RawStateSynchronizer } from './RawStateSynchonizer';
 import { RawGraphUpdater } from './RawUpdater';
 
-const SNAPSHOT_INTERVAL = 1000;
-
 export class RawEngine implements IEngine {
     private readonly state: RawGraphState = new RawGraphState();
     private readonly updater: RawGraphUpdater = new RawGraphUpdater();
     private readonly synchronizer: RawStateSynchronizer =
         new RawStateSynchronizer(this.updater);
-    private readonly rewinder: StateRewinder<RawSnapshot> = new StateRewinder(
-        SNAPSHOT_INTERVAL,
-    );
+    private readonly rewinder: StateRewinder<RawSnapshot> = new StateRewinder();
 
     private saveSnapshots: boolean;
 
@@ -32,7 +28,7 @@ export class RawEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
-            if (this.state.tick % this.rewinder.interval === 0) {
+            if (this.rewinder.canDoSnapshot()) {
                 this.rewinder.saveSnapshot(this.state.makeSnapshot());
             }
         }
