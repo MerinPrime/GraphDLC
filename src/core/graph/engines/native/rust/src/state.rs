@@ -7,6 +7,7 @@ use std::collections::HashSet;
 
 pub struct GraphState {
     pub nodes: Vec<Node>,
+    pub back_links: Vec<Vec<u32>>,
     pub chunks: Vec<Chunk>,
     pub changed_nodes: Vec<u32>,
     pub temp_changed_nodes: Vec<u32>,
@@ -30,6 +31,7 @@ impl GraphState {
     pub fn new() -> Self {
         GraphState {
             nodes: Vec::with_capacity(4096),
+            back_links: vec![Vec::new(); 4096],
             chunks: Vec::with_capacity(16),
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
@@ -65,7 +67,6 @@ impl GraphState {
                 detected_link: None,
                 links: Vec::new(),
                 detectors: Vec::new(),
-                back_links: Vec::new(),
             });
         }
     }
@@ -155,15 +156,13 @@ impl GraphState {
 
         for &target_idx in &old_links {
             if (target_idx as usize) < self.nodes.len() {
-                self.nodes[target_idx as usize]
-                    .back_links
-                    .retain(|&x| x != node_idx);
+                self.back_links[target_idx as usize].retain(|&x| x != node_idx);
             }
         }
 
         for &target_idx in new_links {
             self.ensure_node_capacity((target_idx + 1) as usize);
-            let back_links = &mut self.nodes[target_idx as usize].back_links;
+            let back_links = &mut self.back_links[target_idx as usize];
             if !back_links.contains(&node_idx) {
                 back_links.push(node_idx);
             }
@@ -435,7 +434,7 @@ impl GraphState {
                 };
             }
         } else {
-            let back_links = std::mem::take(&mut self.nodes[node_idx as usize].back_links);
+            let back_links = std::mem::take(&mut self.back_links[node_idx as usize]);
             for &back_idx in &back_links {
                 let back_node = &self.nodes[back_idx as usize];
                 let is_bypassed_head = back_node.head_type() != CYCLE_HEAD_TYPE_NONE
@@ -455,7 +454,7 @@ impl GraphState {
                     }
                 }
             }
-            self.nodes[node_idx as usize].back_links = back_links;
+            self.back_links[node_idx as usize] = back_links;
         }
 
         let n = &mut self.nodes[node_idx as usize];
