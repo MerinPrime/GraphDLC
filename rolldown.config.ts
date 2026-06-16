@@ -385,6 +385,7 @@ if (isProduction) {
                     }
                 },
             },
+            terserPlugin,
         ],
         output: {
             file: 'dist/dev/graphdlc.js',
