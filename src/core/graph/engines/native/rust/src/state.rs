@@ -7,13 +7,14 @@ use std::collections::HashSet;
 
 pub struct GraphState {
     pub nodes: Vec<Node>,
-    pub back_links: Vec<Vec<u32>>,
     pub chunks: Vec<Chunk>,
     pub changed_nodes: Vec<u32>,
     pub temp_changed_nodes: Vec<u32>,
     pub cycles: Vec<Option<CycleState>>,
     pub tick: u32,
     pub break_point: bool,
+    pub back_links: Vec<Vec<u32>>,
+    pub detected_links: Vec<Option<u32>>,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -31,13 +32,14 @@ impl GraphState {
     pub fn new() -> Self {
         GraphState {
             nodes: Vec::with_capacity(4096),
-            back_links: vec![Vec::new(); 4096],
             chunks: Vec::with_capacity(16),
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
             cycles: Vec::with_capacity(64),
             tick: 0,
             break_point: false,
+            back_links: vec![Vec::new(); 4096],
+            detected_links: vec![None; 4096],
         }
     }
 
@@ -67,7 +69,6 @@ impl GraphState {
                 chunk_idx: 0,
                 cycle_idx: 0,
                 cycle_offset: 0,
-                detected_link: None,
 
                 links: [0u32; 4],
                 detectors: [0u32; 4],
@@ -436,7 +437,7 @@ impl GraphState {
         let mut blocked_count = 0;
 
         if is_detector {
-            if let Some(detected_idx) = self.nodes[node_idx as usize].detected_link {
+            if let Some(detected_idx) = self.detected_links[node_idx as usize] {
                 let detected_signal = self.nodes[detected_idx as usize].signal;
                 signals_count = if detected_signal != NODE_SIGNAL_NONE {
                     1
