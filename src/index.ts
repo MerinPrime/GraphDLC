@@ -6,7 +6,8 @@ import { LangUtils } from '@logic-arrows/lang/lang-utils';
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
 
-if (localStorage.getItem('arrows:selectedBundleId') === '1_2_1') {
+const selectedVersion = localStorage.getItem('arrows:selectedBundleId');
+if (selectedVersion === '1_2_1') {
     const style = `
     :root {
         --light-blue: rgb(55, 95, 187) !important;
@@ -2834,7 +2835,7 @@ if (localStorage.getItem('arrows:selectedBundleId') === '1_2_1') {
         })(L);
         R.inject(), (window.graphdlc = R);
     })();
-} else {
+} else if (selectedVersion === '1_4') {
     const lang: string | null = localStorage.getItem('lang');
     if (lang !== null) {
         LangSettings.setLanguage(LangUtils.getLanguageFromString(lang));
@@ -2846,4 +2847,6 @@ if (localStorage.getItem('arrows:selectedBundleId') === '1_2_1') {
     graphDLC.setup();
 
     window.graphdlc = graphDLC;
+} else {
+    alert('GraphDLC: Неизвестная версия игры.');
 }
