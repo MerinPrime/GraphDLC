@@ -18,11 +18,15 @@ const DescriptionLocale = new I18nText(
     "Activer l'historique des instantanés pour l'annulation des tics (peut réduire considérablement les performances)",
 );
 
-export const EnableSnapshotsSetting = new BoolSetting('EnableSnapshots', true, {
-    name: NameLocale,
-    description: DescriptionLocale,
-    isMapSetting: true,
-    group: PerformanceSettingGroup,
-    order: 2,
-});
+export const EnableSnapshotsSetting = new BoolSetting(
+    'EnableSnapshots',
+    false,
+    {
+        name: NameLocale,
+        description: DescriptionLocale,
+        isMapSetting: true,
+        group: PerformanceSettingGroup,
+        order: 2,
+    },
+);
 // TODO: add interval setting
