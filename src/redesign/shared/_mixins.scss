@@ -1,0 +1,17 @@
+@mixin icon-mask($color: var(--text-primary)) {
+  --icon-url: url("");
+  background-color: $color !important;
+
+  -webkit-mask-image: var(--icon-url);
+  mask-image: var(--icon-url);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+
+  color: transparent;
+  opacity: 1;
+  object-position: -9999px -9999px;
+}

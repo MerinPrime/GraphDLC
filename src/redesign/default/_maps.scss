@@ -13,3 +13,9 @@
 .ui-saved-item-name {
   color: var(--text-muted) !important;
 }
+
+.ui-map-settings {
+  font-family: var(--font);
+  font-size: clamp(0.5rem, 1.5vw, 1.2rem);
+  flex-direction: column;
+}

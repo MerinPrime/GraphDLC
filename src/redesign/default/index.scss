@@ -1,9 +1,8 @@
+@use "../shared/utilities";
 @use "colors";
 @use "dev-debug";
-@use "map-settings";
-@use "menu-page-main-div";
-@use "sidebar";
-@use "settings";
 @use "maps";
+@use "pages";
+@use "sidebar";
 @use "arrow-info";
-@use "scrollbar";
+@use "../shared/scrollbar";

@@ -1,3 +1,5 @@
+@use "../shared/mixins" as *;
+
 .ui-controls-hint {
   color: var(--text-blue) !important;
 }
@@ -7,21 +9,5 @@
 }
 
 .inline-icon-blue {
-  --icon-url: url("");
-  background-color: var(--bg-surface) !important;
-
-  -webkit-mask-image: var(--icon-url);
-  mask-image: var(--icon-url);
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-
-  -webkit-mask-position: center;
-  mask-position: center;
-
-  color: transparent;
-  opacity: 1;
-
-  object-position: -9999px -9999px;
+  @include icon-mask(var(--bg-surface));
 }

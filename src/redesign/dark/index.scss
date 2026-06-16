@@ -1,12 +1,11 @@
+@use "../shared/utilities";
 @use "colors";
-@use "menu-button";
-@use "menu-panel";
-@use "menu-map-name-input";
-@use "menu-saving";
-@use "menu-back-text";
+@use "menu";
 @use "hint";
 @use "toolbar";
 @use "speed-controller";
 @use "pause";
 @use "inventory";
 @use "login";
+@use "../shared/scrollbar";
+

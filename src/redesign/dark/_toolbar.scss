@@ -1,3 +1,5 @@
+@use "../shared/mixins" as *;
+
 .ui-toolbar {
   background-color: var(--bg-disabled) !important;
 }
@@ -13,23 +15,7 @@
   &-right,
   &-left {
     img {
-      --icon-url: url("");
-      background-color: var(--border-default) !important;
-
-      -webkit-mask-image: var(--icon-url);
-      mask-image: var(--icon-url);
-      -webkit-mask-size: contain;
-      mask-size: contain;
-      -webkit-mask-repeat: no-repeat;
-      mask-repeat: no-repeat;
-
-      -webkit-mask-position: center;
-      mask-position: center;
-
-      color: transparent;
-      opacity: 1;
-
-      object-position: -9999px -9999px;
+      @include icon-mask(var(--border-default));
     }
   }
 }

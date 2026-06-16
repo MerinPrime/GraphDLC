@@ -1,11 +1,13 @@
+@use "../shared/variables" as *;
+
 .settings-table {
   input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
     width: 160px;
     height: 6px;
-    background: var(--bg-surface); /* Заменили #e2e8f0 */
-    border-radius: 4px;
+    background: var(--bg-surface);
+    border-radius: $border-radius-sm;
     outline: none;
     vertical-align: middle;
 
@@ -15,9 +17,7 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: var(
-        --bg-accent
-      ); /* Заменили --accent-color на вашу основную переменную */
+      background: var(--bg-accent);
       cursor: pointer;
       transition: transform 0.1s ease;
       border: none;
@@ -31,9 +31,7 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: var(
-        --bg-accent
-      ); /* Заменили --accent-color на вашу основную переменную */
+      background: var(--bg-accent);
       cursor: pointer;
       transition: transform 0.1s ease;
       border: none;

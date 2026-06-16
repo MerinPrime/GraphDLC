@@ -1,3 +1,5 @@
+@use "../shared/variables" as *;
+
 .setting-value {
   input[type="checkbox"] {
     appearance: none;
@@ -5,13 +7,13 @@
     width: 28px;
     height: 28px;
     border: 2px solid var(--border-default);
-    border-radius: 8px;
+    border-radius: $border-radius-md;
     outline: none;
     cursor: pointer;
     display: inline-grid;
     place-content: center;
     margin-top: 2px;
-    transition: all 0.2s ease;
+    transition: all $transition-speed ease;
     vertical-align: middle;
 
     &:hover:not(:disabled) {
