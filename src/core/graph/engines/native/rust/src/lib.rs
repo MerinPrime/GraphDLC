@@ -50,19 +50,22 @@ pub extern "C" fn update_node_state(
     let state = get_state();
     state.ensure_node_capacity((node_idx + 1) as usize);
 
-    let mut links = Vec::new();
-    let mut detectors = Vec::new();
+    let mut links = [0u32; 4];
+    let mut detectors = [0u32; 4];
+    let safe_links_count = (links_count as usize).min(4);
+    let safe_detectors_count = (detectors_count as usize).min(4);
+
     unsafe {
         let ptr = STAGING_BUFFER.as_ptr();
-        for i in 0..links_count {
-            links.push(*ptr.add(i as usize));
+        for i in 0..safe_links_count {
+            links[i] = *ptr.add(i);
         }
-        for i in 0..detectors_count {
-            detectors.push(*ptr.add((links_count + i) as usize));
+        for i in 0..safe_detectors_count {
+            detectors[i] = *ptr.add(links_count as usize + i);
         }
     }
 
-    state.update_node_back_links(node_idx, &links);
+    state.update_node_back_links(node_idx, &links[..safe_links_count]);
 
     let existing_flags = state.nodes[node_idx as usize].flags;
     let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_CHANGED);
@@ -103,8 +106,11 @@ pub extern "C" fn update_node_state(
     } else {
         None
     };
+
     node.links = links;
+    node.links_count = safe_links_count as u8;
     node.detectors = detectors;
+    node.detectors_count = safe_detectors_count as u8;
 
     if reset_signal != 0 {
         node.signal = NODE_SIGNAL_NONE;
