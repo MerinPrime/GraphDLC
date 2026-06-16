@@ -41,16 +41,16 @@ const EnhancedLocale = new I18nText(
 );
 
 const NativeLocale = new I18nText(
-    'Native',
-    'Нативный',
-    'Нативний',
-    'Натыўны',
-    'Natif',
+    'Native (Experimental)',
+    'Нативный (Экспериментальный)',
+    'Нативний (Експериментальний)',
+    'Натыўны (Эксперыментальны)',
+    'Natif (Expérimental)',
 );
 
 export const GraphEngineSetting = new SelectSetting<GraphEngine>(
     'GraphEngine',
-    GraphEngine.STANDARD,
+    GraphEngine.NATIVE,
     {
         name: NameLocale,
         description: DescriptionLocale,
