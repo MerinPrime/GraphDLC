@@ -1,0 +1,16 @@
+pub struct Node {
+    pub node_type: u8,
+    pub flags: u8,
+    pub signal: u8,
+    pub last_signal: u8,
+    pub signals_count: u8,
+    pub blocked_count: u8,
+    pub head_type: u8,
+    pub chunk_idx: u32,
+    pub cycle_idx: u32,
+    pub cycle_offset: u32,
+    pub detected_link: Option<u32>,
+    pub links: Vec<u32>,
+    pub detectors: Vec<u32>,
+    pub back_links: Vec<u32>,
+}
