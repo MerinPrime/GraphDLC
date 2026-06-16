@@ -48,7 +48,7 @@ export const PatchGame: IPatcher = (
             public constructor(canvas: HTMLCanvasElement) {
                 super(canvas);
                 const _this = this as any as PrivateGame;
-                _this.gameMap.isMain = true;
+                _this.gameMap.isMain = location.pathname.startsWith('/map-');
             }
 
             public getArrowAtCursor(): Arrow | undefined {
@@ -332,6 +332,15 @@ export const PatchGame: IPatcher = (
                 const delta = now - lastUpdateTime;
                 lastUpdateTime = now;
                 accumulator += delta;
+
+                if (!this.gameMap.isMain) {
+                    const tickDelta = 1000 / 3;
+                    while (accumulator > tickDelta) {
+                        this.updateTick(payload);
+                        accumulator -= tickDelta;
+                    }
+                    return;
+                }
 
                 const isMaxTPS = this.updateSpeedLevel === 8;
                 // const isCustomTPS = this.updateSpeedLevel === 9;

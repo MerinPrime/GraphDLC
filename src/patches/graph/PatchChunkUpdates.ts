@@ -11,13 +11,24 @@ export const PatchChunkUpdates: IPatcher = (
     patchLoader.addDefinitionPatch(
         'ChunkUpdates',
         (_module: typeof ChunkUpdates) => {
+            const oldUpdate = _module.update;
             _module.update = function GraphUpdate(gameMap: GameMap) {
-                const graph = gameMap.graph;
-                graph.engine.runTick();
+                if (gameMap.isMain) {
+                    const graph = gameMap.graph;
+                    graph.engine.runTick();
+                } else {
+                    oldUpdate(gameMap);
+                }
             };
 
+            const oldClearSignals = _module.clearSignals;
             _module.clearSignals = function clearSignals(gameMap: GameMap) {
-                gameMap.graph.engine.reset();
+                if (gameMap.isMain) {
+                    const graph = gameMap.graph;
+                    graph.engine.reset();
+                } else {
+                    oldClearSignals(gameMap);
+                }
             };
         },
     );
