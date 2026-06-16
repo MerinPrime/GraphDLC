@@ -19,6 +19,10 @@ export class NativeEngine implements IEngine {
     private readonly stagingBufferPtr: number;
     private readonly rewinder: StateRewinder<NativeSnapshot> =
         new StateRewinder();
+
+    private extraRewindNodes: Set<number> = new Set();
+    private extraSignalsHistory: Map<number, Map<number, number>> = new Map();
+
     private saveSnapshots: boolean;
 
     public constructor() {
@@ -34,8 +38,21 @@ export class NativeEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
+            const signals = new Map<number, number>();
+            for (const nodeIdx of this.extraRewindNodes) {
+                signals.set(nodeIdx, this.getNodeSignal(nodeIdx));
+            }
+            this.extraSignalsHistory.set(this.getTick(), signals);
+
             if (this.rewinder.canDoSnapshot()) {
                 this.rewinder.saveSnapshot(this.makeSnapshot());
+
+                const oldestTick = this.rewinder.getOldestSnapshotTick();
+                for (const tick of this.extraSignalsHistory.keys()) {
+                    if (tick < oldestTick) {
+                        this.extraSignalsHistory.delete(tick);
+                    }
+                }
             }
         }
         this.exports.run_tick();
@@ -61,6 +78,13 @@ export class NativeEngine implements IEngine {
 
         this.loadSnapshot(closestSnapshot);
         for (let i = 0; i < stepsToSimulate; i++) {
+            const currentTick = this.getTick();
+            const recordedSignals = this.extraSignalsHistory.get(currentTick);
+            if (recordedSignals) {
+                for (const [nodeIdx, signal] of recordedSignals) {
+                    this.exports.set_node_signal_export(nodeIdx, signal);
+                }
+            }
             this.exports.run_tick();
         }
     }
@@ -100,12 +124,17 @@ export class NativeEngine implements IEngine {
     }
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
-        return this.exports.get_node_signal_export(nodeIdx);
+        return this.exports.get_node_signal_export(nodeIdx) as NodeSignal;
+    }
+
+    public setExtraRewindNodes(nodeIndices: Set<number>): void {
+        this.extraRewindNodes = nodeIndices;
     }
 
     public reset(): void {
         this.exports.reset_export();
         this.rewinder.reset();
+        this.extraSignalsHistory.clear();
     }
 
     public onCycleBuild(cycle: GraphCycle): void {

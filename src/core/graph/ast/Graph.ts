@@ -31,6 +31,7 @@ export class Graph {
     private chunks: Chunk[] = [];
     private cycles: (GraphCycle | null)[] = [];
     private freeCycleIndices: number[] = [];
+    public readonly extraRewindNodes: Set<number> = new Set();
 
     private readonly cycleManager: CycleManager = new CycleManager();
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
@@ -57,6 +58,7 @@ export class Graph {
         }
 
         this.engine = engine;
+        this.engine.setExtraRewindNodes(this.extraRewindNodes);
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
@@ -324,6 +326,13 @@ export class Graph {
             this.engine.updateNodeState(backLinkedNode);
         });
         this.engine.updateNodeState(node, true);
+        if (
+            node.type === NodeType.DIRECTIONAL_BUTTON ||
+            node.type === NodeType.BUTTON ||
+            node.type === NodeType.RANDOM
+        )
+            this.extraRewindNodes.add(node.nodeIdx);
+        else this.extraRewindNodes.delete(node.nodeIdx);
     }
 
     private setNodeRotation(node: GraphNode, rotation: number) {

@@ -92,7 +92,7 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
         }
     }
 
-    public findClosestSnapshot(targetTimestamp: number): TSnapshot | null {
+    public findClosestSnapshot(targetTick: number): TSnapshot | null {
         let bestMatch: WrappedSnapshot<TSnapshot> | null = null;
 
         for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
@@ -101,8 +101,8 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
             for (let i = 0; i < snapshots.length; i++) {
                 const snap = snapshots[i];
 
-                if (snap.timestamp <= targetTimestamp) {
-                    if (!bestMatch || snap.timestamp > bestMatch.timestamp) {
+                if (snap.data.tick <= targetTick) {
+                    if (!bestMatch || snap.data.tick > bestMatch.data.tick) {
                         bestMatch = snap;
 
                         break;
@@ -112,6 +112,17 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
         }
 
         return bestMatch ? bestMatch.data : null;
+    }
+
+    public getOldestSnapshotTick(): number {
+        let oldestTick = Infinity;
+        for (const tier of this.tiers) {
+            const last = tier.snapshots[tier.snapshots.length - 1];
+            if (last && last.data.tick < oldestTick) {
+                oldestTick = last.data.tick;
+            }
+        }
+        return oldestTick === Infinity ? 0 : oldestTick;
     }
 
     public reset() {

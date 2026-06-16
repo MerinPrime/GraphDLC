@@ -30,5 +30,3 @@ export class SoASnapshot {
     public tempChangedNodes: number[] = [];
     public cycles: SoACycleSnapshot[] = [];
 }
-
-// TODO: store random arrow states

@@ -30,6 +30,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     get_node_signal_export(node_idx: number): number;
     get_dirty_chunks_count(): number;
     copy_dirty_chunks(out_ptr: number, mark_undirty: number): number;
+    set_node_signal_export(node_idx: number, signal: number): void;
     do_press_button_export(node_idx: number, button_state: number): void;
     on_cycle_build_export(
         cycle_idx: number,

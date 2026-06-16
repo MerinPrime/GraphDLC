@@ -252,6 +252,18 @@ pub extern "C" fn copy_dirty_chunks(out_ptr: *mut u32, mark_undirty: i32) -> u32
 }
 
 #[no_mangle]
+pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
+    let state = get_state();
+    let node = &mut state.nodes[node_idx as usize];
+    node.signal = signal;
+    let chunk_idx = node.chunk_idx;
+
+    state.mark_node_as_changed(node_idx);
+    state.mark_node_as_changed_non_temp(node_idx);
+    state.make_dirty_chunk(chunk_idx);
+}
+
+#[no_mangle]
 pub extern "C" fn do_press_button_export(node_idx: u32, button_state: i32) {
     let new_signal = if button_state != 0 {
         NODE_SIGNAL_ACTIVE

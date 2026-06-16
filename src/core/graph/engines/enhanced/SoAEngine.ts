@@ -18,6 +18,10 @@ export class SoAEngine implements IEngine {
         new SoAStateSynchronizer(this.updater);
     private readonly rewinder: StateRewinder<SoASnapshot> = new StateRewinder();
 
+    private extraRewindNodes: Set<number> = new Set();
+    private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
+        new Map();
+
     private saveSnapshots: boolean;
 
     public constructor() {
@@ -29,8 +33,21 @@ export class SoAEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
+            const signals = new Map<number, NodeSignal>();
+            for (const nodeIdx of this.extraRewindNodes) {
+                signals.set(nodeIdx, this.getNodeSignal(nodeIdx));
+            }
+            this.extraSignalsHistory.set(this.getTick(), signals);
+
             if (this.rewinder.canDoSnapshot()) {
                 this.rewinder.saveSnapshot(this.state.makeSnapshot());
+
+                const oldestTick = this.rewinder.getOldestSnapshotTick();
+                for (const tick of this.extraSignalsHistory.keys()) {
+                    if (tick < oldestTick) {
+                        this.extraSignalsHistory.delete(tick);
+                    }
+                }
             }
         }
         this.updater.updateState(this.state);
@@ -56,6 +73,25 @@ export class SoAEngine implements IEngine {
 
         this.state.loadSnapshot(closestSnapshot);
         for (let i = 0; i < stepsToSimulate; i++) {
+            const currentTick = this.getTick();
+            const recordedSignals = this.extraSignalsHistory.get(currentTick);
+            if (recordedSignals) {
+                for (const [nodeIdx, signal] of recordedSignals) {
+                    const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+                    const extraNodeOffset =
+                        nodeIdx * SoALayout.Extra32Node.STRIDE;
+                    const chunkIdx =
+                        this.state.extra32NodeData[
+                            extraNodeOffset + SoALayout.Extra32Node.CHUNK_IDX
+                        ];
+
+                    this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
+                        signal;
+                    this.updater.markNodeAsChanged(this.state, nodeIdx);
+                    this.state.changedNodes.add(nodeIdx);
+                    this.state.makeDirtyChunk(chunkIdx);
+                }
+            }
             this.updater.updateState(this.state);
         }
     }
@@ -90,9 +126,14 @@ export class SoAEngine implements IEngine {
         return this.state.getNodeSignal(nodeIdx);
     }
 
+    public setExtraRewindNodes(nodeIndices: Set<number>): void {
+        this.extraRewindNodes = nodeIndices;
+    }
+
     public reset(): void {
         this.state.reset();
         this.rewinder.reset();
+        this.extraSignalsHistory.clear();
     }
 
     public onCycleBuild(cycle: GraphCycle): void {

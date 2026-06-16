@@ -17,6 +17,10 @@ export class RawEngine implements IEngine {
         new RawStateSynchronizer(this.updater);
     private readonly rewinder: StateRewinder<RawSnapshot> = new StateRewinder();
 
+    private extraRewindNodes: Set<number> = new Set();
+    private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
+        new Map();
+
     private saveSnapshots: boolean;
 
     public constructor() {
@@ -28,8 +32,21 @@ export class RawEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
+            const signals = new Map<number, NodeSignal>();
+            for (const nodeIdx of this.extraRewindNodes) {
+                signals.set(nodeIdx, this.getNodeSignal(nodeIdx));
+            }
+            this.extraSignalsHistory.set(this.getTick(), signals);
+
             if (this.rewinder.canDoSnapshot()) {
                 this.rewinder.saveSnapshot(this.state.makeSnapshot());
+
+                const oldestTick = this.rewinder.getOldestSnapshotTick();
+                for (const tick of this.extraSignalsHistory.keys()) {
+                    if (tick < oldestTick) {
+                        this.extraSignalsHistory.delete(tick);
+                    }
+                }
             }
         }
         this.updater.updateState(this.state);
@@ -55,6 +72,18 @@ export class RawEngine implements IEngine {
 
         this.state.loadSnapshot(closestSnapshot);
         for (let i = 0; i < stepsToSimulate; i++) {
+            const currentTick = this.getTick();
+            const recordedSignals = this.extraSignalsHistory.get(currentTick);
+            if (recordedSignals) {
+                for (const [nodeIdx, signal] of recordedSignals) {
+                    const nodeState = this.state.getNode(nodeIdx);
+                    if (nodeState) {
+                        nodeState.signal = signal;
+                        this.updater.markNodeAsChanged(this.state, nodeState);
+                        this.state.makeDirtyChunk(nodeState.chunkIdx);
+                    }
+                }
+            }
             this.updater.updateState(this.state);
         }
     }
@@ -89,9 +118,14 @@ export class RawEngine implements IEngine {
         return this.state.getNodeSignal(nodeIdx);
     }
 
+    public setExtraRewindNodes(nodeIndices: Set<number>): void {
+        this.extraRewindNodes = nodeIndices;
+    }
+
     public reset(): void {
         this.state.reset();
         this.rewinder.reset();
+        this.extraSignalsHistory.clear();
     }
 
     public onCycleBuild(cycle: GraphCycle): void {
