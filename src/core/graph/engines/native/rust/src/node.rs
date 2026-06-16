@@ -11,7 +11,6 @@ pub struct Node {
     pub detected_link: Option<u32>,
     pub links: Vec<u32>,
     pub detectors: Vec<u32>,
-    pub back_links: Vec<u32>,
 }
 
 impl Node {
