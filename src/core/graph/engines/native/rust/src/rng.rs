@@ -1,21 +1,30 @@
 static mut RNG_STATE: u64 = 123456789;
+static mut RANDOM_BUFFER: u64 = 0;
+static mut RANDOM_BUFFER_INDEX: u8 = 64;
 
 #[inline(always)]
-pub fn next_random() -> f64 {
+pub fn random_bool() -> bool {
     unsafe {
-        RNG_STATE = RNG_STATE
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-
-        let val = (RNG_STATE >> 11) & 0x1F_FFFF_FFFF_FFFF;
-
-        (val as f64) / 9007199254740992.0
+        if RANDOM_BUFFER_INDEX >= 64 {
+            let mut x = RNG_STATE;
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            RNG_STATE = x;
+            RANDOM_BUFFER = x;
+            RANDOM_BUFFER_INDEX = 0;
+        }
+        let bit = (RANDOM_BUFFER & 1) == 1;
+        RANDOM_BUFFER >>= 1;
+        RANDOM_BUFFER_INDEX += 1;
+        bit
     }
 }
 
-#[inline(always)]
 pub fn reset_rng() {
     unsafe {
         RNG_STATE = 123456789;
+        RANDOM_BUFFER = 0;
+        RANDOM_BUFFER_INDEX = 64;
     }
 }

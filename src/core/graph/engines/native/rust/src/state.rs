@@ -2,7 +2,7 @@ use crate::chunk::Chunk;
 use crate::consts::*;
 use crate::cycle::CycleState;
 use crate::node::Node;
-use crate::rng::{next_random, reset_rng};
+use crate::rng::{random_bool, reset_rng};
 use std::collections::HashSet;
 
 pub struct GraphState {
@@ -403,7 +403,7 @@ impl GraphState {
                 }
             }
             NODE_TYPE_RANDOM => {
-                if signals_count > 0 && next_random() > 0.5 {
+                if signals_count > 0 && random_bool() {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
