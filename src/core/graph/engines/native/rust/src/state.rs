@@ -448,7 +448,7 @@ impl GraphState {
                 }
             }
             NODE_TYPE_LOGIC_XOR => {
-                if signals_count % 2 == 1 {
+                if signals_count & 1 == 1 {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
