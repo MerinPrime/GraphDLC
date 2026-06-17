@@ -242,12 +242,9 @@ impl GraphState {
                     _ => {}
                 }
 
-                unsafe {
-                    GraphState::mark_node_as_changed_fast(
-                        nodes_ptr,
-                        &mut self.temp_changed_nodes,
-                        node_idx as usize,
-                    );
+                if node.flags & FLAG_IS_CHANGED == 0 {
+                    node.flags |= FLAG_IS_CHANGED;
+                    self.temp_changed_nodes.push(node_idx as u32);
                 }
                 continue;
             }
@@ -271,24 +268,18 @@ impl GraphState {
                         let edge_idx = links[0] as usize;
                         let edge = unsafe { &mut *nodes_ptr.add(edge_idx as usize) };
                         edge.blocked_count = edge.blocked_count.wrapping_add(delta);
-                        unsafe {
-                            GraphState::mark_node_as_changed_fast(
-                                nodes_ptr,
-                                &mut self.temp_changed_nodes,
-                                edge_idx as usize,
-                            );
+                        if edge.flags & FLAG_IS_CHANGED == 0 {
+                            edge.flags |= FLAG_IS_CHANGED;
+                            self.temp_changed_nodes.push(edge_idx as u32);
                         }
                     } else {
                         for i in 0..links_count {
                             let edge_idx = links[i] as usize;
                             let edge = unsafe { &mut *nodes_ptr.add(edge_idx as usize) };
                             edge.signals_count = edge.signals_count.wrapping_add(delta);
-                            unsafe {
-                                GraphState::mark_node_as_changed_fast(
-                                    nodes_ptr,
-                                    &mut self.temp_changed_nodes,
-                                    edge_idx as usize,
-                                );
+                            if edge.flags & FLAG_IS_CHANGED == 0 {
+                                edge.flags |= FLAG_IS_CHANGED;
+                                self.temp_changed_nodes.push(edge_idx as u32);
                             }
                         }
                     }
@@ -305,13 +296,19 @@ impl GraphState {
                         let detector_idx = unsafe { *detectors.get_unchecked(0) } as usize;
                         let detector = unsafe { &mut *nodes_ptr.add(detector_idx as usize) };
                         detector.signals_count = sig_count;
-                        self.mark_node_as_changed_internal(detector_idx as u32);
+                        if detector.flags & FLAG_IS_CHANGED == 0 {
+                            detector.flags |= FLAG_IS_CHANGED;
+                            self.temp_changed_nodes.push(detector_idx as u32);
+                        }
                     } else {
                         for i in 0..detectors_count {
                             let detector_idx = detectors[i] as usize;
                             let detector = unsafe { &mut *nodes_ptr.add(detector_idx as usize) };
                             detector.signals_count = sig_count;
-                            self.mark_node_as_changed_internal(detector_idx as u32);
+                            if detector.flags & FLAG_IS_CHANGED == 0 {
+                                detector.flags |= FLAG_IS_CHANGED;
+                                self.temp_changed_nodes.push(detector_idx as u32);
+                            }
                         }
                     }
                 }
@@ -330,7 +327,10 @@ impl GraphState {
                 || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0)
             {
                 node.flags &= !FLAG_IS_UPDATED;
-                self.mark_node_as_changed(node_idx);
+                if node.flags & FLAG_IS_CHANGED == 0 {
+                    node.flags |= FLAG_IS_CHANGED;
+                    self.temp_changed_nodes.push(node_idx as u32);
+                }
             }
         }
 
