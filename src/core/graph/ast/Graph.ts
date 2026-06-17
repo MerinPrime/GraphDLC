@@ -243,6 +243,7 @@ export class Graph {
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
+        this.extraRewindNodes.clear();
         this.engine.clear();
         this.listeners.forEach((listener) => {
             listener.onGraphClear(this);
