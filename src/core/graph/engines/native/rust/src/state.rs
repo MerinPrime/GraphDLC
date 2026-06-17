@@ -86,7 +86,7 @@ impl GraphState {
 
     #[inline(always)]
     pub fn make_dirty_chunk(&mut self, chunk_idx: u32) {
-        self.ensure_chunk_capacity((chunk_idx + 1) as usize);
+        // self.ensure_chunk_capacity((chunk_idx + 1) as usize);
         self.chunks[chunk_idx as usize].flags |= CHUNK_FLAG_IS_DIRTY;
     }
 

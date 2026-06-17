@@ -49,6 +49,7 @@ pub extern "C" fn update_node_state(
 ) {
     let state = get_state();
     state.ensure_node_capacity((node_idx + 1) as usize);
+    state.ensure_chunk_capacity((chunk_idx + 1) as usize);
 
     let mut links = [0u32; 4];
     let mut detectors = [0u32; 4];
