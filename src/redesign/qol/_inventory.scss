@@ -1,4 +1,8 @@
 .ui-inventory-items {
-  background-color: #46f !important;
+  background-color: var(--bg-base) !important;
   border-radius: 2vmin !important;
+}
+
+.ui-inventory-line {
+  background-color: transparent !important;
 }
