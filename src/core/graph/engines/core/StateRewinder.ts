@@ -17,8 +17,10 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
     public static readonly SNAPSHOTS_PER_TIER: number = 10;
     public static readonly MAX_LEVELS: number = 5;
 
-    public readonly baseInterval: number = 250;
+    public readonly baseTimeInterval: number = 250;
+    public readonly baseTickInterval: number = 1000;
     private lastSavedTime: number = 0;
+    private lastSavedTick: number = -this.baseTickInterval - 1;
 
     public constructor() {
         this.initTiers();
@@ -29,16 +31,20 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
         for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
             this.tiers.push({
                 level: l,
-                interval: this.baseInterval * 2 ** l,
+                interval: this.baseTimeInterval * 2 ** l,
                 snapshots: [],
             });
         }
     }
 
-    public canDoSnapshot(): boolean {
+    public canDoSnapshot(tick: number): boolean {
         const now = performance.now();
 
-        if (now - this.lastSavedTime < this.baseInterval) {
+        if (now - this.lastSavedTime < this.baseTimeInterval) {
+            return false;
+        }
+
+        if (tick - this.lastSavedTick < this.baseTickInterval) {
             return false;
         }
 
@@ -48,11 +54,16 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
     public saveSnapshot(snapshot: TSnapshot) {
         const now = performance.now();
 
-        if (now - this.lastSavedTime < this.baseInterval) {
+        if (now - this.lastSavedTime < this.baseTimeInterval) {
             return;
         }
 
+        if (snapshot.tick - this.lastSavedTick < this.baseTickInterval) {
+            return false;
+        }
+
         this.lastSavedTime = now;
+        this.lastSavedTick = snapshot.tick;
 
         const wrapped: WrappedSnapshot<TSnapshot> = {
             timestamp: now,

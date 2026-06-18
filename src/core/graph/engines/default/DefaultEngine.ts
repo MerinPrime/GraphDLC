@@ -80,7 +80,7 @@ export class DefaultEngine implements IEngine {
             }
             this.extraSignalsHistory.set(this.getTick(), signals);
 
-            if (this.rewinder.canDoSnapshot()) {
+            if (this.rewinder.canDoSnapshot(this.tick)) {
                 this.rewinder.saveSnapshot(this.makeSnapshot());
 
                 const oldestTick = this.rewinder.getOldestSnapshotTick();

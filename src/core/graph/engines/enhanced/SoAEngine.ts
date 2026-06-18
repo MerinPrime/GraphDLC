@@ -39,7 +39,7 @@ export class SoAEngine implements IEngine {
             }
             this.extraSignalsHistory.set(this.getTick(), signals);
 
-            if (this.rewinder.canDoSnapshot()) {
+            if (this.rewinder.canDoSnapshot(this.getTick())) {
                 this.rewinder.saveSnapshot(this.state.makeSnapshot());
 
                 const oldestTick = this.rewinder.getOldestSnapshotTick();
