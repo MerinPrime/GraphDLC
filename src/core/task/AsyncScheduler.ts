@@ -78,29 +78,38 @@ export class AsyncScheduler {
 
             const startTime = performance.now();
 
-            while (this.queueHead < this.tasksQueue.length) {
+            let processedTasks = 0;
+            const total = this.tasksQueue.length;
+
+            while (processedTasks < total) {
                 if (performance.now() - startTime > budget) {
                     break;
                 }
 
-                const entry = this.tasksQueue[this.queueHead];
-                if (entry.task.isCanceled) {
-                    this.queueHead++;
-                    continue;
+                if (this.queueHead >= this.tasksQueue.length) {
+                    this.queueHead = 0;
                 }
+
+                const entry = this.tasksQueue[this.queueHead];
+
+                this.queueHead++;
+                processedTasks++;
+
+                if (entry.task.isCanceled) continue;
 
                 const isFinished = entry.task.step(
                     entry.task.stepBatchSize ?? 50,
                 );
 
                 if (isFinished) {
-                    this.queueHead++;
                     if (entry.key !== undefined) {
                         this.activeTasksByKey.delete(entry.key);
                     }
 
                     const result = entry.task.getResult();
                     entry.onComplete(result);
+
+                    entry.task.isCanceled = true;
                 }
             }
 
