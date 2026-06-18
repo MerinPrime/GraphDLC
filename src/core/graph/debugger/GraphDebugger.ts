@@ -28,7 +28,7 @@ export class GraphDebugger implements IGraphListener {
 
     public constructor(graph: Graph) {
         this.graph = graph;
-        this.asyncScheduler = new AsyncScheduler(() => 1);
+        this.asyncScheduler = new AsyncScheduler(() => 8);
 
         this.modes = {
             [DebugMode.SHOW_RINGS]: new CycleDebuggerMode(this.asyncScheduler),
