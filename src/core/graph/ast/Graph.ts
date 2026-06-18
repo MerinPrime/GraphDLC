@@ -13,6 +13,7 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
 import type { IEngine } from '../engines/core/types';
+import { DefaultEngine } from '../engines/default/DefaultEngine';
 import { SoAEngine } from '../engines/enhanced/SoAEngine';
 import { NativeEngine } from '../engines/native/NativeEngine';
 import { RawEngine } from '../engines/raw/RawEngine';
@@ -28,6 +29,7 @@ interface PrivateGameMap {
 export class Graph {
     private gameMap: GameMap;
     private nodes: GraphNode[] = [];
+    private arrows: Arrow[] = [];
     private chunks: Chunk[] = [];
     private cycles: (GraphCycle | null)[] = [];
     private freeCycleIndices: number[] = [];
@@ -46,6 +48,9 @@ export class Graph {
         let engine: IEngine;
 
         switch (GraphEngineSetting.value) {
+            case GraphEngine.ORIGINAL:
+                engine = new DefaultEngine(this, this.gameMap);
+                break;
             case GraphEngine.STANDARD:
                 engine = new RawEngine();
                 break;
@@ -88,6 +93,10 @@ export class Graph {
 
     public getNode(nodeIdx: number): GraphNode {
         return this.nodes[nodeIdx];
+    }
+
+    public getArrow(nodeIdx: number): Arrow {
+        return this.arrows[nodeIdx];
     }
 
     public updateNodeRelations(node: GraphNode) {
@@ -217,6 +226,7 @@ export class Graph {
             localY,
         );
         this.nodes.push(node);
+        this.arrows.push(arrow);
         arrow.astIndex = nodeIdx;
         this.engine.updateNodeState(node);
 

@@ -18,7 +18,7 @@ import { PathFinder } from './path_finder/PathFinder';
 import { SettingsManager } from './settings/Manager';
 
 export class GraphDLC {
-    private patchLoader: PatchLoader;
+    public patchLoader: PatchLoader;
     public settingsManager: SettingsManager;
     private designManager: DesignManager;
     public pathFinder: PathFinder;

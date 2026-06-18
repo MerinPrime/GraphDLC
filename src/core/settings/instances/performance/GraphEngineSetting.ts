@@ -3,9 +3,10 @@ import { SelectSetting } from '../../types/SelectSetting';
 import { PerformanceSettingGroup } from './PerformanceGroup';
 
 export const enum GraphEngine {
-    STANDARD = 0,
-    ENHANCED = 1,
-    NATIVE = 2,
+    ORIGINAL = 0,
+    STANDARD = 1,
+    ENHANCED = 2,
+    NATIVE = 3,
 }
 
 const NameLocale = new I18nText(
@@ -24,11 +25,19 @@ const DescriptionLocale = new I18nText(
     'Sélectionnez le moteur de simulation de graphe. Modifiez en cas de bugs.',
 );
 
+const OriginalLocale = new I18nText(
+    'Original',
+    'Оригинальный',
+    'Оригінальний',
+    'Арыгінальны',
+    'Original',
+);
+
 const StandardLocale = new I18nText(
     'Standard',
     'Стандартный',
     'Стандартний',
-    'Standard',
+    'Стандартны',
     'Standard',
 );
 
@@ -59,6 +68,10 @@ export const GraphEngineSetting = new SelectSetting<GraphEngine>(
         order: 0,
     },
     [
+        {
+            value: GraphEngine.ORIGINAL,
+            label: OriginalLocale,
+        },
         {
             value: GraphEngine.STANDARD,
             label: StandardLocale,
