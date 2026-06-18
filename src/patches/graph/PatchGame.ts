@@ -48,7 +48,7 @@ export const PatchGame: IPatcher = (
             public constructor(canvas: HTMLCanvasElement) {
                 super(canvas);
                 const _this = this as any as PrivateGame;
-                _this.gameMap.isMain = location.pathname.startsWith('/map-');
+                _this.gameMap.isMain = location.pathname.startsWith('/map');
             }
 
             public getArrowAtCursor(): Arrow | undefined {
