@@ -1,4 +1,5 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
+import { isWasmSupported } from 'src/core/utils/WasmSupport';
 import { SelectSetting } from '../../types/SelectSetting';
 import { PerformanceSettingGroup } from './PerformanceGroup';
 
@@ -48,9 +49,10 @@ const NativeLocale = new I18nText(
     'Natif (Expérimental)',
 );
 
+const canNative = isWasmSupported();
 export const GraphEngineSetting = new SelectSetting<GraphEngine>(
     'GraphEngine',
-    GraphEngine.NATIVE,
+    GraphEngine.STANDARD,
     {
         name: NameLocale,
         description: DescriptionLocale,
@@ -70,6 +72,10 @@ export const GraphEngineSetting = new SelectSetting<GraphEngine>(
         {
             value: GraphEngine.NATIVE,
             label: NativeLocale,
+            disabled: !canNative,
         },
     ],
 );
+if (canNative) {
+    GraphEngineSetting.value = GraphEngine.NATIVE;
+}
