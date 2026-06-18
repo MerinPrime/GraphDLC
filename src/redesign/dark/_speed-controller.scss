@@ -2,8 +2,27 @@
   background-color: var(--bg-surface) !important;
 }
 
-.ui-range-thumb-line.left {
+.ui-range-thumb-line {
+  &.left,
+  &.right {
+    background-color: var(--bg-accent) !important;
+  }
+}
+
+.ui-range-thumb {
   background-color: var(--bg-accent) !important;
+  &.pause {
+    background-color: transparent !important;
+  }
+}
+
+.ui-range-pause-area {
+  background: linear-gradient(
+    to right,
+    var(--bg-disabled-checked) 80%,
+    var(--bg-disabled-checked) 90%,
+    transparent 100%
+  ) !important;
 }
 
 .ui-range-tick {

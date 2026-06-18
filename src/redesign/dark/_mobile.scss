@@ -1,0 +1,19 @@
+@use "../shared/mixins" as *;
+
+.ui-undo-button {
+  background-color: var(--bg-hover) !important;
+
+  &.disabled > .ui-undo-icon {
+    @include icon-mask(var(--bg-disabled-checked));
+    filter: none !important;
+  }
+
+  .ui-undo-icon {
+    @include icon-mask(var(--bg-accent));
+  }
+}
+
+.ui-tools-toggle {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
