@@ -56,3 +56,10 @@ declare module '@logic-arrows/player/game' {
         getArrowAtCursor(): OriginalArrow | undefined;
     }
 }
+
+declare module '@logic-arrows/game-logic/chunk-updates' {
+    export interface ChunkUpdates {
+        oldUpdate(map: GameMap): void;
+        oldClearSignals(map: GameMap): void;
+    }
+}

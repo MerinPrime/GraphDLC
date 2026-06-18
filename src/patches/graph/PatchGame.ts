@@ -269,8 +269,8 @@ export const PatchGame: IPatcher = (
                             arrow.signal = ArrowSignal.BLUE;
                         else arrow.signal = ArrowSignal.NONE;
                     });
-                    chunk.markRenderDirty();
                     engine.makeUndirtyChunk(dirtyChunkIdx);
+                    chunk.markRenderDirty();
                 });
 
                 super.draw();
