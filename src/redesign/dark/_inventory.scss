@@ -4,8 +4,12 @@
 
 .ui-inventory-line {
   background-color: transparent !important;
+}
 
-  img {
-    background-color: var(--bg-disabled-checked) !important;
-  }
+.inventory-item {
+  background-color: var(--bg-disabled) !important;
+}
+
+.ui-toolbar-item-active {
+  box-shadow: 0px 0px 0px 0.2vw var(--bg-disabled-checked) !important;
 }

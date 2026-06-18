@@ -1,7 +1,7 @@
 @use "../shared/mixins" as *;
 
 .ui-menu-panel {
-  background-color: var(--bg-surface) !important;
+  background-color: var(--bg-accent) !important;
 }
 
 .ui-menu-button {
@@ -13,13 +13,13 @@
 }
 
 .ui-menu-map-name-input {
-  color: var(--text-light) !important;
+  color: var(--text-primary) !important;
 }
 
 .ui-menu-saving {
-  color: var(--text-light) !important;
+  color: var(--text-primary) !important;
 }
 
 .ui-menu-back-text {
-  color: var(--text-light) !important;
+  color: var(--text-primary) !important;
 }

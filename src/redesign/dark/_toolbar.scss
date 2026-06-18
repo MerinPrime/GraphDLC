@@ -1,11 +1,11 @@
 @use "../shared/mixins" as *;
 
 .ui-toolbar {
-  background-color: var(--bg-disabled) !important;
+  background-color: var(--bg-accent) !important;
 }
 
 .ui-toolbar-item {
-  background-color: var(--bg-disabled-checked) !important;
+  background-color: var(--bg-disabled) !important;
   span {
     color: var(--text-muted) !important;
   }
@@ -15,7 +15,7 @@
   &-right,
   &-left {
     img {
-      @include icon-mask(var(--border-default));
+      @include icon-mask(var(--bg-disabled-checked));
     }
   }
 }
