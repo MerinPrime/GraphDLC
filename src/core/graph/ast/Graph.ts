@@ -325,6 +325,13 @@ export class Graph {
             });
         }
         this.engine.updateNodeState(node);
+        if (
+            node.type === NodeType.DIRECTIONAL_BUTTON ||
+            node.type === NodeType.BUTTON ||
+            node.type === NodeType.RANDOM
+        )
+            this.extraRewindNodes.add(node.nodeIdx);
+        else this.extraRewindNodes.delete(node.nodeIdx);
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
