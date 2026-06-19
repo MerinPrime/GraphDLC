@@ -1,9 +1,15 @@
+import type { Game } from '@logic-arrows/player/game';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { UISpeedController } from '@logic-arrows/ui/components/ui-speed-controller';
 import { PLATFORM } from '@logic-arrows/utils/platform';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../Patcher';
+
+interface PrivatePlayerUI {
+    fpsDisplay: HTMLDivElement | null;
+    game: Game | null;
+}
 
 export const PatchPlayerUI: IPatcher = (
     patchLoader: PatchLoader,
@@ -48,6 +54,15 @@ export const PatchPlayerUI: IPatcher = (
                         return '';
                     },
                 );
+            }
+
+            public updateFpsDisplay(): void {
+                const _this = this as any as PrivatePlayerUI;
+                if (_this.fpsDisplay === null || _this.game === null) return;
+                const fps = _this.game.getFPS();
+                const tps = _this.game.getTPS();
+                const tick = _this.game.gameMap.graph.engine.getTick();
+                _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: ${tick}`;
             }
         };
     });
