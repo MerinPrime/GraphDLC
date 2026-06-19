@@ -11,3 +11,7 @@
 .inline-icon-blue {
   @include icon-mask(var(--bg-surface));
 }
+
+.ui-fps-display {
+  color: var(--text-blue) !important;
+}
