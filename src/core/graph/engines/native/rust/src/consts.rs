@@ -31,7 +31,7 @@ pub const NODE_SIGNAL_KEEP_SIGNAL: u8 = 3;
 pub const CYCLE_HEAD_TYPE_NONE: u8 = 0;
 pub const CYCLE_HEAD_TYPE_READ: u8 = 1;
 pub const CYCLE_HEAD_TYPE_WRITE: u8 = 2;
-pub const CYCLE_HEAD_TYPE_XOR_WRITE: u8 = 3;
-pub const CYCLE_HEAD_TYPE_CLEAR: u8 = 4;
+pub const CYCLE_HEAD_TYPE_CLEAR: u8 = 3;
+pub const CYCLE_HEAD_TYPE_XOR_WRITE: u8 = 4;
 
 pub const CHUNK_FLAG_IS_DIRTY: u8 = 1 << 0;
