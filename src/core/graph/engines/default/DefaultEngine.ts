@@ -3,7 +3,7 @@ import type { ChunkUpdates } from '@logic-arrows/game-logic/chunk-updates';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import { EnableBreakpointSetting } from 'src/core/settings/instances/tools/EnableBreakpointSetting';
-import { ArrowSignal } from 'src/core/utils/ArrowSignal';
+import { ACTIVE_SIGNALS, ArrowSignal } from 'src/core/utils/ArrowSignal';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { Graph } from '../../ast/Graph';
@@ -17,7 +17,7 @@ export class DefaultEngine implements IEngine {
     public chunkUpdates: typeof ChunkUpdates;
     public rewinder: StateRewinder<DefaultSnapshot> = new StateRewinder();
 
-    private extraRewindNodes: number[] = [];
+    private extraRewindNodes: Set<number> = new Set();
     private saveSnapshots: boolean = false;
     private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
         new Map();
@@ -74,7 +74,8 @@ export class DefaultEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
-            const signals = new Map<number, NodeSignal>();
+            const curSignals = this.extraSignalsHistory.get(this.getTick());
+            const signals = curSignals ?? new Map<number, NodeSignal>();
             for (const nodeIdx of this.extraRewindNodes) {
                 const signal = this.getNodeSignal(nodeIdx);
                 if (signal === NodeSignal.NONE) {
@@ -119,6 +120,31 @@ export class DefaultEngine implements IEngine {
         }
     }
 
+    private applyRecordedSignals(tick: number): void {
+        const recordedSignals = this.extraSignalsHistory.get(tick);
+        if (!recordedSignals) {
+            return;
+        }
+
+        for (const nodeIdx of this.extraRewindNodes) {
+            const arrow = this.graph.getArrow(nodeIdx);
+            arrow.signal = ArrowSignal.NONE;
+        }
+
+        for (const [nodeIdx, signal] of recordedSignals) {
+            const arrow = this.graph.getArrow(nodeIdx);
+            let arrowSignal = ArrowSignal.NONE;
+
+            if (signal === NodeSignal.PENDING) {
+                arrowSignal = ArrowSignal.BLUE;
+            } else if (signal === NodeSignal.ACTIVE) {
+                arrowSignal = ACTIVE_SIGNALS[arrow.type];
+            }
+
+            arrow.signal = arrowSignal;
+        }
+    }
+
     public rewindToTick(targetTick: number): void {
         const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
         if (!closestSnapshot) {
@@ -133,18 +159,18 @@ export class DefaultEngine implements IEngine {
 
         this.loadSnapshot(closestSnapshot);
         for (let i = 0; i < stepsToSimulate; i++) {
-            const currentTick = this.getTick();
-            const recordedSignals = this.extraSignalsHistory.get(currentTick);
-            if (recordedSignals) {
-                for (const nodeIdx of this.extraRewindNodes) {
-                    const arrow = this.graph.getArrow(nodeIdx);
-                    const signal =
-                        recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
-                    arrow.signal = signal;
-                }
-            }
+            this.applyRecordedSignals(this.getTick());
             this.runTickInternal();
         }
+        this.applyRecordedSignals(targetTick);
+
+        const savedTicks = Array.from(this.extraSignalsHistory.keys());
+        savedTicks.forEach((savedTick) => {
+            if (savedTick > targetTick) {
+                this.extraSignalsHistory.delete(savedTick);
+            }
+        });
+
         this.gameMap.chunks.forEach((chunk) => {
             chunk.markRenderDirty();
             chunk.setUpdated();
@@ -187,7 +213,7 @@ export class DefaultEngine implements IEngine {
     }
 
     public setExtraRewindNodes(_nodeIndices: Set<number>): void {
-        this.extraRewindNodes = Array.from(_nodeIndices);
+        this.extraRewindNodes = _nodeIndices;
     }
 
     public reset(): void {
@@ -217,6 +243,29 @@ export class DefaultEngine implements IEngine {
     public updateChunk(_chunk: Chunk): void {}
 
     public doPressButton(_nodeIdx: number, _state: boolean): void {}
+
+    public doArrowSignal(nodeIdx: number, state: boolean): void {
+        const node = this.graph.getNode(nodeIdx);
+        const arrow = this.graph.getArrow(nodeIdx);
+        arrow.signal = state ? ACTIVE_SIGNALS[arrow.type] : ArrowSignal.NONE;
+
+        if (this.saveSnapshots) {
+            const currentTick = this.getTick();
+            let recordedSignals = this.extraSignalsHistory.get(currentTick);
+
+            if (!recordedSignals) {
+                recordedSignals = new Map<number, NodeSignal>();
+                this.extraSignalsHistory.set(currentTick, recordedSignals);
+            }
+
+            const signal = this.getNodeSignal(nodeIdx);
+            recordedSignals.set(nodeIdx, signal);
+        }
+
+        const chunk = this.graph.getChunkByIdx(node.chunkIdx);
+        chunk.markRenderDirty();
+        chunk.setUpdated();
+    }
 
     public clear(): void {
         this.tick = 0;

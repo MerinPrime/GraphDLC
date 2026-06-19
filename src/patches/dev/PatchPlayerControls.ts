@@ -8,6 +8,7 @@ import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actio
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
+import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import type { IPatcher } from '../Patcher';
@@ -107,6 +108,26 @@ export const PatchPlayerControls: IPatcher = (
                         code: string,
                         key: string,
                     ) => {
+                        if (code === 'KeyP') {
+                            const arrow = _this.getArrowByMousePosition();
+                            if (
+                                arrow?.astIndex === undefined ||
+                                arrow.astIndex == null
+                            )
+                                return;
+                            const engine = _this.game.gameMap.graph.engine;
+                            const node = _this.game.gameMap.graph.getNode(
+                                arrow.astIndex,
+                            );
+                            if (!node.isCycle) {
+                                const signal = engine.getNodeSignal(
+                                    arrow.astIndex,
+                                );
+                                const state = signal === NodeSignal.NONE;
+                                engine.doArrowSignal(arrow.astIndex, state);
+                                return;
+                            }
+                        }
                         if (
                             _this.keyboardHandler.getShiftPressed() &&
                             code === 'Enter'

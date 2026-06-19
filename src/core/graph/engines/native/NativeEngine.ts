@@ -38,7 +38,8 @@ export class NativeEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
-            const signals = new Map<number, number>();
+            const curSignals = this.extraSignalsHistory.get(this.getTick());
+            const signals = curSignals ?? new Map<number, NodeSignal>();
             for (const nodeIdx of this.extraRewindNodes) {
                 const signal = this.getNodeSignal(nodeIdx);
                 if (signal === NodeSignal.NONE) {
@@ -68,6 +69,19 @@ export class NativeEngine implements IEngine {
         }
     }
 
+    private applyRecordedSignals(tick: number): void {
+        const recordedSignals = this.extraSignalsHistory.get(tick);
+        if (!recordedSignals) {
+            return;
+        }
+        for (const nodeIdx of this.extraRewindNodes) {
+            this.exports.set_node_signal_export(nodeIdx, NodeSignal.NONE);
+        }
+        for (const [nodeIdx, signal] of recordedSignals) {
+            this.exports.set_node_signal_export(nodeIdx, signal);
+        }
+    }
+
     public rewindToTick(targetTick: number): void {
         const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
         if (!closestSnapshot) {
@@ -82,17 +96,17 @@ export class NativeEngine implements IEngine {
 
         this.loadSnapshot(closestSnapshot);
         for (let i = 0; i < stepsToSimulate; i++) {
-            const currentTick = this.getTick();
-            const recordedSignals = this.extraSignalsHistory.get(currentTick);
-            if (recordedSignals) {
-                for (const nodeIdx of this.extraRewindNodes) {
-                    const signal =
-                        recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
-                    this.exports.set_node_signal_export(nodeIdx, signal);
-                }
-            }
+            this.applyRecordedSignals(this.getTick());
             this.exports.run_tick();
         }
+        this.applyRecordedSignals(targetTick);
+
+        const savedTicks = Array.from(this.extraSignalsHistory.keys());
+        savedTicks.forEach((savedTick) => {
+            if (savedTick > targetTick) {
+                this.extraSignalsHistory.delete(savedTick);
+            }
+        });
     }
 
     public getTick(): number {
@@ -293,6 +307,27 @@ export class NativeEngine implements IEngine {
 
     public doPressButton(nodeIdx: number, state: boolean): void {
         this.exports.do_press_button_export(nodeIdx, state ? 1 : 0);
+    }
+
+    public doArrowSignal(nodeIdx: number, state: boolean): void {
+        this.exports.do_press_button_export(nodeIdx, state ? 1 : 0);
+
+        if (this.saveSnapshots) {
+            const currentTick = this.getTick();
+            let recordedSignals = this.extraSignalsHistory.get(currentTick);
+
+            if (!recordedSignals) {
+                recordedSignals = new Map<number, NodeSignal>();
+                this.extraSignalsHistory.set(currentTick, recordedSignals);
+            }
+
+            const signal = this.getNodeSignal(nodeIdx);
+            if (signal === NodeSignal.NONE) {
+                recordedSignals.delete(nodeIdx);
+            } else {
+                recordedSignals.set(nodeIdx, signal);
+            }
+        }
     }
 
     public clear(): void {

@@ -288,6 +288,14 @@ export class SoAGraphState {
             ~SoALayout.Chunk.Flags.IsDirty;
     }
 
+    public makeAllChunksDirty() {
+        for (let chunkIdx = 0; chunkIdx < this.chunkCount; chunkIdx++) {
+            const chunkOffset = chunkIdx * SoALayout.Chunk.STRIDE;
+            this.chunks[chunkOffset + SoALayout.Chunk.FLAGS] |=
+                SoALayout.Chunk.Flags.IsDirty;
+        }
+    }
+
     public getNodeSignal(nodeIdx: number): NodeSignal {
         const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
         const extra32Offset = nodeIdx * SoALayout.Extra32Node.STRIDE;

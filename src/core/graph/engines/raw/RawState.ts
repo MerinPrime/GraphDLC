@@ -175,6 +175,12 @@ export class RawGraphState {
         this.chunks[chunkIdx].isDirty = false;
     }
 
+    public makeAllChunksDirty() {
+        this.chunks.forEach((chunk) => {
+            chunk.isDirty = true;
+        });
+    }
+
     public getNodeSignal(nodeIdx: number): NodeSignal {
         const nodeState = this.getNode(nodeIdx);
         const cycleIdx = nodeState.cycleIdx;

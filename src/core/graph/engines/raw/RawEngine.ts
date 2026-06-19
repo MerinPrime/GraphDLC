@@ -32,7 +32,8 @@ export class RawEngine implements IEngine {
 
     public runTick(): void {
         if (this.saveSnapshots) {
-            const signals = new Map<number, NodeSignal>();
+            const curSignals = this.extraSignalsHistory.get(this.getTick());
+            const signals = curSignals ?? new Map<number, NodeSignal>();
             for (const nodeIdx of this.extraRewindNodes) {
                 const signal = this.getNodeSignal(nodeIdx);
                 if (signal === NodeSignal.NONE) {
@@ -62,6 +63,27 @@ export class RawEngine implements IEngine {
         }
     }
 
+    private applyRecordedSignals(tick: number): void {
+        const recordedSignals = this.extraSignalsHistory.get(tick);
+        if (!recordedSignals) {
+            return;
+        }
+        for (const nodeIdx of this.extraRewindNodes) {
+            const nodeState = this.state.getNode(nodeIdx);
+            if (nodeState) {
+                nodeState.signal = NodeSignal.NONE;
+                this.state.changedNodes.push(nodeState);
+            }
+        }
+        for (const [nodeIdx, signal] of recordedSignals) {
+            const nodeState = this.state.getNode(nodeIdx);
+            if (nodeState) {
+                nodeState.signal = signal;
+                this.state.changedNodes.push(nodeState);
+            }
+        }
+    }
+
     public rewindToTick(targetTick: number): void {
         const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
         if (!closestSnapshot) {
@@ -76,22 +98,19 @@ export class RawEngine implements IEngine {
 
         this.state.loadSnapshot(closestSnapshot);
         for (let i = 0; i < stepsToSimulate; i++) {
-            const currentTick = this.getTick();
-            const recordedSignals = this.extraSignalsHistory.get(currentTick);
-            if (recordedSignals) {
-                for (const nodeIdx of this.extraRewindNodes) {
-                    const signal =
-                        recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
-                    const nodeState = this.state.getNode(nodeIdx);
-                    if (nodeState) {
-                        nodeState.signal = signal;
-                        this.updater.markNodeAsChanged(this.state, nodeState);
-                        this.state.makeDirtyChunk(nodeState.chunkIdx);
-                    }
-                }
-            }
+            this.applyRecordedSignals(this.getTick());
             this.updater.updateState(this.state);
         }
+        this.applyRecordedSignals(targetTick);
+
+        const savedTicks = Array.from(this.extraSignalsHistory.keys());
+        savedTicks.forEach((savedTick) => {
+            if (savedTick > targetTick) {
+                this.extraSignalsHistory.delete(savedTick);
+            }
+        });
+
+        this.state.makeAllChunksDirty();
     }
 
     public getTick(): number {
@@ -166,6 +185,27 @@ export class RawEngine implements IEngine {
         const astState = this.state.getNode(nodeIdx);
         astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
         this.updater.markNodeAsChanged(this.state, astState);
+        this.state.changedNodes.push(astState);
+        this.state.makeDirtyChunk(astState.chunkIdx);
+    }
+
+    public doArrowSignal(nodeIdx: number, state: boolean): void {
+        const astState = this.state.getNode(nodeIdx);
+        astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
+
+        if (this.saveSnapshots) {
+            const currentTick = this.getTick();
+            let recordedSignals = this.extraSignalsHistory.get(currentTick);
+
+            if (!recordedSignals) {
+                recordedSignals = new Map<number, NodeSignal>();
+                this.extraSignalsHistory.set(currentTick, recordedSignals);
+            }
+
+            const signal = this.getNodeSignal(nodeIdx);
+            recordedSignals.set(nodeIdx, signal);
+        }
+
         this.state.changedNodes.push(astState);
         this.state.makeDirtyChunk(astState.chunkIdx);
     }

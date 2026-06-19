@@ -34,6 +34,7 @@ export interface IEngine {
     updateChunk(chunk: Chunk): void;
 
     doPressButton(nodeIdx: number, state: boolean): void;
+    doArrowSignal(nodeIdx: number, state: boolean): void;
 
     clear(): void;
 }
