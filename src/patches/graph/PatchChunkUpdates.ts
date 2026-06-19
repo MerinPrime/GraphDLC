@@ -1,5 +1,6 @@
 import type { ChunkUpdates } from '@logic-arrows/game-logic/chunk-updates';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
+import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../Patcher';
@@ -21,6 +22,9 @@ export const PatchChunkUpdates: IPatcher = (
                 } else {
                     oldUpdate(gameMap);
                 }
+                patchLoader
+                    .getInstance<PlayerUI>('PlayerUI')
+                    ?.updateFpsDisplay();
             };
 
             const oldClearSignals = _module.clearSignals;
@@ -33,6 +37,9 @@ export const PatchChunkUpdates: IPatcher = (
                 } else {
                     oldClearSignals(gameMap);
                 }
+                patchLoader
+                    .getInstance<PlayerUI>('PlayerUI')
+                    ?.updateFpsDisplay();
             };
         },
     );

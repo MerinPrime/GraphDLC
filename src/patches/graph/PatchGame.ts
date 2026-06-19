@@ -462,8 +462,8 @@ export const PatchGame: IPatcher = (
                     _this.updateTime = performance.now();
                     _this.tps = _this.updatesPerSecond;
                     _this.updatesPerSecond = 0;
-                    this.onFPSUpdate();
                 }
+                this.onFPSUpdate();
             }
         };
     });

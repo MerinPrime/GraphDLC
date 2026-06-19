@@ -115,6 +115,7 @@ export const PatchPlayerControls: IPatcher = (
                             engine.rewindToTick(
                                 Math.max(engine.getTick() - 1, 0),
                             );
+                            _this.playerUI.updateFpsDisplay();
                             return;
                         }
                         if (oldKeyDownCallback) oldKeyDownCallback(code, key);
