@@ -6,7 +6,8 @@ import { LangUtils } from '@logic-arrows/lang/lang-utils';
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
 
-const selectedVersion = localStorage.getItem('arrows:selectedBundleId');
+const selectedVersion =
+    localStorage.getItem('arrows:selectedBundleId') ?? '1_4';
 if (selectedVersion === '1_2_1') {
     const style = `
     :root {
