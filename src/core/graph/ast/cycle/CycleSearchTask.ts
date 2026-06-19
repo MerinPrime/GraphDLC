@@ -10,7 +10,7 @@ export class CycleSearchTask implements ITask<GraphNode[] | null> {
 
     private queue: GraphNode[] = [];
     private head = 0;
-    private readonly visited = new Set<GraphNode>();
+
     private readonly parentMap = new Map<GraphNode, GraphNode>();
 
     private isDone = false;
@@ -21,16 +21,17 @@ export class CycleSearchTask implements ITask<GraphNode[] | null> {
         this.targetNode = targetNode;
 
         if (startNode === targetNode) {
-            for (const child of startNode.links) {
+            const links = startNode.links;
+            for (let i = 0; i < links.length; i++) {
+                const child = links[i];
                 if (canBeInCycle(child)) {
                     this.queue.push(child);
-                    this.visited.add(child);
                     this.parentMap.set(child, startNode);
                 }
             }
         } else {
             this.queue.push(startNode);
-            this.visited.add(startNode);
+            this.parentMap.set(startNode, startNode);
         }
     }
 
@@ -45,15 +46,17 @@ export class CycleSearchTask implements ITask<GraphNode[] | null> {
             const current = this.queue[this.head++];
             stepsRun++;
 
-            for (const child of current.links) {
+            const links = current.links;
+            const linksLen = links.length;
+            for (let i = 0; i < linksLen; i++) {
+                const child = links[i];
                 if (child === this.targetNode) {
                     this.buildPath(current);
                     this.complete(this.resultPath);
                     return true;
                 }
 
-                if (canBeInCycle(child) && !this.visited.has(child)) {
-                    this.visited.add(child);
+                if (canBeInCycle(child) && !this.parentMap.has(child)) {
                     this.parentMap.set(child, current);
                     this.queue.push(child);
                 }
@@ -93,7 +96,6 @@ export class CycleSearchTask implements ITask<GraphNode[] | null> {
         this.isDone = true;
 
         this.queue = [];
-        this.visited.clear();
         this.parentMap.clear();
     }
 }
