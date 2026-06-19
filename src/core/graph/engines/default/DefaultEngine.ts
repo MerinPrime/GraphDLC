@@ -76,7 +76,11 @@ export class DefaultEngine implements IEngine {
         if (this.saveSnapshots) {
             const signals = new Map<number, NodeSignal>();
             for (const nodeIdx of this.extraRewindNodes) {
-                signals.set(nodeIdx, this.getNodeSignal(nodeIdx));
+                const signal = this.getNodeSignal(nodeIdx);
+                if (signal === NodeSignal.NONE) {
+                    continue;
+                }
+                signals.set(nodeIdx, signal);
             }
             this.extraSignalsHistory.set(this.getTick(), signals);
 
@@ -132,8 +136,10 @@ export class DefaultEngine implements IEngine {
             const currentTick = this.getTick();
             const recordedSignals = this.extraSignalsHistory.get(currentTick);
             if (recordedSignals) {
-                for (const [nodeIdx, signal] of recordedSignals) {
+                for (const nodeIdx of this.extraRewindNodes) {
                     const arrow = this.graph.getArrow(nodeIdx);
+                    const signal =
+                        recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
                     arrow.signal = signal;
                 }
             }

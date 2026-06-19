@@ -35,7 +35,11 @@ export class SoAEngine implements IEngine {
         if (this.saveSnapshots) {
             const signals = new Map<number, NodeSignal>();
             for (const nodeIdx of this.extraRewindNodes) {
-                signals.set(nodeIdx, this.getNodeSignal(nodeIdx));
+                const signal = this.getNodeSignal(nodeIdx);
+                if (signal === NodeSignal.NONE) {
+                    continue;
+                }
+                signals.set(nodeIdx, signal);
             }
             this.extraSignalsHistory.set(this.getTick(), signals);
 
@@ -76,7 +80,9 @@ export class SoAEngine implements IEngine {
             const currentTick = this.getTick();
             const recordedSignals = this.extraSignalsHistory.get(currentTick);
             if (recordedSignals) {
-                for (const [nodeIdx, signal] of recordedSignals) {
+                for (const nodeIdx of this.extraRewindNodes) {
+                    const signal =
+                        recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
                     const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
                     const extraNodeOffset =
                         nodeIdx * SoALayout.Extra32Node.STRIDE;

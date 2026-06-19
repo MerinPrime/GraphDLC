@@ -2,7 +2,7 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
-import type { NodeSignal } from '../core/NodeSignal';
+import { NodeSignal } from '../core/NodeSignal';
 import { NodeType } from '../core/NodeType';
 import { StateRewinder } from '../core/StateRewinder';
 import type { IEngine, ISnapshot } from '../core/types';
@@ -40,7 +40,11 @@ export class NativeEngine implements IEngine {
         if (this.saveSnapshots) {
             const signals = new Map<number, number>();
             for (const nodeIdx of this.extraRewindNodes) {
-                signals.set(nodeIdx, this.getNodeSignal(nodeIdx));
+                const signal = this.getNodeSignal(nodeIdx);
+                if (signal === NodeSignal.NONE) {
+                    continue;
+                }
+                signals.set(nodeIdx, signal);
             }
             this.extraSignalsHistory.set(this.getTick(), signals);
 
@@ -81,7 +85,9 @@ export class NativeEngine implements IEngine {
             const currentTick = this.getTick();
             const recordedSignals = this.extraSignalsHistory.get(currentTick);
             if (recordedSignals) {
-                for (const [nodeIdx, signal] of recordedSignals) {
+                for (const nodeIdx of this.extraRewindNodes) {
+                    const signal =
+                        recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
                     this.exports.set_node_signal_export(nodeIdx, signal);
                 }
             }
