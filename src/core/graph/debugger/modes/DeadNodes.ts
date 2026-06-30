@@ -7,12 +7,14 @@ import { DebuggerMode } from '../DebuggerMode';
 import type { DebugColor, INodeDebugData } from '../types';
 
 export interface DeadNodeDebugData extends INodeDebugData {
+    isUnoptimized: boolean;
     isReachable: boolean;
 }
 
 export class DeadNodeDebuggerMode extends DebuggerMode<DeadNodeDebugData> {
     public constructor(asyncScheduler: AsyncScheduler) {
         super(asyncScheduler, () => ({
+            isUnoptimized: false,
             isReachable: false,
         }));
     }
@@ -46,6 +48,9 @@ export class DeadNodeDebuggerMode extends DebuggerMode<DeadNodeDebugData> {
 class DeadNodeUpdateTask implements ITask<void> {
     private static readonly OFF_COLOR: DebugColor = [0, 0, 0, 0];
     private static readonly DEAD_COLOR: DebugColor = [0, 0, 0, 0.3];
+    private static readonly UNOPTIMIZED_COLOR: DebugColor = [
+        0.6, 0.1, 0.8, 0.4,
+    ];
 
     public isCanceled: boolean = false;
     public stepBatchSize?: number = 50;
@@ -221,13 +226,66 @@ class DeadNodeUpdateTask implements ITask<void> {
                         const isReachable = this.visited[node.nodeIdx] === true;
                         data.isReachable = isReachable;
 
+                        let isUnoptimized = false;
+
+                        const isAndLatchGate =
+                            node.type === NodeType.LOGIC_AND ||
+                            node.type === NodeType.LATCH;
+                        const isXorGate = node.type === NodeType.LOGIC_XOR;
+
+                        if (isAndLatchGate || isXorGate) {
+                            const backLinks = node.backLinks;
+                            const bLen = backLinks.length;
+                            let reachableUniqueParents = 0;
+
+                            for (let j = 0; j < bLen; j++) {
+                                const parent = backLinks[j];
+
+                                if (this.visited[parent.nodeIdx] === true) {
+                                    let isDuplicate = false;
+                                    for (let k = 0; k < j; k++) {
+                                        if (
+                                            backLinks[k].nodeIdx ===
+                                            parent.nodeIdx
+                                        ) {
+                                            isDuplicate = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!isDuplicate) {
+                                        reachableUniqueParents++;
+                                    }
+                                }
+                            }
+
+                            if (isXorGate) {
+                                if (isReachable && reachableUniqueParents < 2) {
+                                    isUnoptimized = true;
+                                }
+                            } else if (isAndLatchGate) {
+                                if (
+                                    !isReachable &&
+                                    reachableUniqueParents === 1
+                                ) {
+                                    isUnoptimized = true;
+                                }
+                            }
+                        }
+                        data.isUnoptimized = isUnoptimized;
+
+                        let nodeColor = DeadNodeUpdateTask.OFF_COLOR;
+                        if (isUnoptimized) {
+                            nodeColor = DeadNodeUpdateTask.UNOPTIMIZED_COLOR;
+                        } else if (!isReachable) {
+                            nodeColor = DeadNodeUpdateTask.DEAD_COLOR;
+                        }
+
                         this.mode.setChunkColor(
                             node.chunkIdx,
                             node.localX,
                             node.localY,
-                            isReachable
-                                ? DeadNodeUpdateTask.OFF_COLOR
-                                : DeadNodeUpdateTask.DEAD_COLOR,
+                            nodeColor,
                         );
                     }
 
