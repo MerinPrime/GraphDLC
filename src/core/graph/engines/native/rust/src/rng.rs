@@ -21,9 +21,9 @@ pub fn random_bool() -> bool {
     }
 }
 
-pub fn reset_rng() {
+pub fn reset_rng(state: u64) {
     unsafe {
-        RNG_STATE = 123456789;
+        RNG_STATE = state;
         RANDOM_BUFFER = 0;
         RANDOM_BUFFER_INDEX = 64;
     }

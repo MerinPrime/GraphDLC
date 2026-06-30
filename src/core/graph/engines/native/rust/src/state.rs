@@ -51,7 +51,7 @@ impl GraphState {
         self.cycles.clear();
         self.tick = 0;
         self.break_point = false;
-        reset_rng();
+        // reset_rng(new_state);
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {

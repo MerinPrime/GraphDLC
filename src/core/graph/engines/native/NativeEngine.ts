@@ -25,9 +25,16 @@ export class NativeEngine implements IEngine {
 
     private saveSnapshots: boolean;
 
+    private _getNewRngState(): BigInt {
+        const arr = new Uint32Array(2);
+        crypto.getRandomValues(arr);
+
+        return (BigInt(arr[0]) << 32n) | BigInt(arr[1]);
+    }
+
     public constructor() {
         this.exports = instantiateRustEngine();
-        this.exports.init();
+        this.exports.init(this._getNewRngState());
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
 
         this.saveSnapshots = EnableSnapshotsSetting.value;
@@ -331,7 +338,7 @@ export class NativeEngine implements IEngine {
     }
 
     public clear(): void {
-        this.exports.clear();
+        this.exports.clear(this._getNewRngState());
     }
 
     private makeSnapshot(): NativeSnapshot {
