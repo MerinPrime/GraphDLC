@@ -120,19 +120,9 @@ export const PatchGameMap: IPatcher = (
                     globalY - chunk.y * CHUNK_SIZE,
                 );
                 if (!arrow) return;
-                const oldType = arrow.type;
                 super.removeArrow(globalX, globalY, player);
-                if (oldType === arrow.type) return;
-                const newType = arrow.type;
                 if (this.isMain)
-                    this.graph.updateArrowType(
-                        arrow,
-                        chunk,
-                        globalX,
-                        globalY,
-                        oldType,
-                        newType,
-                    );
+                    this.graph.updateArrowState(arrow, chunk, globalX, globalY);
             }
 
             public updateArrowState(
