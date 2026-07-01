@@ -103,7 +103,6 @@ export const PatchPlayerControls: IPatcher = (
                     };
 
                     const oldKeyDownCallback = _this.keyboardHandler.onKeyDown;
-
                     _this.keyboardHandler.onKeyDown = (
                         code: string,
                         key: string,
@@ -140,6 +139,14 @@ export const PatchPlayerControls: IPatcher = (
                             return;
                         }
                         if (oldKeyDownCallback) oldKeyDownCallback(code, key);
+                    };
+
+                    const oldKeyUpCallback = _this.keyboardHandler.onKeyUp;
+                    _this.keyboardHandler.onKeyUp = (code: string) => {
+                        if (code === 'KeyE') {
+                            _this.arrowActions.hideSelectionTip();
+                        }
+                        if (oldKeyUpCallback) oldKeyUpCallback(code);
                     };
                 }
 

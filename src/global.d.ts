@@ -63,3 +63,9 @@ declare module '@logic-arrows/game-logic/chunk-updates' {
         oldClearSignals(map: GameMap): void;
     }
 }
+
+declare module '@logic-arrows/player/player-arrow-actions' {
+    export interface PlayerArrowActions {
+        hideSelectionTip(): void;
+    }
+}

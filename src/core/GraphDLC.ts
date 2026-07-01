@@ -1,3 +1,4 @@
+import { PatchPlayerArrowActions } from 'src/patches/dev/PatchPlayerArrowActions';
 import { PatchPlayerControls } from 'src/patches/dev/PatchPlayerControls';
 import { PatchPlayerUI } from 'src/patches/dev/PatchPlayerUI';
 import { PatchArrow } from 'src/patches/graph/PatchArrow';
@@ -53,5 +54,6 @@ export class GraphDLC {
         PatchChunkUpdates(this.patchLoader, this);
         PatchBackend(this.patchLoader, this);
         PatchPlayerControls(this.patchLoader, this);
+        PatchPlayerArrowActions(this.patchLoader, this);
     }
 }
