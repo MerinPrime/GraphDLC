@@ -59,7 +59,7 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
         }
 
         if (snapshot.tick - this.lastSavedTick < this.baseTickInterval) {
-            return false;
+            return;
         }
 
         this.lastSavedTime = now;
