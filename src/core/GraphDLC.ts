@@ -46,14 +46,12 @@ export class GraphDLC {
         PatchGame(this.patchLoader, this);
         PatchPlayerControls(this.patchLoader, this);
         PatchUIMenu(this.patchLoader, this);
-        PatchGame(this.patchLoader, this);
         PatchLoadShader(this.patchLoader, this);
         PatchGameRender(this.patchLoader, this);
         PatchLoad(this.patchLoader, this);
         PatchSave(this.patchLoader, this);
         PatchChunkUpdates(this.patchLoader, this);
         PatchBackend(this.patchLoader, this);
-        PatchPlayerControls(this.patchLoader, this);
         PatchPlayerArrowActions(this.patchLoader, this);
     }
 }
