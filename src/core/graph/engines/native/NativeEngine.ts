@@ -71,6 +71,10 @@ export class NativeEngine implements IEngine {
     }
 
     public runManyTicks(ticksCount: number): void {
+        if (!this.saveSnapshots) {
+            this.exports.run_many_ticks(ticksCount);
+            return;
+        }
         for (let i = 0; i < ticksCount; i++) {
             this.runTick();
         }
