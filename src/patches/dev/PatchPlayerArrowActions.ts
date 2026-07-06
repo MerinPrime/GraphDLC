@@ -204,9 +204,9 @@ export const PatchPlayerArrowActions: IPatcher = (
                             mousePos[0],
                             mousePos[1],
                             alignX,
-                            alignY,
+                            'top',
                             5,
-                            20,
+                            5,
                         );
                     }
                 }
