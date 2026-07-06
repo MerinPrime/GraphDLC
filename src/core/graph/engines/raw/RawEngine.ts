@@ -7,7 +7,7 @@ import { StateRewinder } from '../core/StateRewinder';
 import type { IEngine } from '../core/types';
 import type { RawSnapshot } from './RawSnapshot';
 import { RawGraphState } from './RawState';
-import { RawStateSynchronizer } from './RawStateSynchonizer';
+import { RawStateSynchronizer } from './RawStateSynchronizer';
 import { RawGraphUpdater } from './RawUpdater';
 
 export class RawEngine implements IEngine {

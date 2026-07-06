@@ -8,7 +8,7 @@ import type { IEngine } from '../core/types';
 import { SoALayout } from './SoALayout';
 import type { SoASnapshot } from './SoASnapshot';
 import { SoAGraphState } from './SoAState';
-import { SoAStateSynchronizer } from './SoAStateSynchonizer';
+import { SoAStateSynchronizer } from './SoAStateSynchronizer';
 import { SoAGraphUpdater } from './SoAUpdater';
 
 export class SoAEngine implements IEngine {
