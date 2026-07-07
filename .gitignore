@@ -141,3 +141,4 @@ archive
 **/*.wasm.base64
 **/*.wasm.base64.txt
 
+package-lock.json
