@@ -27,6 +27,7 @@ export class SoAGraphState {
 
     public tick: number = 0;
     public breakPoint: boolean = false;
+    public breakPointNode: number = 0;
 
     public nodeData: Uint8Array = new Uint8Array(
         INIT_NODE_COUNT * SoALayout.Node.STRIDE,

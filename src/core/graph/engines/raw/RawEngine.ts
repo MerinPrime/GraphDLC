@@ -117,10 +117,12 @@ export class RawEngine implements IEngine {
         return this.state.tick;
     }
 
-    public resetBreakpoint(): boolean {
-        const oldBreakpoint = this.state.breakPoint;
-        this.state.breakPoint = false;
-        return oldBreakpoint;
+    public resetBreakpoint(): number | false {
+        if (this.state.breakPoint) {
+            this.state.breakPoint = false;
+            return this.state.breakPointNode;
+        }
+        return false;
     }
 
     public isChanged(): boolean {

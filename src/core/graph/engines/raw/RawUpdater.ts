@@ -167,6 +167,7 @@ export class RawGraphUpdater {
                         nodeState.isBreakpoint
                     ) {
                         state.breakPoint = true;
+                        state.breakPointNode = nodeState.nodeIdx;
                     }
                 }
             }

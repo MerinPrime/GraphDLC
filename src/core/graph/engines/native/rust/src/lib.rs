@@ -193,9 +193,9 @@ pub extern "C" fn reset_breakpoint() -> i32 {
     let old = state.break_point;
     state.break_point = false;
     if old {
-        1
+        state.break_point_node as i32
     } else {
-        0
+        -1
     }
 }
 

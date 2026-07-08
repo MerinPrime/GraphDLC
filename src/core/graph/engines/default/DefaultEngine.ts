@@ -25,7 +25,8 @@ export class DefaultEngine implements IEngine {
     private tick: number = 0;
 
     private useBreakPoints: boolean = false;
-    private isBreakpoint: boolean = false;
+    private isBreakPoint: boolean = false;
+    private breakPointNode: number = 0;
     private breakPoints: number[] = [];
 
     public constructor(
@@ -104,7 +105,8 @@ export class DefaultEngine implements IEngine {
             this.breakPoints.forEach((nodeIdx) => {
                 const arrow = this.graph.getArrow(nodeIdx);
                 if (arrow.lastSignal === 0 && arrow.signal !== 0) {
-                    this.isBreakpoint = true;
+                    this.isBreakPoint = true;
+                    this.breakPointNode = nodeIdx;
                 }
             });
         }
@@ -181,10 +183,10 @@ export class DefaultEngine implements IEngine {
         return this.tick;
     }
 
-    public resetBreakpoint(): boolean {
-        if (this.isBreakpoint) {
-            this.isBreakpoint = false;
-            return true;
+    public resetBreakpoint(): number | false {
+        if (this.isBreakPoint) {
+            this.isBreakPoint = false;
+            return this.breakPointNode;
         }
         return false;
     }

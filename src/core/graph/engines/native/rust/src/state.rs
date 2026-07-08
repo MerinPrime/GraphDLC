@@ -13,6 +13,7 @@ pub struct GraphState {
     pub cycles: Vec<Option<CycleState>>,
     pub tick: u32,
     pub break_point: bool,
+    pub break_point_node: u32,
     pub back_links: Vec<Vec<u32>>,
     pub detected_links: Vec<Option<u32>>,
 }
@@ -38,6 +39,7 @@ impl GraphState {
             cycles: Vec::with_capacity(64),
             tick: 0,
             break_point: false,
+            break_point_node: 0,
             back_links: vec![Vec::new(); 4096],
             detected_links: vec![None; 4096],
         }
@@ -361,6 +363,7 @@ impl GraphState {
                     let is_breakpoint = (flags & FLAG_IS_BREAKPOINT) != 0;
                     if signal == NODE_SIGNAL_ACTIVE && is_breakpoint {
                         self.break_point = true;
+                        self.break_point_node = node_idx;
                     }
                 }
             }

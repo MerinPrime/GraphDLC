@@ -55,7 +55,6 @@ export class SoAGraphUpdater {
         nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT] = signalsCount;
         nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT] = blockedCount;
 
-        // Читаем флаги один раз, модифицируем локально, пишем обратно один раз
         let flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
         flags |= SoALayout.Node.Flags.IsUpdated;
 
@@ -239,7 +238,7 @@ export class SoAGraphUpdater {
                     flags |= SoALayout.Node.Flags.IsChanged;
                     tempChangedNodes.add(nodeIdx);
                 }
-                nodeData[nodeOffset + SoALayout.Node.FLAGS] = flags; // Записываем флаги обратно только в случае изменения
+                nodeData[nodeOffset + SoALayout.Node.FLAGS] = flags;
             }
         }
 
@@ -255,7 +254,6 @@ export class SoAGraphUpdater {
             const nodeIdx = nextChangedBuffer[i];
             const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
 
-            // Считываем и сбрасываем флаг изменения за одно действие
             const flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
             nodeData[nodeOffset + SoALayout.Node.FLAGS] =
                 flags & ~SoALayout.Node.Flags.IsChanged;
@@ -287,7 +285,6 @@ export class SoAGraphUpdater {
                     nodeOffset + SoALayout.Node.SIGNAL
                 ] as NodeSignal;
 
-                // Передаем все считанные поля как аргументы (устраняет ВСЕ чтения nodeData внутри метода)
                 const signal = this.updateNodeSignal(
                     state,
                     nodeIdx,
@@ -309,6 +306,7 @@ export class SoAGraphUpdater {
                             (flags & SoALayout.Node.Flags.IsBreakpoint) !== 0
                         ) {
                             state.breakPoint = true;
+                            state.breakPointNode = nodeIdx;
                         }
                     }
                 }
@@ -342,7 +340,6 @@ export class SoAGraphUpdater {
         flags: number,
         currentSignal: NodeSignal,
     ): NodeSignal {
-        // Метод больше вообще не обращается к nodeData за свойствами текущего узла!
         if ((flags & SoALayout.Node.Flags.IsReadHead) !== 0) {
             if (signalsCount > 1) return NodeSignal.ACTIVE;
             if (signalsCount === 0) return NodeSignal.NONE;
