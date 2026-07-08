@@ -53,6 +53,8 @@ declare module '@logic-arrows/game-logic/game-map' {
 
 declare module '@logic-arrows/player/game' {
     export interface Game {
+        customTPS: number;
+
         getArrowAtCursor(): OriginalArrow | undefined;
     }
 }
@@ -67,5 +69,11 @@ declare module '@logic-arrows/game-logic/chunk-updates' {
 declare module '@logic-arrows/player/player-arrow-actions' {
     export interface PlayerArrowActions {
         hideSelectionTip(): void;
+    }
+}
+
+declare module '@logic-arrows/ui/components/ui-speed-controller' {
+    export interface UISpeedController {
+        public customTPSField: CustomTPSComponent | null = null;
     }
 }

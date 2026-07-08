@@ -107,6 +107,18 @@ export const PatchPlayerControls: IPatcher = (
                         code: string,
                         key: string,
                     ) => {
+                        if (
+                            _this.playerUI.speedController?.customTPSField?.isFocused()
+                        ) {
+                            if (
+                                code === 'Enter' ||
+                                code === 'NumpadEnter' ||
+                                code === 'Escape'
+                            ) {
+                                _this.playerUI.speedController?.customTPSField?.blur();
+                            }
+                            return;
+                        }
                         if (code === 'KeyP') {
                             const arrow = _this.getArrowByMousePosition();
                             if (
@@ -154,6 +166,10 @@ export const PatchPlayerControls: IPatcher = (
                     super.update();
 
                     const _this = this as any as PrivatePlayerControls;
+
+                    _this.game.customTPS =
+                        _this.playerUI.speedController?.customTPSField.tps || 1;
+
                     const taskKey = 'player-drag-path';
 
                     if (isRightMouseDown) {

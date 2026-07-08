@@ -1,0 +1,29 @@
+.custom-tps-container {
+  position: inherit;
+  left: 0;
+  z-index: 2;
+}
+
+.custom-tps-input {
+  width: 19.5vmin;
+  height: 3.5vmin;
+  border-radius: 1vmin;
+  border: none;
+  margin: 0;
+  position: absolute;
+  top: 0;
+  font-size: 2vmin;
+  padding: 0.25vmin;
+  font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial, serif;
+  left: 4vmin;
+  background-color: var(--bg-surface) !important;
+
+  &:focus-visible {
+    outline: 2px solid var(--light-blue);
+  }
+
+  &.has-pause {
+    width: 17.5vmin;
+    left: 6vmin
+  }
+}

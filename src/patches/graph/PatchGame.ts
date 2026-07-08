@@ -44,6 +44,7 @@ export const PatchGame: IPatcher = (
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public path: PathStep[] | null = null;
+            public customTPS: number = 1;
 
             public constructor(canvas: HTMLCanvasElement) {
                 super(canvas);
@@ -343,7 +344,7 @@ export const PatchGame: IPatcher = (
                 }
 
                 const isMaxTPS = this.updateSpeedLevel === 8;
-                // const isCustomTPS = this.updateSpeedLevel === 9;
+                const isCustomTPS = this.updateSpeedLevel === 0;
 
                 if (previousSpeed !== this.updateSpeedLevel) {
                     accumulator = 0;
@@ -351,6 +352,7 @@ export const PatchGame: IPatcher = (
                 }
 
                 const skip = [
+                    1000 / 1,
                     1000 / 3,
                     1000 / 12,
                     1000 / 60,
@@ -362,10 +364,7 @@ export const PatchGame: IPatcher = (
                     1000 / 60,
                     1000 / 60,
                 ][this.updateSpeedLevel];
-                // const ticks = !isCustomTPS
-                //     ? [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][updateSpeedLevel]
-                //     : graphDLC.customUI.customTPSField!.getTicksPerFrame();
-                const ticks = [1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][
+                const ticks = [1, 1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][
                     this.updateSpeedLevel
                 ];
 
@@ -438,6 +437,19 @@ export const PatchGame: IPatcher = (
                         }
 
                         accumulator = 0;
+                    } else if (isCustomTPS) {
+                        const customSkipDelta = 1000 / this.customTPS;
+                        const customSkip = Math.max(customSkipDelta, 1000 / 60);
+                        if (accumulator >= customSkip) {
+                            payload();
+                            const runTicks = Math.floor(
+                                accumulator / customSkipDelta,
+                            );
+                            this.gameMap.graph.engine.runManyTicks(runTicks);
+                            _this.tick += runTicks;
+                            _this.updatesPerSecond += runTicks;
+                            accumulator -= runTicks * customSkipDelta;
+                        }
                     } else {
                         while (accumulator >= skip) {
                             payload();
