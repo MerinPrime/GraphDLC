@@ -244,28 +244,77 @@ const tampermonkeyPlugin = (): RolldownPlugin => ({
     async writeBundle() {
         const outDir = path.resolve(projectRoot, 'dist/tampermonkey');
         const filePath = path.join(outDir, 'tampermonkey.js');
+        const templatePath = path.resolve(
+            projectRoot,
+            'templates/tampermonkey.js',
+        );
 
-        if (fs.existsSync(filePath)) {
-            const banner = `// ==UserScript==
-// @name         ${pkg.name}
-// @namespace    https://logic-arrows.io/
-// @version      ${pkg.version}
-// @description  ${pkg.description}
-// @author       ${pkg.author}
-// @match        https://logic-arrows.io/*
-// @match        https://v1_2.logic-arrows.io/*
-// @grant        none
-// @run-at       document-start
-// ==/UserScript==\n`;
+        if (fs.existsSync(filePath) && fs.existsSync(templatePath)) {
+            const bundleContent = fs.readFileSync(filePath, 'utf8');
+            let template = fs.readFileSync(templatePath, 'utf8');
 
-            const content = fs.readFileSync(filePath, 'utf8');
-            fs.writeFileSync(filePath, banner + content);
+            template = template
+                .replace('{{name}}', pkg.displayName)
+                .replace('{{version}}', pkg.version)
+                .replace('{{description}}', pkg.description)
+                .replace('{{author}}', pkg.author);
+
+            const finalContent = template.replace(
+                '{{BUNDLE_CODE}}',
+                bundleContent,
+            );
+
+            fs.writeFileSync(filePath, finalContent);
+        } else if (!fs.existsSync(templatePath)) {
+            console.warn(
+                `\n[Rolldown] Template file not found at: ${templatePath}`,
+            );
         }
 
         const zipDest = path.resolve(projectRoot, 'dist/tampermonkey-dist.zip');
         await zipDirectory(outDir, zipDest);
         console.log(
             `\n[Rolldown] Successfully packaged [tampermonkey] userscript into: ${zipDest}`,
+        );
+    },
+});
+
+const viaMobilePlugin = (): RolldownPlugin => ({
+    name: 'viamobile-plugin',
+    async writeBundle() {
+        const outDir = path.resolve(projectRoot, 'dist/viamobile');
+        const filePath = path.join(outDir, 'viamobile.js');
+        const templatePath = path.resolve(
+            projectRoot,
+            'templates/viamobile.js',
+        );
+
+        if (fs.existsSync(filePath) && fs.existsSync(templatePath)) {
+            const bundleContent = fs.readFileSync(filePath, 'utf8');
+            let template = fs.readFileSync(templatePath, 'utf8');
+
+            template = template
+                .replace('{{name}}', pkg.displayName)
+                .replace('{{version}}', pkg.version)
+                .replace('{{description}}', pkg.description)
+                .replace('{{author}}', pkg.author);
+
+            const finalContent = template.replace(
+                '{{BUNDLE_CODE}}',
+                bundleContent,
+            );
+
+            fs.writeFileSync(filePath, finalContent);
+        } else if (!fs.existsSync(templatePath)) {
+            console.warn(
+                `\n[Rolldown] Template file not found at: ${templatePath}`,
+            );
+        }
+
+        const zipDest = path.resolve(projectRoot, 'dist/viamobile-dist.zip');
+        await zipDirectory(outDir, zipDest);
+        console.log(
+            `\n[Rolldown] Successfully packaged [viamobile] userscript into: ${zipDest}`,
         );
     },
 });
@@ -361,6 +410,23 @@ if (isProduction) {
             ],
             output: {
                 file: 'dist/tampermonkey/tampermonkey.js',
+                format: 'iife' as const,
+                name: 'graphdlc',
+                sourcemap: 'hidden' as const,
+                minify: false,
+            },
+        },
+        {
+            ...baseInputConfig,
+            plugins: [
+                rustWasmPlugin(),
+                rawPlugin(),
+                scssInjectPlugin(),
+                viaMobilePlugin(),
+                terserPlugin,
+            ],
+            output: {
+                file: 'dist/viamobile/viamobile.js',
                 format: 'iife' as const,
                 name: 'graphdlc',
                 sourcemap: 'hidden' as const,
