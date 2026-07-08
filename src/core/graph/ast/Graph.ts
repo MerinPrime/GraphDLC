@@ -371,6 +371,7 @@ export class Graph {
             listener.onLinkAdded(this, fromNode, toNode);
         });
         this.engine.updateNodeState(fromNode);
+        this.engine.updateNodeState(toNode);
     }
 
     private removeNodeLink(fromNode: GraphNode, toNode: GraphNode) {
@@ -379,6 +380,7 @@ export class Graph {
             listener.onLinkRemoved(this, fromNode, toNode);
         });
         this.engine.updateNodeState(fromNode);
+        this.engine.updateNodeState(toNode);
     }
 
     public addCycle(nodes: GraphNode[]): GraphCycle {
