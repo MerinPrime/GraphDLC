@@ -1,26 +1,44 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
-import { BoolSetting } from '../../types/BoolSetting';
+import { SelectSetting } from '../../types/SelectSetting';
 import { ToolsSettingGroup } from './ToolsGroup';
 
+export const enum BreakpointMode {
+    OFF = 0,
+    ON = 1,
+    ON_ZOOM = 2,
+}
+
 const NameLocale = new I18nText(
-    'Enable Breakpoints',
-    'Включить брейкпоинты',
-    'Увімкнути точки зупину',
-    'Уключыць кропкі прыпынку',
-    "Activer les points d'arrêt",
+    'Breakpoint Mode',
+    'Режим брейкпоинтов',
+    'Режим точок зупину',
+    'Рэжым кропак прыпынку',
+    "Mode points d'arrêt",
 );
 
 const DescriptionLocale = new I18nText(
-    'Enable or disable breakpoints during execution',
-    'Включить или выключить брейкпоинты во время выполнения',
-    'Увімкнути або вимкнути точки зупину під час виконання',
-    'Уключыць ці выключыць кропкі прыпынку падчас выканання',
-    "Activer ou désactiver les points d'arrêt pendant l'exécution",
+    'Select breakpoint behavior during execution',
+    'Выберите поведение брейкпоинтов во время выполнения',
+    'Виберіть поведінку точок зупину під час виконання',
+    'Выберыце паводзіны кропак прыпынку падчас выканання',
+    "Sélectionnez le comportement des points d'arrêt pendant l'exécution",
 );
 
-export const EnableBreakpointSetting = new BoolSetting(
+const OffLocale = new I18nText('Off', 'Выкл.', 'Вимк.', 'Выкл.', 'Désactivé');
+
+const OnLocale = new I18nText('On', 'Вкл.', 'Увімк.', 'Укл.', 'Activé');
+
+const OnZoomLocale = new I18nText(
+    'On + Zoom',
+    'Вкл. + Зум',
+    'Увімк. + Зум',
+    'Укл. + Зум',
+    'Activé + Zoom',
+);
+
+export const EnableBreakpointSetting = new SelectSetting<BreakpointMode>(
     'EnableBreakpoint',
-    false,
+    BreakpointMode.OFF,
     {
         name: NameLocale,
         description: DescriptionLocale,
@@ -28,4 +46,18 @@ export const EnableBreakpointSetting = new BoolSetting(
         group: ToolsSettingGroup,
         order: 1,
     },
+    [
+        {
+            value: BreakpointMode.OFF,
+            label: OffLocale,
+        },
+        {
+            value: BreakpointMode.ON,
+            label: OnLocale,
+        },
+        {
+            value: BreakpointMode.ON_ZOOM,
+            label: OnZoomLocale,
+        },
+    ],
 );

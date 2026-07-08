@@ -11,7 +11,10 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import { TargetFPSSetting } from 'src/core/settings/instances/performance/TargetFPSSetting';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/tools/EnableArrowRelationsSetting';
-import { EnableBreakpointSetting } from 'src/core/settings/instances/tools/EnableBreakpointSetting';
+import {
+    BreakpointMode,
+    EnableBreakpointSetting,
+} from 'src/core/settings/instances/tools/EnableBreakpointSetting';
 import { ShowArrowConnectionsSetting } from 'src/core/settings/instances/tools/ShowArrowConnectionsSetting';
 import { ACTIVE_SIGNALS, ArrowSignal } from 'src/core/utils/ArrowSignal';
 import { ArrowType } from 'src/core/utils/ArrowType';
@@ -233,6 +236,20 @@ export const PatchGame: IPatcher = (
                     maxX * CHUNK_SIZE,
                     maxY * CHUNK_SIZE,
                 );
+            }
+
+            public focusOnCell(x: number, y: number, speed: number = 1): void {
+                const boxWidth: number =
+                    this.width / 40 / window.devicePixelRatio;
+                const boxHeight: number =
+                    this.height / 40 / window.devicePixelRatio;
+
+                const x0 = x - boxWidth / 2;
+                const x1 = x + boxWidth / 2;
+                const y0 = y - boxHeight / 2;
+                const y1 = y + boxHeight / 2;
+
+                this.focusOnBox(x0, y0, x1, y1, 0, speed);
             }
 
             public draw() {
@@ -459,14 +476,25 @@ export const PatchGame: IPatcher = (
                             accumulator -= skip;
                         }
                     }
-                    if (
-                        EnableBreakpointSetting.value &&
-                        this.gameMap.graph.engine.resetBreakpoint()
-                    ) {
-                        this.playing = false;
-                        patchLoader
-                            .getInstance<UIPauseSign>('UIPauseSign')
-                            ?.setVisibility(true);
+                    const breakMode = EnableBreakpointSetting.value;
+                    if (breakMode !== BreakpointMode.OFF) {
+                        const breakpointIdx =
+                            this.gameMap.graph.engine.resetBreakpoint();
+                        if (breakpointIdx !== false) {
+                            this.playing = false;
+                            patchLoader
+                                .getInstance<UIPauseSign>('UIPauseSign')
+                                ?.setVisibility(true);
+                            if (breakMode === BreakpointMode.ON_ZOOM) {
+                                const breakpointNode =
+                                    this.gameMap.graph.getNode(breakpointIdx);
+                                this.focusOnCell(
+                                    breakpointNode.globalX,
+                                    breakpointNode.globalY,
+                                    1 / 30,
+                                );
+                            }
+                        }
                     }
                 }
 
