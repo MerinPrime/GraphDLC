@@ -15,6 +15,8 @@ import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
+import { UpdateManager } from './credentials/UpdateManager';
+import { checkVersion } from './credentials/version/VersionState';
 import type { PatchLoader } from './PatchLoader';
 import { PathFinder } from './path_finder/PathFinder';
 import { SettingsManager } from './settings/Manager';
@@ -23,6 +25,7 @@ export class GraphDLC {
     public patchLoader: PatchLoader;
     public settingsManager: SettingsManager;
     private designManager: DesignManager;
+    private updateManager: UpdateManager;
     public pathFinder: PathFinder;
 
     public constructor(patchLoader: PatchLoader) {
@@ -30,12 +33,15 @@ export class GraphDLC {
         this.settingsManager = new SettingsManager();
         this.designManager = new DesignManager();
         this.pathFinder = new PathFinder();
+        this.updateManager = new UpdateManager();
     }
 
     public setup() {
         this.settingsManager.setup();
         this.designManager.setup();
+        this.updateManager.setup();
         this.inject();
+        checkVersion();
     }
 
     public inject() {

@@ -1,4 +1,11 @@
 import type { SettingsPage } from '@logic-arrows/pages/settings-page';
+import {
+    GraphDLCPrefix,
+    LatestVersionTextLocale,
+    OutdatedVersionLocale,
+    VersionUnknownLocale,
+} from 'src/core/credentials/Locale';
+import { VersionState } from 'src/core/credentials/version/VersionState';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { SortedSettingGroup } from 'src/core/settings/Manager';
@@ -31,6 +38,25 @@ export const PatchSettingsPage: IPatcher = (
                     settingGroups.forEach((group) => {
                         this.addGroup(group);
                     });
+                    this.addSpace(2);
+                    const versionUpdate = this.addText(
+                        GraphDLCPrefix + VersionUnknownLocale.get(),
+                        TextColor.MUTED,
+                    );
+                    VersionState.subscribe((state) => {
+                        if (state === 'latest') {
+                            versionUpdate(
+                                GraphDLCPrefix + LatestVersionTextLocale.get(),
+                            );
+                        } else if (state === 'outdated') {
+                            versionUpdate(
+                                GraphDLCPrefix +
+                                    OutdatedVersionLocale.get(
+                                        'https://github.com/MerinPrime/GraphDLC/releases/latest',
+                                    ),
+                            );
+                        }
+                    });
                 }
 
                 private addGroup(group: SortedSettingGroup) {
@@ -51,12 +77,21 @@ export const PatchSettingsPage: IPatcher = (
                 private addText(
                     label: string,
                     labelColor: TextColor = TextColor.PRIMARY,
-                ) {
+                ): (newText: string, newColor?: TextColor) => void {
                     const labelText = document.createElement('div');
-                    labelText.innerText = label;
+                    labelText.innerHTML = label;
                     labelText.classList.add(labelColor);
                     this.lastElement.after(labelText);
                     this.lastElement = labelText;
+                    return (
+                        newText: string,
+                        newColor: TextColor = labelColor,
+                    ) => {
+                        labelText.classList.remove(labelColor);
+                        labelText.innerHTML = newText;
+                        labelText.classList.add(newColor);
+                        labelColor = newColor;
+                    };
                 }
 
                 private addSpace(size: number = 1) {

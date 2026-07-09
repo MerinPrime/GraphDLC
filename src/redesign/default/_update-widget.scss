@@ -1,0 +1,73 @@
+.update-remind-widget {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+
+  width: 320px;
+  padding: 16px;
+
+  background: var(--bg-base);
+  border: 2px solid var(--bg-surface);
+  border-radius: 8px;
+
+  color: var(--text-primary);
+  font-family: Arial, sans-serif;
+
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .4);
+
+  z-index: 9999;
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  &__content {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.4;
+    margin-bottom: 14px;
+
+    b {
+      color: var(--text-primary);
+    }
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  &__button {
+    padding: 6px 14px;
+
+    border-radius: 5px;
+    border: 2px solid var(--bg-surface);
+
+    background: var(--bg-base);
+    color: var(--text-primary);
+
+    cursor: pointer;
+
+    transition: background .15s;
+
+    &:hover {
+      background: var(--bg-base-hover);
+    }
+
+    &--update {
+      border-color: var(--btn-blue);
+      background: color-mix(in srgb, var(--btn-blue), black 10%);
+
+      &:hover {
+        background: var(--btn-blue-hover);
+      }
+    }
+
+    &--later {
+      opacity: .8;
+    }
+  }
+}

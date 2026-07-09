@@ -3,6 +3,8 @@ import type { GraphDLC } from './core/GraphDLC';
 import type { Graph } from './core/graph/ast/Graph';
 
 declare global {
+    declare const __CURRENT_VERSION__: string
+
     interface Window {
         graphdlc: GraphDLC;
         patchWebpackModules: (
