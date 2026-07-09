@@ -16,7 +16,7 @@ export class CustomTPSComponent extends CUIComponent {
         this.field = document.createElement('input');
         this.field.type = 'number';
         this.field.min = '1';
-        this.field.max = '1000000';
+        this.field.max = '10000000';
         this.field.value = '1';
         this.field.classList.add('custom-tps-input');
 
@@ -27,7 +27,7 @@ export class CustomTPSComponent extends CUIComponent {
         this.field.addEventListener('change', () => {
             const parsedValue = parseInt(this.field.value);
             const value = Number.isNaN(parsedValue) ? 1 : parsedValue;
-            this.tps = Math.max(1, Math.min(value, 1000000));
+            this.tps = Math.max(1, Math.min(value, 10000000));
             this.field.value = this.tps.toString(10);
         });
 
