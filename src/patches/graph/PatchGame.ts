@@ -360,7 +360,7 @@ export const PatchGame: IPatcher = (
                     return;
                 }
 
-                const isMaxTPS = this.updateSpeedLevel === 8;
+                const isMaxTPS = this.updateSpeedLevel === 9;
                 const isCustomTPS = this.updateSpeedLevel === 0;
 
                 if (previousSpeed !== this.updateSpeedLevel) {
@@ -381,7 +381,7 @@ export const PatchGame: IPatcher = (
                     1000 / 60,
                     1000 / 60,
                 ][this.updateSpeedLevel];
-                const ticks = [1, 1, 1, 1, 5, 20, 100, 500, 2000, 0, 1][
+                const ticks = [1, 1, 1, 1, 5, 20, 100, 500, 2000, 0][
                     this.updateSpeedLevel
                 ];
 
