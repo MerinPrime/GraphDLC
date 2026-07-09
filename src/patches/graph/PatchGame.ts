@@ -10,6 +10,7 @@ import { NodeType } from 'src/core/graph/engines/core/NodeType';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
 import { TargetFPSSetting } from 'src/core/settings/instances/performance/TargetFPSSetting';
+import { TPSOverloadSetting } from 'src/core/settings/instances/performance/TPSOverloadSetting';
 import { EnableArrowRelationsSetting } from 'src/core/settings/instances/tools/EnableArrowRelationsSetting';
 import {
     BreakpointMode,
@@ -381,13 +382,15 @@ export const PatchGame: IPatcher = (
                     1000 / 60,
                     1000 / 60,
                 ][this.updateSpeedLevel];
-                const ticks = [1, 1, 1, 1, 5, 20, 100, 500, 2000, 0][
+                const perUpdateTicks = [1, 1, 1, 1, 5, 20, 100, 500, 2000, 0][
                     this.updateSpeedLevel
                 ];
 
-                if (accumulator > skip * 3) {
-                    accumulator = skip;
-                }
+                const tickSpeed = [
+                    0, 3, 12, 60, 300, 1200, 6000, 30000, 120000, 0,
+                ][this.updateSpeedLevel];
+
+                const UPDATE_BUDGET = 1000 / 30;
 
                 if (this.gameMap.graph.engine.isChanged()) {
                     if (isMaxTPS) {
@@ -454,26 +457,46 @@ export const PatchGame: IPatcher = (
                         }
 
                         accumulator = 0;
-                    } else if (isCustomTPS) {
-                        const customSkipDelta = 1000 / this.customTPS;
+                    } else if (TPSOverloadSetting.value) {
+                        const targetTPS = isCustomTPS
+                            ? this.customTPS
+                            : tickSpeed;
+                        const customSkipDelta = 1000 / targetTPS;
                         const customSkip = Math.max(customSkipDelta, 1000 / 60);
                         if (accumulator >= customSkip) {
                             payload();
-                            const runTicks = Math.floor(
+                            let runTicks = Math.floor(
                                 accumulator / customSkipDelta,
                             );
-                            this.gameMap.graph.engine.runManyTicks(runTicks);
-                            _this.tick += runTicks;
-                            _this.updatesPerSecond += runTicks;
-                            accumulator -= runTicks * customSkipDelta;
+                            const maxTickBatch =
+                                Math.round(targetTPS / 60 / 100) + 1;
+                            const startTime = performance.now();
+                            while (
+                                performance.now() - startTime < UPDATE_BUDGET &&
+                                runTicks > 0
+                            ) {
+                                const tickBatch = Math.min(
+                                    runTicks,
+                                    maxTickBatch,
+                                );
+                                this.gameMap.graph.engine.runManyTicks(
+                                    tickBatch,
+                                );
+                                _this.tick += tickBatch;
+                                _this.updatesPerSecond += tickBatch;
+                                accumulator -= tickBatch * customSkipDelta;
+                                runTicks -= tickBatch;
+                            }
                         }
                     } else {
                         while (accumulator >= skip) {
                             payload();
-                            this.gameMap.graph.engine.runManyTicks(ticks);
-                            _this.tick += ticks;
-                            _this.updatesPerSecond += ticks;
-                            accumulator -= skip;
+                            this.gameMap.graph.engine.runManyTicks(
+                                perUpdateTicks,
+                            );
+                            _this.tick += perUpdateTicks;
+                            _this.updatesPerSecond += perUpdateTicks;
+                            accumulator -= perUpdateTicks;
                         }
                     }
                     const breakMode = EnableBreakpointSetting.value;
