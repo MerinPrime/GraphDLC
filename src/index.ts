@@ -3,11 +3,15 @@
 import { LangSettings } from '@logic-arrows/lang/lang-settings';
 import type { LangType } from '@logic-arrows/lang/lang-type';
 import { LangUtils } from '@logic-arrows/lang/lang-utils';
+import { UpdateManager } from './core/credentials/UpdateManager';
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
 
-const selectedVersion =
-    localStorage.getItem('arrows:selectedBundleId') ?? '1_4';
+const selectedBundle = localStorage.getItem('arrows:selectedBundleId');
+const selectedVersion = selectedBundle ?? '1_4';
+if (selectedBundle === null)
+    localStorage.setItem('arrows:selectedBundleId', '1_4');
+
 if (selectedVersion === '1_2_1') {
     const style = `
     :root {
@@ -2836,11 +2840,13 @@ if (selectedVersion === '1_2_1') {
         })(L);
         R.inject(), (window.graphdlc = R);
     })();
+    localStorage.removeItem('graphdlc:unsupported');
 } else if (selectedVersion === '1_4') {
     const lang: string | null = localStorage.getItem('lang');
     if (lang !== null) {
         LangSettings.setLanguage(LangUtils.getLanguageFromString(lang));
     }
+    localStorage.removeItem('graphdlc:unsupported');
 
     const patchLoader = new PatchLoader();
     patchLoader.hook();
@@ -2848,6 +2854,11 @@ if (selectedVersion === '1_2_1') {
     graphDLC.setup();
 
     window.graphdlc = graphDLC;
-} else {
-    alert('GraphDLC: Неизвестная версия игры.');
+} else if (localStorage.getItem('graphdlc:unsupported') !== '1') {
+    localStorage.setItem('graphdlc:unsupported', '1');
+    const updateManager = new UpdateManager();
+    updateManager.setup();
+    alert(
+        'GraphDLC: Неподдерживаемая версия игры. Мод временно отключен. Ожидайте обновление!',
+    );
 }
