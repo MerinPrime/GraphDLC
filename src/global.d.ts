@@ -1,4 +1,4 @@
-import type { Arrow as OriginalArrow } from '@logic-arrows/game-logic/arrow';
+import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { GraphDLC } from './core/GraphDLC';
 import type { Graph } from './core/graph/ast/Graph';
 
@@ -50,6 +50,8 @@ declare module '@logic-arrows/game-logic/game-map' {
             chunkX: number,
             chunkY: number,
         );
+
+        getOrCreateArrow(x: number, y: number): [Chunk, Arrow];
     }
 }
 
@@ -57,14 +59,14 @@ declare module '@logic-arrows/player/game' {
     export interface Game {
         customTPS: number;
 
-        getArrowAtCursor(): OriginalArrow | undefined;
+        getArrowAtCursor(): Arrow | undefined;
     }
 }
 
 declare module '@logic-arrows/game-logic/chunk-updates' {
-    export interface ChunkUpdates {
-        oldUpdate(map: GameMap): void;
-        oldClearSignals(map: GameMap): void;
+    export namespace ChunkUpdates {
+        export function oldUpdate(map: GameMap): void;
+        export function oldClearSignals(map: GameMap): void;
     }
 }
 

@@ -1,17 +1,13 @@
-import { CUIComponent } from './CUIComponent';
-
-// TODO: legacy
-
-export class CustomTPSComponent extends CUIComponent {
+export class CustomTPSComponent {
+    public readonly parent: HTMLElement;
     public readonly field: HTMLInputElement;
+    public isRemoved: boolean;
     public tps: number;
 
     constructor(parent: HTMLElement, hasPause: boolean) {
-        super(parent);
-
+        this.parent = parent;
+        this.isRemoved = false;
         this.tps = 0;
-
-        this.element.classList.add('custom-tps-container');
 
         this.field = document.createElement('input');
         this.field.type = 'number';
@@ -31,7 +27,7 @@ export class CustomTPSComponent extends CUIComponent {
             this.field.value = this.tps.toString(10);
         });
 
-        this.element.appendChild(this.field);
+        this.parent.appendChild(this.field);
         this.setVisibility(false);
     }
 
@@ -54,10 +50,15 @@ export class CustomTPSComponent extends CUIComponent {
 
     setVisibility(visibility: boolean): void {
         if (this.isRemoved) return;
-        const beHidden = this.element.hidden;
-        super.setVisibility(visibility);
+        const beHidden = this.field.hidden;
+        this.field.hidden = !visibility;
         if (beHidden && visibility) {
             this.focus();
         }
+    }
+
+    remove() {
+        this.isRemoved = true;
+        this.field.remove();
     }
 }

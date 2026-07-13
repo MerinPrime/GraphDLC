@@ -149,6 +149,19 @@ export const PatchGameMap: IPatcher = (
                 super.clear();
                 if (this.isMain) this.graph.clear();
             }
+
+            public getOrCreateArrow(x: number, y: number): [Chunk, Arrow] {
+                const chunkX = Math.floor(x / CHUNK_SIZE);
+                const chunkY = Math.floor(y / CHUNK_SIZE);
+                const chunk = this.getOrCreateChunk(chunkX, chunkY);
+                return [
+                    chunk,
+                    chunk.getArrow(
+                        x - chunkX * CHUNK_SIZE,
+                        y - chunkY * CHUNK_SIZE,
+                    ),
+                ];
+            }
         };
     });
 };

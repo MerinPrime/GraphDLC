@@ -13,7 +13,6 @@ export const PatchChunkUpdates: IPatcher = (
         'ChunkUpdates',
         (_module: typeof ChunkUpdates) => {
             const oldUpdate = _module.update;
-            //@ts-expect-error
             _module.oldUpdate = oldUpdate;
             _module.update = function GraphUpdate(gameMap: GameMap) {
                 if (gameMap.isMain) {
@@ -28,7 +27,6 @@ export const PatchChunkUpdates: IPatcher = (
             };
 
             const oldClearSignals = _module.clearSignals;
-            //@ts-expect-error
             _module.oldClearSignals = oldClearSignals;
             _module.clearSignals = function clearSignals(gameMap: GameMap) {
                 if (gameMap.isMain) {

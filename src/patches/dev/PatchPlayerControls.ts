@@ -194,7 +194,6 @@ export const PatchPlayerControls: IPatcher = (
                             this.pathData.endPathY = y;
 
                             graphDLC.pathFinder.cancelPathSearch(taskKey);
-
                             graphDLC.pathFinder.findPathAsync(
                                 taskKey,
                                 _this.game.gameMap,
@@ -214,10 +213,11 @@ export const PatchPlayerControls: IPatcher = (
                         if (this.pathData) {
                             graphDLC.pathFinder.forceCompletePath(taskKey);
 
+                            const gameMap = _this.game.gameMap;
                             this.pathData.path.forEach(
                                 ({ x, y, type, rotation, flipped }) => {
                                     const arrowOld = _ArrowData.def.fromArrow(
-                                        _this.game.gameMap.getArrow(x, y),
+                                        gameMap.getArrow(x, y),
                                     );
                                     const arrowNew = _ArrowData.def.fromState(
                                         type,
@@ -232,16 +232,16 @@ export const PatchPlayerControls: IPatcher = (
                                             arrowNew,
                                         );
                                     }
-                                    _this.game.gameMap.setArrowType(x, y, type);
-                                    _this.game.gameMap.setArrowRotation(
+                                    const [chunk, arrow] =
+                                        gameMap.getOrCreateArrow(x, y);
+                                    arrow.type = type;
+                                    arrow.rotation = rotation;
+                                    arrow.flipped = flipped;
+                                    gameMap.graph.updateArrowState(
+                                        arrow,
+                                        chunk,
                                         x,
                                         y,
-                                        rotation,
-                                    );
-                                    _this.game.gameMap.setArrowFlipped(
-                                        x,
-                                        y,
-                                        flipped,
                                     );
                                 },
                             );

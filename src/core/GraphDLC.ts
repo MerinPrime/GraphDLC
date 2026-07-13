@@ -10,6 +10,7 @@ import { PatchGameMap } from 'src/patches/graph/PatchGameMap';
 import { PatchLoad } from 'src/patches/graph/PatchLoad';
 import { PatchSave } from 'src/patches/graph/PatchSave';
 import { PatchBackend } from 'src/patches/map_protection/PatchBackend';
+import { ApplyPatches } from 'src/patches/Patcher';
 import { PatchGameRender } from 'src/patches/render/PatchGameRender';
 import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
@@ -45,21 +46,23 @@ export class GraphDLC {
     }
 
     public inject() {
-        PatchArrow(this.patchLoader, this);
-        PatchChunk(this.patchLoader, this);
-        PatchSettingsPage(this.patchLoader, this);
-        PatchGameMap(this.patchLoader, this);
-        PatchPlayerUI(this.patchLoader, this);
-        PatchGame(this.patchLoader, this);
-        PatchPlayerControls(this.patchLoader, this);
-        PatchUIMenu(this.patchLoader, this);
-        PatchLoadShader(this.patchLoader, this);
-        PatchGameRender(this.patchLoader, this);
-        PatchLoad(this.patchLoader, this);
-        PatchSave(this.patchLoader, this);
-        PatchChunkUpdates(this.patchLoader, this);
-        PatchBackend(this.patchLoader, this);
-        PatchPlayerArrowActions(this.patchLoader, this);
-        PatchSpeedController(this.patchLoader, this);
+        ApplyPatches(this.patchLoader, this, [
+            PatchArrow,
+            PatchChunk,
+            PatchSettingsPage,
+            PatchGameMap,
+            PatchPlayerUI,
+            PatchGame,
+            PatchPlayerControls,
+            PatchUIMenu,
+            PatchLoadShader,
+            PatchGameRender,
+            PatchLoad,
+            PatchSave,
+            PatchChunkUpdates,
+            PatchBackend,
+            PatchPlayerArrowActions,
+            PatchSpeedController,
+        ]);
     }
 }
