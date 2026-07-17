@@ -1,0 +1,53 @@
+@use "../shared/variables" as *;
+
+.setting-value {
+  input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--border-default);
+    border-radius: $border-radius-md;
+    outline: none;
+    cursor: pointer;
+    display: inline-grid;
+    place-content: center;
+    margin-top: 2px;
+    transition: all $transition-speed ease;
+    vertical-align: middle;
+
+    &:hover:not(:disabled) {
+      border-color: var(--checkbox-accent);
+    }
+
+    &:checked {
+      background-color: var(--checkbox-accent);
+      border-color: var(--checkbox-accent);
+
+      &::before {
+        content: "";
+        width: 10px;
+        height: 6px;
+        border-left: 2px solid var(--bg-base);
+        border-bottom: 2px solid var(--bg-base);
+        transform: rotate(-45deg) translate(1px, -1px);
+      }
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      background-color: var(--bg-disabled);
+      border-color: var(--bg-surface);
+
+      &:checked {
+        background-color: var(--bg-disabled-checked);
+        border-color: var(--bg-surface);
+
+        &::before {
+          border-left-color: var(--text-disabled);
+          border-bottom-color: var(--text-disabled);
+        }
+      }
+    }
+  }
+}

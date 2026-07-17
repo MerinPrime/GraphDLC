@@ -1,0 +1,9 @@
+@use "../shared/variables" as *;
+
+.ui-dev-debug-info {
+  position: absolute;
+  right: 2vmin;
+  top: 2vmin;
+  z-index: 2;
+  font-family: $font-family;
+}

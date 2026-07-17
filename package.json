@@ -1,26 +1,31 @@
 {
-  "name": "graphdlc",
-  "version": "2.1.8",
-  "description": "GraphDLC для стрелочек...",
-  "main": "index.js",
-  "scripts": {
-    "build:dev": "webpack --env development",
-    "build:prod": "webpack --env production"
-  },
-  "keywords": [],
-  "author": "MerinPrime",
-  "license": "ISC",
-  "devDependencies": {
-    "@types/deflate-js": "^0.2.2",
-    "copy-webpack-plugin": "^13.0.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.8.2",
-    "webpack": "^5.98.0",
-    "webpack-cli": "^6.0.1",
-    "zip-webpack-plugin": "^4.0.3"
-  },
-  "dependencies": {
-    "deflate-js": "^0.2.3",
-    "jsdom": "^26.1.0"
-  }
+    "name": "graphdlc",
+    "displayName": "GraphDLC",
+    "version": "3.0.0",
+    "description": "GraphDLC для стрелочек...",
+    "main": "index.js",
+    "scripts": {
+        "build": "NODE_ENV=production rolldown -c",
+        "lint": "npx biome check --write .",
+        "dev": "NODE_ENV=development concurrently \"npm run watch:game\" \"npm run watch:graphdlc\" \"npm run server\"",
+        "watch:game": "cd logic-arrows && npm run prod -- --watch --output-path=../dist/dev",
+        "watch:graphdlc": "rolldown -c -w",
+        "server": "sirv dist/dev --port 8080 --single --dev"
+    },
+    "keywords": [],
+    "author": "MerinPrime",
+    "license": "ISC",
+    "devDependencies": {
+        "@biomejs/biome": "^2.4.16",
+        "@rollup/plugin-terser": "^1.0.0",
+        "@types/archiver": "^8.0.0",
+        "@types/node": "^25.9.1",
+        "archiver": "^8.0.0",
+        "concurrently": "^10.0.3",
+        "rolldown": "^1.1.1",
+        "sass": "^1.101.0",
+        "sirv-cli": "^3.0.1",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.2"
+    }
 }

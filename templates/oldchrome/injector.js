@@ -1,4 +1,4 @@
-const ext = typeof browser !== "undefined" ? browser : chrome;
+const ext = typeof browser !== 'undefined' ? browser : chrome;
 const xhr = new XMLHttpRequest();
 xhr.open('GET', ext.extension.getURL('index.js'), false);
 xhr.send(null);

@@ -1,0 +1,17 @@
+@use "../shared/mixins" as *;
+
+.ui-controls-hint {
+  color: var(--text-blue) !important;
+}
+
+.inline-key-blue {
+  background-color: var(--bg-surface) !important;
+}
+
+.inline-icon-blue {
+  @include icon-mask(var(--bg-surface));
+}
+
+.ui-fps-display {
+  color: var(--text-blue) !important;
+}

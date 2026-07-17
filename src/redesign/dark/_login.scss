@@ -1,0 +1,47 @@
+#login-cnv {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 35vw !important;
+  height: 100vh !important;
+}
+
+#login-main-div {
+  position: absolute !important;
+  left: 35vw !important;
+  right: 0 !important;
+  top: 0 !important;
+
+  width: auto !important;
+  height: 100vh !important;
+
+  padding-left: 6vw;
+  box-sizing: border-box;
+
+  background-color: var(--bg-base) !important;
+
+  #login-caption {
+    color: var(--text-blue) !important;
+  }
+
+  #login-btn {
+    background-color: var(--text-blue) !important;
+    color: var(--text-light) !important;
+  }
+
+  #login-text {
+    color: var(--text-secondary) !important;
+  }
+
+  .login-lang {
+    color: var(--text-secondary) !important;
+  }
+
+  .policy-link {
+    color: var(--text-secondary) !important;
+  }
+
+  .version-div {
+    color: var(--text-secondary) !important;
+  }
+}

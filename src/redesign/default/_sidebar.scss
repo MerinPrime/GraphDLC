@@ -1,0 +1,21 @@
+@use "../shared/mixins" as *;
+
+#menu-page-side-bar {
+  background-color: var(--bg-accent) !important;
+}
+
+.side-menu-element {
+  background-color: var(--bg-accent) !important;
+
+  &-selected {
+    background-color: var(--bg-accent-active) !important;
+  }
+}
+
+.side-menu-title {
+  color: var(--sidebar-text-primary) !important;
+}
+
+.side-menu-icon {
+  @include icon-mask(var(--bg-hover));
+}

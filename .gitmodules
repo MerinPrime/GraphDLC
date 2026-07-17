@@ -1,0 +1,3 @@
+[submodule "logicarrows"]
+	path = logic-arrows
+	url = https://github.com/ArtemOnigiri/logic-arrows.git

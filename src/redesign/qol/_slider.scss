@@ -1,0 +1,44 @@
+@use "../shared/variables" as *;
+
+.settings-table {
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 160px;
+    height: 6px;
+    background: var(--bg-surface);
+    border-radius: $border-radius-sm;
+    outline: none;
+    vertical-align: middle;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--bg-accent);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      border: none;
+
+      &:hover {
+        transform: scale(1.25);
+      }
+    }
+
+    &::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--bg-accent);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      border: none;
+
+      &:hover {
+        transform: scale(1.25);
+      }
+    }
+  }
+}

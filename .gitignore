@@ -130,3 +130,15 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+archive
+
+**/target/
+
+**/*.rs.bk
+
+**/*.wasm
+**/*.wasm.base64
+**/*.wasm.base64.txt
+
+package-lock.json

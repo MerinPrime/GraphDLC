@@ -1,0 +1,21 @@
+@use "../shared/variables" as *;
+
+select {
+  background-color: var(--bg-base);
+  border: 2px solid var(--bg-surface);
+  border-radius: $border-radius-md;
+  padding: 0.4rem 1.5rem 0.4rem 0.8rem;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+
+  &:focus {
+    border-color: var(--text-blue);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-blue) 15%, transparent);
+  }
+}

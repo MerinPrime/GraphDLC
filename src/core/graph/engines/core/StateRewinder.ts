@@ -1,0 +1,143 @@
+import type { ISnapshot } from './types';
+
+interface WrappedSnapshot<TSnapshot extends ISnapshot> {
+    timestamp: number;
+    data: TSnapshot;
+}
+
+interface Tier<TSnapshot extends ISnapshot> {
+    level: number;
+    interval: number;
+    snapshots: WrappedSnapshot<TSnapshot>[];
+}
+
+export class StateRewinder<TSnapshot extends ISnapshot> {
+    private tiers: Tier<TSnapshot>[] = [];
+
+    public static readonly SNAPSHOTS_PER_TIER: number = 10;
+    public static readonly MAX_LEVELS: number = 5;
+
+    public readonly baseTimeInterval: number = 250;
+    public readonly baseTickInterval: number = 1000;
+    private lastSavedTime: number = 0;
+    private lastSavedTick: number = -this.baseTickInterval - 1;
+
+    public constructor() {
+        this.initTiers();
+    }
+
+    private initTiers() {
+        this.tiers = [];
+        for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
+            this.tiers.push({
+                level: l,
+                interval: this.baseTimeInterval * 2 ** l,
+                snapshots: [],
+            });
+        }
+    }
+
+    public canDoSnapshot(tick: number): boolean {
+        const now = performance.now();
+
+        if (now - this.lastSavedTime < this.baseTimeInterval) {
+            return false;
+        }
+
+        if (tick - this.lastSavedTick < this.baseTickInterval) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public saveSnapshot(snapshot: TSnapshot) {
+        const now = performance.now();
+
+        if (now - this.lastSavedTime < this.baseTimeInterval) {
+            return;
+        }
+
+        if (snapshot.tick - this.lastSavedTick < this.baseTickInterval) {
+            return;
+        }
+
+        this.lastSavedTime = now;
+        this.lastSavedTick = snapshot.tick;
+
+        const wrapped: WrappedSnapshot<TSnapshot> = {
+            timestamp: now,
+            data: snapshot,
+        };
+
+        this.addSnapshotToTier(0, wrapped);
+    }
+
+    private addSnapshotToTier(
+        level: number,
+        wrappedSnapshot: WrappedSnapshot<TSnapshot>,
+    ) {
+        if (level >= StateRewinder.MAX_LEVELS) return;
+
+        const tier = this.tiers[level];
+
+        tier.snapshots.unshift(wrappedSnapshot);
+
+        if (tier.snapshots.length > StateRewinder.SNAPSHOTS_PER_TIER) {
+            const oldest = tier.snapshots.pop();
+            if (!oldest) return;
+
+            const nextLevel = level + 1;
+            if (nextLevel < StateRewinder.MAX_LEVELS) {
+                const nextTier = this.tiers[nextLevel];
+                const lastNextTierSnap = nextTier.snapshots[0];
+
+                if (
+                    !lastNextTierSnap ||
+                    oldest.timestamp - lastNextTierSnap.timestamp >=
+                        nextTier.interval
+                ) {
+                    this.addSnapshotToTier(nextLevel, oldest);
+                }
+            }
+        }
+    }
+
+    public findClosestSnapshot(targetTick: number): TSnapshot | null {
+        let bestMatch: WrappedSnapshot<TSnapshot> | null = null;
+
+        for (let l = 0; l < StateRewinder.MAX_LEVELS; l++) {
+            const snapshots = this.tiers[l].snapshots;
+
+            for (let i = 0; i < snapshots.length; i++) {
+                const snap = snapshots[i];
+
+                if (snap.data.tick <= targetTick) {
+                    if (!bestMatch || snap.data.tick > bestMatch.data.tick) {
+                        bestMatch = snap;
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        return bestMatch ? bestMatch.data : null;
+    }
+
+    public getOldestSnapshotTick(): number {
+        let oldestTick = Infinity;
+        for (const tier of this.tiers) {
+            const last = tier.snapshots[tier.snapshots.length - 1];
+            if (last && last.data.tick < oldestTick) {
+                oldestTick = last.data.tick;
+            }
+        }
+        return oldestTick === Infinity ? 0 : oldestTick;
+    }
+
+    public reset() {
+        this.lastSavedTime = 0;
+        this.initTiers();
+    }
+}

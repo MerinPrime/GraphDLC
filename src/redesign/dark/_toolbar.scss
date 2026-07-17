@@ -1,0 +1,21 @@
+@use "../shared/mixins" as *;
+
+.ui-toolbar {
+  background-color: var(--bg-accent) !important;
+}
+
+.ui-toolbar-item {
+  background-color: var(--bg-disabled) !important;
+  span {
+    color: var(--text-muted) !important;
+  }
+}
+
+.ui-toolbar-arrow {
+  &-right,
+  &-left {
+    img {
+      @include icon-mask(var(--bg-disabled-checked));
+    }
+  }
+}

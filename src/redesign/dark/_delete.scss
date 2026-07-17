@@ -1,0 +1,13 @@
+.ui-ok-cancel-panel {
+  background-color: var(--bg-accent) !important;
+}
+
+.ui-ok-cancel-message {
+  color: var(--text-primary) !important;
+}
+
+.ui-ok-cancel-bottom .ui-button {
+  background-color: var(--bg-disabled-checked);
+  color: var(--text-primary) !important;
+  font-family: "Nunito" !important;
+}

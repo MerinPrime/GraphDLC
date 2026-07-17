@@ -1,21 +1,21 @@
 {
-  "manifest_version": 2,
-  "name": "GraphDLC",
-  "version": "2.1.8",
-  "description": "GraphDLC для стрелочек...",
-  "icons": {
-    "128": "images/icon128.png"
-  },
-  "content_scripts": [
-    {
-      "matches": ["https://logic-arrows.io/*"],
-      "js": ["injector.js"],
-      "css": ["style.css"],
-      "run_at": "document_start",
-      "all_frames": true
-    }
-  ],
-  "web_accessible_resources": [
-    "index.js"
-  ]
+    "manifest_version": 2,
+    "name": "GraphDLC",
+    "version": "x.y.z.w",
+    "description": "GraphDLC для стрелочек...",
+    "icons": {
+        "128": "images/icon128.png"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://logic-arrows.io/*",
+                "https://v1_2.logic-arrows.io/*"
+            ],
+            "js": ["injector.js"],
+            "run_at": "document_start",
+            "all_frames": true
+        }
+    ],
+    "web_accessible_resources": ["index.js"]
 }

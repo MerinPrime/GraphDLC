@@ -1,0 +1,39 @@
+import { ArrowType } from './ArrowType';
+
+export const enum ArrowSignal {
+    NONE = 0,
+    RED = 1,
+    BLUE = 2,
+    YELLOW = 3,
+    GREEN = 4,
+    ORANGE = 5,
+    PURPLE = 6,
+    BLACK = 7,
+}
+
+export const ACTIVE_SIGNALS: Array<ArrowSignal> = new Array<number>(25);
+ACTIVE_SIGNALS[ArrowType.EMPTY] = ArrowSignal.NONE;
+ACTIVE_SIGNALS[ArrowType.ARROW] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.SOURCE] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.BLOCKER] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.DELAY] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.DETECTOR] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_DOWN] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_RIGHT] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_RIGHT_LEFT] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.IMPULSE] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.BLUE_ARROW] = ArrowSignal.BLUE;
+ACTIVE_SIGNALS[ArrowType.DIAGONAL_ARROW] = ArrowSignal.BLUE;
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_UP] = ArrowSignal.BLUE;
+ACTIVE_SIGNALS[ArrowType.SPLITTER_RIGHT_UP] = ArrowSignal.BLUE;
+ACTIVE_SIGNALS[ArrowType.SPLITTER_UP_DIAGONAL] = ArrowSignal.BLUE;
+ACTIVE_SIGNALS[ArrowType.LOGIC_NOT] = ArrowSignal.YELLOW;
+ACTIVE_SIGNALS[ArrowType.LOGIC_AND] = ArrowSignal.YELLOW;
+ACTIVE_SIGNALS[ArrowType.LOGIC_XOR] = ArrowSignal.YELLOW;
+ACTIVE_SIGNALS[ArrowType.LATCH] = ArrowSignal.YELLOW;
+ACTIVE_SIGNALS[ArrowType.FLIP_FLOP] = ArrowSignal.YELLOW;
+ACTIVE_SIGNALS[ArrowType.RANDOM] = ArrowSignal.ORANGE;
+ACTIVE_SIGNALS[ArrowType.BUTTON] = ArrowSignal.ORANGE;
+ACTIVE_SIGNALS[ArrowType.LEVEL_SOURCE] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.LEVEL_TARGET] = ArrowSignal.RED;
+ACTIVE_SIGNALS[ArrowType.DIRECTIONAL_BUTTON] = ArrowSignal.ORANGE;
