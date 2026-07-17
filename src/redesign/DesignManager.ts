@@ -28,55 +28,57 @@ export class DesignManager {
     ];
 
     public setup() {
-        this.designSettings.forEach(this.applySetting);
+        this.waitForElement('documentElement', () => {
+            this.designSettings.forEach(this.applySetting.bind(this));
 
-        DarkThemeSetting.onChange.add(() => {
-            window.location.reload();
-        });
+            DarkThemeSetting.onChange.add(() => {
+                window.location.reload();
+            });
 
-        const syncSrcToCustomProperty = (img: HTMLImageElement) => {
-            if (img.src) {
-                img.style.setProperty('--icon-url', `url('${img.src}')`);
-            }
-        };
+            const syncSrcToCustomProperty = (img: HTMLImageElement) => {
+                if (img.src) {
+                    img.style.setProperty('--icon-url', `url('${img.src}')`);
+                }
+            };
 
-        const processNewNodes = (nodes: NodeList) => {
-            nodes.forEach((node) => {
-                if (node instanceof HTMLImageElement) {
-                    syncSrcToCustomProperty(node);
-                } else if (node instanceof Element) {
-                    node.querySelectorAll('img').forEach(
-                        syncSrcToCustomProperty,
-                    );
+            const processNewNodes = (nodes: NodeList) => {
+                nodes.forEach((node) => {
+                    if (node instanceof HTMLImageElement) {
+                        syncSrcToCustomProperty(node);
+                    } else if (node instanceof Element) {
+                        node.querySelectorAll('img').forEach(
+                            syncSrcToCustomProperty,
+                        );
+                    }
+                });
+            };
+
+            document.querySelectorAll('img').forEach(syncSrcToCustomProperty);
+
+            const observer = new MutationObserver((mutationsList) => {
+                for (const mutation of mutationsList) {
+                    if (
+                        mutation.type === 'attributes' &&
+                        mutation.attributeName === 'src'
+                    ) {
+                        if (mutation.target instanceof HTMLImageElement) {
+                            syncSrcToCustomProperty(mutation.target);
+                        }
+                    } else if (
+                        mutation.type === 'childList' &&
+                        mutation.addedNodes.length > 0
+                    ) {
+                        processNewNodes(mutation.addedNodes);
+                    }
                 }
             });
-        };
 
-        document.querySelectorAll('img').forEach(syncSrcToCustomProperty);
-
-        const observer = new MutationObserver((mutationsList) => {
-            for (const mutation of mutationsList) {
-                if (
-                    mutation.type === 'attributes' &&
-                    mutation.attributeName === 'src'
-                ) {
-                    if (mutation.target instanceof HTMLImageElement) {
-                        syncSrcToCustomProperty(mutation.target);
-                    }
-                } else if (
-                    mutation.type === 'childList' &&
-                    mutation.addedNodes.length > 0
-                ) {
-                    processNewNodes(mutation.addedNodes);
-                }
-            }
-        });
-
-        observer.observe(document.documentElement, {
-            attributes: true,
-            childList: true,
-            subtree: true,
-            attributeFilter: ['src'],
+            observer.observe(document.documentElement, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+                attributeFilter: ['src'],
+            });
         });
     }
 
@@ -85,23 +87,9 @@ export class DesignManager {
         styleElement.textContent = style;
 
         const appendToHead = () => {
-            if (document.head) {
+            this.waitForElement('head', () => {
                 document.head.appendChild(styleElement);
-                return true;
-            }
-
-            const observer = new MutationObserver(() => {
-                if (document.head) {
-                    document.head.appendChild(styleElement);
-                    observer.disconnect();
-                }
             });
-
-            observer.observe(document.documentElement, {
-                childList: true,
-                subtree: true,
-            });
-            return false;
         };
 
         if (setting.value) {
@@ -115,5 +103,24 @@ export class DesignManager {
                 styleElement.remove();
             }
         });
+    }
+
+    private waitForElement(
+        selector: 'documentElement' | 'head',
+        callback: () => void,
+    ) {
+        if (document[selector]) {
+            callback();
+            return;
+        }
+
+        const observer = new MutationObserver((_, obs) => {
+            if (document[selector]) {
+                obs.disconnect();
+                callback();
+            }
+        });
+
+        observer.observe(document, { childList: true, subtree: true });
     }
 }
