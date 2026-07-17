@@ -2,6 +2,7 @@ import { CycleBudgetSetting } from './instances/performance/CycleBudgetSetting';
 import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
 import { GraphEngineSetting } from './instances/performance/GraphEngineSetting';
 import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
+import { TPSOverloadSetting } from './instances/performance/TPSOverloadSetting';
 import { DarkThemeSetting } from './instances/redesign/DarkThemeSetting';
 import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
 import { QoLReDesignSetting } from './instances/redesign/QoLReDesignSetting';
@@ -31,6 +32,10 @@ const settings: BaseSetting<any>[] = [
     GraphDLCDesignSetting,
     DarkThemeSetting,
 ];
+
+if (__DEBUG__) {
+    settings.push(TPSOverloadSetting);
+}
 
 export const SettingsRegistry = settings.reduce<
     Record<string, BaseSetting<any>>

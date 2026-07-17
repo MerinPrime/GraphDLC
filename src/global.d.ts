@@ -3,7 +3,8 @@ import type { GraphDLC } from './core/GraphDLC';
 import type { Graph } from './core/graph/ast/Graph';
 
 declare global {
-    declare const __CURRENT_VERSION__: string
+    declare const __CURRENT_VERSION__: string;
+    declare const __DEBUG__: boolean;
 
     interface Window {
         graphdlc: GraphDLC;

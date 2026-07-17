@@ -330,8 +330,8 @@ const baseInputConfig = {
     },
     transform: {
         define: {
-            'process.env.IS_DEBUG': JSON.stringify(!isProduction),
             __CURRENT_VERSION__: JSON.stringify(pkg.version),
+            __DEBUG__: JSON.stringify(!isProduction),
         },
     },
 };
