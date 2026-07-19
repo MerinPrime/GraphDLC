@@ -1,5 +1,3 @@
-import { LangSettings } from '@logic-arrows/lang/lang-settings';
-import { LangUtils } from '@logic-arrows/lang/lang-utils';
 import { UpdateManager } from './core/credentials/UpdateManager';
 import { GraphDLC } from './core/GraphDLC';
 import { PatchLoader } from './core/PatchLoader';
@@ -15,10 +13,6 @@ if (selectedVersion === '1_2_1') {
 
     InjectGraphDLCv2();
 } else if (selectedVersion === '1_4') {
-    const lang: string | null = localStorage.getItem('lang');
-    if (lang !== null) {
-        LangSettings.setLanguage(LangUtils.getLanguageFromString(lang));
-    }
     localStorage.removeItem('graphdlc:unsupported');
 
     const patchLoader = new PatchLoader();
