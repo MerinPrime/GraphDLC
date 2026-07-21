@@ -496,7 +496,7 @@ export const PatchGame: IPatcher = (
                             );
                             _this.tick += perUpdateTicks;
                             _this.updatesPerSecond += perUpdateTicks;
-                            accumulator -= perUpdateTicks;
+                            accumulator -= skip;
                         }
                     }
                     const breakMode = EnableBreakpointSetting.value;
