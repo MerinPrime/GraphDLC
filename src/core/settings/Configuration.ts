@@ -1,3 +1,4 @@
+import { STORAGE_KEYS } from '../StorageKeys';
 import type { BaseSetting } from './types/BaseSetting';
 
 export type SettingsRegistry = Record<string, BaseSetting<any>>;
@@ -8,11 +9,9 @@ export type ConfigurationData<R extends SettingsRegistry> = {
 
 export class Configuration<R extends SettingsRegistry> {
     public readonly registry: R;
-    private readonly storageKey: string;
 
-    public constructor(registry: R, storageKey = 'graphdlcv3-settings') {
+    public constructor(registry: R) {
         this.registry = registry;
-        this.storageKey = storageKey;
     }
 
     public setup() {
@@ -33,7 +32,7 @@ export class Configuration<R extends SettingsRegistry> {
 
     public load(): void {
         try {
-            const rawData = localStorage.getItem(this.storageKey);
+            const rawData = localStorage.getItem(STORAGE_KEYS.Settings);
             if (!rawData) {
                 return;
             }
@@ -47,7 +46,7 @@ export class Configuration<R extends SettingsRegistry> {
             }
         } catch (error) {
             console.error(
-                `[Configuration] Failed to load settings from ${this.storageKey}:`,
+                `[Configuration] Failed to load settings from ${STORAGE_KEYS.Settings}:`,
                 error,
             );
         }
@@ -60,10 +59,13 @@ export class Configuration<R extends SettingsRegistry> {
                 dataToSave[key] = this.registry[key].value;
             }
 
-            localStorage.setItem(this.storageKey, JSON.stringify(dataToSave));
+            localStorage.setItem(
+                STORAGE_KEYS.Settings,
+                JSON.stringify(dataToSave),
+            );
         } catch (error) {
             console.error(
-                `[Configuration] Failed to save settings to ${this.storageKey}:`,
+                `[Configuration] Failed to save settings to ${STORAGE_KEYS.Settings}:`,
                 error,
             );
         }

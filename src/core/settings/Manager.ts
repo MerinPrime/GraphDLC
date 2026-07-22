@@ -12,10 +12,7 @@ export class SettingsManager {
     private config: Configuration<typeof SettingsRegistry>;
 
     public constructor() {
-        this.config = new Configuration(
-            SettingsRegistry,
-            'graphdlc-v3-settings',
-        );
+        this.config = new Configuration(SettingsRegistry);
     }
 
     public setup() {

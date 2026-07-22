@@ -1,17 +1,17 @@
+import { STORAGE_KEYS } from 'src/core/StorageKeys';
+
 type UpdatePreferences = {
     remindAt?: number;
     ignoredVersion?: string;
 };
 
-const UPDATE_PREFERENCES_KEY = 'graphdlc:update-preferences';
-
 export class UpdatePreferencesStorage {
     static save(data: UpdatePreferences) {
-        localStorage.setItem(UPDATE_PREFERENCES_KEY, JSON.stringify(data));
+        localStorage.setItem(STORAGE_KEYS.UpdatePref, JSON.stringify(data));
     }
 
     static get(): UpdatePreferences | undefined {
-        const value = localStorage.getItem(UPDATE_PREFERENCES_KEY);
+        const value = localStorage.getItem(STORAGE_KEYS.UpdatePref);
 
         if (!value) return undefined;
 
@@ -24,6 +24,6 @@ export class UpdatePreferencesStorage {
     }
 
     static clear() {
-        localStorage.removeItem(UPDATE_PREFERENCES_KEY);
+        localStorage.removeItem(STORAGE_KEYS.UpdatePref);
     }
 }
