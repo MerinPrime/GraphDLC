@@ -45,6 +45,8 @@ export const PatchGame: IPatcher = (
 
     let adaptiveBatchSize = 100;
 
+    const uiPauseSign = patchLoader.getInstance<UIPauseSign>('UIPauseSign');
+
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public path: PathStep[] | null = null;
@@ -505,9 +507,7 @@ export const PatchGame: IPatcher = (
                             this.gameMap.graph.engine.resetBreakpoint();
                         if (breakpointIdx !== false) {
                             this.playing = false;
-                            patchLoader
-                                .getInstance<UIPauseSign>('UIPauseSign')
-                                ?.setVisibility(true);
+                            uiPauseSign.val?.setVisibility(true);
                             if (breakMode === BreakpointMode.ON_ZOOM) {
                                 const breakpointNode =
                                     this.gameMap.graph.getNode(breakpointIdx);

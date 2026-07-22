@@ -44,3 +44,5 @@ export const enum NodeStatus {
     OPEN = 1,
     CLOSED = 2,
 }
+
+// TODO: branch on start

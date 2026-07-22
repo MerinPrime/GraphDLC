@@ -216,10 +216,10 @@ export const PatchPlayerControls: IPatcher = (
                             const gameMap = _this.game.gameMap;
                             this.pathData.path.forEach(
                                 ({ x, y, type, rotation, flipped }) => {
-                                    const arrowOld = _ArrowData.def.fromArrow(
+                                    const arrowOld = _ArrowData.val.fromArrow(
                                         gameMap.getArrow(x, y),
                                     );
-                                    const arrowNew = _ArrowData.def.fromState(
+                                    const arrowNew = _ArrowData.val.fromState(
                                         type,
                                         rotation,
                                         flipped,

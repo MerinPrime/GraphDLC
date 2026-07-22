@@ -103,6 +103,8 @@ export const PatchPlayerArrowActions: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {
+    const mouseHandler = patchLoader.getInstance<MouseHandler>('MouseHandler');
+
     patchLoader.addDefinitionPatch(
         'PlayerArrowActions',
         (_module: typeof PlayerArrowActions) => {
@@ -186,9 +188,7 @@ export const PatchPlayerArrowActions: IPatcher = (
                         shiftPressed,
                         ctrlPressed,
                     );
-                    const mouseHandler =
-                        patchLoader.getInstance<MouseHandler>('MouseHandler');
-                    const mousePos = mouseHandler?.getMousePosition();
+                    const mousePos = mouseHandler.val?.getMousePosition();
                     if (!mousePos) {
                         this.selectionSizeTip.setVisibility(false);
                     } else {

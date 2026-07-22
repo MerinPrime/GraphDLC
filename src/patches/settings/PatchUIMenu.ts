@@ -109,3 +109,5 @@ export const PatchUIMenu: IPatcher = (
         };
     });
 };
+
+// TODO: maybe extract settings utils?

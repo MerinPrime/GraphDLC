@@ -24,7 +24,7 @@ export const PatchPlayerUI: IPatcher = (
         return class PlayerUI extends _module {
             public addSpeedController() {
                 const hasPause = PLATFORM === 'mobile';
-                this.speedController = new _UISpeedController.def(
+                this.speedController = new _UISpeedController.val(
                     document.body,
                     10,
                     hasPause,
