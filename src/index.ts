@@ -1,5 +1,6 @@
 import { UpdateManager } from './core/credentials/UpdateManager';
 import { STORAGE_KEYS } from './core/StorageKeys';
+import { DesignManager } from './redesign/DesignManager';
 import { InjectGraphDLCv2 } from './versions/graphdlcv2';
 import { InjectGraphDLCv3 } from './versions/graphdlcv3';
 
@@ -9,10 +10,12 @@ const versions = {
 } as const;
 
 function handleUnsupportedVersion() {
+    new DesignManager().setup(true);
+    new UpdateManager().setup();
+
     if (localStorage.getItem(STORAGE_KEYS.Unsupported) === '1') return;
     localStorage.setItem(STORAGE_KEYS.Unsupported, '1');
 
-    new UpdateManager().setup();
     alert('GraphDLC: Неподдерживаемая версия игры. Мод временно отключен.');
 }
 

@@ -5,6 +5,7 @@ import type { BoolSetting } from 'src/core/settings/types/BoolSetting';
 import darkStyle from 'src/redesign/dark/index.scss?raw';
 import graphDLCStyle from 'src/redesign/default/index.scss?raw';
 import qolStyle from 'src/redesign/qol/index.scss?raw';
+import updateStyle from 'src/redesign/update/index.scss?raw';
 
 interface DesignSetting {
     setting: BoolSetting;
@@ -27,13 +28,16 @@ export class DesignManager {
         },
     ];
 
-    public setup() {
+    public setup(fallback: boolean = false) {
         this.waitForElement('documentElement', () => {
-            this.designSettings.forEach(this.applySetting.bind(this));
+            if (!fallback) {
+                this.designSettings.forEach(this.applySetting.bind(this));
 
-            DarkThemeSetting.onChange.add(() => {
-                window.location.reload();
-            });
+                DarkThemeSetting.onChange.add(() => {
+                    window.location.reload();
+                });
+            }
+            this.applyStyle(updateStyle);
 
             const syncSrcToCustomProperty = (img: HTMLImageElement) => {
                 if (img.src) {
@@ -102,6 +106,14 @@ export class DesignManager {
             } else {
                 styleElement.remove();
             }
+        });
+    }
+
+    private applyStyle(style: string) {
+        this.waitForElement('head', () => {
+            const styleElement = document.createElement('style');
+            styleElement.textContent = style;
+            document.head.appendChild(styleElement);
         });
     }
 
