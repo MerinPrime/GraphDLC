@@ -25,29 +25,29 @@ export class SoAGraphUpdater {
                 ] as NodeSignal;
                 signalsCount = detectedSignal !== NodeSignal.NONE ? 1 : 0;
             }
-        } else {
-            const backLinks = node.backLinks;
-            const backLinksLen = backLinks.length;
-            for (let i = 0; i < backLinksLen; i++) {
-                const back = backLinks[i];
-                if (
-                    back.headType !== CycleHeadType.NONE &&
-                    back.headType !== CycleHeadType.READ
-                ) {
-                    continue;
-                }
+        }
 
-                const backOffset = back.nodeIdx * SoALayout.Node.STRIDE;
-                const backLastSignal = nodeData[
-                    backOffset + SoALayout.Node.LAST_SIGNAL
-                ] as NodeSignal;
+        const backLinks = node.backLinks;
+        const backLinksLen = backLinks.length;
+        for (let i = 0; i < backLinksLen; i++) {
+            const back = backLinks[i];
+            if (
+                back.headType !== CycleHeadType.NONE &&
+                back.headType !== CycleHeadType.READ
+            ) {
+                continue;
+            }
 
-                if (backLastSignal === NodeSignal.ACTIVE) {
-                    if (back.type === NodeType.BLOCKER) {
-                        blockedCount++;
-                    } else {
-                        signalsCount++;
-                    }
+            const backOffset = back.nodeIdx * SoALayout.Node.STRIDE;
+            const backLastSignal = nodeData[
+                backOffset + SoALayout.Node.LAST_SIGNAL
+            ] as NodeSignal;
+
+            if (backLastSignal === NodeSignal.ACTIVE) {
+                if (back.type === NodeType.BLOCKER) {
+                    blockedCount++;
+                } else if (!isDetector) {
+                    signalsCount++;
                 }
             }
         }

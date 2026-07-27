@@ -138,6 +138,7 @@ export const PatchGame: IPatcher = (
                 astNode.backLinks.forEach((previousNode) => {
                     if (
                         astNode.type === NodeType.DETECTOR &&
+                        previousNode.type !== NodeType.BLOCKER &&
                         astNode.detectedLink !== previousNode
                     )
                         return;

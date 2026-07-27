@@ -136,7 +136,11 @@ export class SoAGraphState {
         this.nodeData[nodeOffset + SoALayout.Node.TYPE] = node.type;
 
         const links = node.links
-            .filter((linkedNode) => linkedNode.type !== NodeType.DETECTOR)
+            .filter(
+                (linkedNode) =>
+                    linkedNode.type !== NodeType.DETECTOR ||
+                    node.type === NodeType.BLOCKER,
+            )
             .map((linkedNode) => linkedNode.nodeIdx);
         this.nodeData[nodeOffset + SoALayout.Node.LINKS_COUNT] = links.length;
         this.linkIndices.set(links, linksOffset);

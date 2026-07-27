@@ -87,7 +87,11 @@ export class RawGraphState {
 
         nodeState.type = node.type;
         nodeState.links = node.links
-            .filter((linkedNode) => linkedNode.type !== NodeType.DETECTOR)
+            .filter(
+                (linkedNode) =>
+                    linkedNode.type !== NodeType.DETECTOR ||
+                    node.type === NodeType.BLOCKER,
+            )
             .map((linkedNode) => this.getNode(linkedNode.nodeIdx));
 
         nodeState.detectorLinks = node.links
