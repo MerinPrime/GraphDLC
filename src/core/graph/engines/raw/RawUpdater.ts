@@ -36,7 +36,7 @@ export class RawGraphUpdater {
 
             if (prevState.lastSignal === NodeSignal.ACTIVE) {
                 const isBlocker = prev.type === NodeType.BLOCKER;
-                if (isBlocker) {
+                if (isBlocker && prev.blockedLink === node) {
                     blockedCount++;
                 } else if (!isDetector) {
                     signalsCount++;
@@ -106,7 +106,10 @@ export class RawGraphUpdater {
                     for (let i = 0; i < linkedNodes.length; i++) {
                         const edgeState = linkedNodes[i];
 
-                        if (isBlocker) {
+                        if (
+                            isBlocker &&
+                            nodeState.node.blockedLink === edgeState.node
+                        ) {
                             edgeState.blockedCount += delta;
                             this.markNodeAsChanged(state, edgeState);
                         } else {

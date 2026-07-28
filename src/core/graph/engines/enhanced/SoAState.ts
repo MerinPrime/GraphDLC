@@ -211,6 +211,10 @@ export class SoAGraphState {
             extra32NodeOffset + SoALayout.Extra32Node.CHUNK_IDX
         ] = node.chunkIdx;
 
+        this.extra32NodeData[
+            extra32NodeOffset + SoALayout.Extra32Node.BLOCKED_LINK_IDX
+        ] = node.blockedLink !== null ? node.blockedLink.nodeIdx : 0xFFFFFFFF;
+
         if (resetSignal) {
             this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = 0;
             this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;
