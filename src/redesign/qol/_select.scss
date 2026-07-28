@@ -18,4 +18,12 @@ select {
     border-color: var(--text-blue);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-blue) 15%, transparent);
   }
+
+  &:disabled {
+    background-color: var(--bg-disabled);
+    border-color: var(--bg-surface);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+    opacity: 1;
+  }
 }

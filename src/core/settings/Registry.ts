@@ -18,7 +18,8 @@ const settings: BaseSetting<any>[] = [
     GraphEngineSetting,
     TargetFPSSetting,
     EnableSnapshotsSetting,
-    CycleBudgetSetting,
+    // CycleBudgetSetting,
+    // TPSOverloadSetting,
 
     // Tools
     EnableArrowRelationsSetting,
@@ -28,12 +29,14 @@ const settings: BaseSetting<any>[] = [
     EnableBreakpointSetting,
 
     // Visuals
+    // GraphDLCDesignSetting,
     QoLReDesignSetting,
-    GraphDLCDesignSetting,
     DarkThemeSetting,
 ];
 
 if (__DEBUG__) {
+    settings.push(CycleBudgetSetting);
+    settings.push(GraphDLCDesignSetting);
     settings.push(TPSOverloadSetting);
 }
 

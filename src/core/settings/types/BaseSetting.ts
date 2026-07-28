@@ -28,15 +28,22 @@ export abstract class BaseSetting<T> {
     public readonly key: string;
     public readonly defaultValue: T;
     public readonly meta: SettingMeta;
+    public readonly disabled: boolean;
     public _value: T;
 
     public readonly onChange = new SettingEvent<T>();
 
-    public constructor(key: string, defaultValue: T, meta: SettingMeta) {
+    public constructor(
+        key: string,
+        defaultValue: T,
+        meta: SettingMeta,
+        disabled: boolean = false,
+    ) {
         this.key = key;
         this.defaultValue = defaultValue;
         this.meta = meta;
         this._value = defaultValue;
+        this.disabled = disabled;
     }
 
     public get value(): T {

@@ -2,16 +2,13 @@ import { BaseSetting } from './BaseSetting';
 import type { SettingMeta } from './Types';
 
 export class BoolSetting extends BaseSetting<boolean> {
-    public readonly disabled: boolean;
-
     public constructor(
         key: string,
         defaultValue: boolean,
         meta: SettingMeta,
-        disabled = false,
+        disabled: boolean = false,
     ) {
-        super(key, defaultValue, meta);
-        this.disabled = disabled;
+        super(key, defaultValue, meta, disabled);
     }
 
     public buildUIComponent(): HTMLInputElement {

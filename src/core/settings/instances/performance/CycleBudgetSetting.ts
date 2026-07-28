@@ -37,7 +37,7 @@ const FormatFunc = (value: number) => {
 
 export const CycleBudgetSetting = new NumberSetting(
     'CycleBudget',
-    10,
+    16,
     {
         name: NameLocale,
         description: DescriptionLocale,

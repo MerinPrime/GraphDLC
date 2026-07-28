@@ -16,8 +16,9 @@ export class SelectSetting<T extends string | number> extends BaseSetting<T> {
         defaultValue: T,
         meta: SettingMeta,
         options: Option<T>[],
+        disabled: boolean = false,
     ) {
-        super(key, defaultValue, meta);
+        super(key, defaultValue, meta, disabled);
         this.options = options;
     }
 
@@ -37,6 +38,7 @@ export class SelectSetting<T extends string | number> extends BaseSetting<T> {
         });
 
         select.value = this.value.toString();
+        select.disabled = this.disabled;
 
         select.addEventListener('change', () => {
             const val =

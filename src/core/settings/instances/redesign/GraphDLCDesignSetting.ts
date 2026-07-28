@@ -18,15 +18,10 @@ const DescriptionLocale = new I18nText(
     "Activer ou désactiver le design des composants GraphDLC par défaut (n'affecte pas la refonte du jeu)",
 );
 
-export const GraphDLCDesignSetting = new BoolSetting(
-    'GraphDLCDesign',
-    true,
-    {
-        name: NameLocale,
-        description: DescriptionLocale,
-        isMapSetting: false,
-        group: ReDesignSettingGroup,
-        order: 0,
-    },
-    true,
-);
+export const GraphDLCDesignSetting = new BoolSetting('GraphDLCDesign', true, {
+    name: NameLocale,
+    description: DescriptionLocale,
+    isMapSetting: false,
+    group: ReDesignSettingGroup,
+    order: 0,
+});

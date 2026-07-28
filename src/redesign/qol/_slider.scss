@@ -35,9 +35,22 @@
       cursor: pointer;
       transition: transform 0.1s ease;
       border: none;
+    }
 
-      &:hover {
-        transform: scale(1.25);
+    &:disabled {
+      cursor: not-allowed;
+      background: var(--bg-disabled);
+
+      &::-webkit-slider-thumb {
+        background: var(--bg-disabled-checked);
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      &::-moz-range-thumb {
+        background: var(--bg-disabled-checked);
+        cursor: not-allowed;
+        transform: none;
       }
     }
   }

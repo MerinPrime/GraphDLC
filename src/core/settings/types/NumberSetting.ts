@@ -19,6 +19,7 @@ export class NumberSetting extends BaseSetting<number> {
         defaultValue: boolean | number,
         meta: SettingMeta,
         options: NumberSettingOptions,
+        disabled: boolean = false,
     ) {
         super(
             key,
@@ -28,6 +29,7 @@ export class NumberSetting extends BaseSetting<number> {
                     : 0
                 : defaultValue,
             meta,
+            disabled,
         );
 
         this.min = options.min;
@@ -51,6 +53,7 @@ export class NumberSetting extends BaseSetting<number> {
         slider.step = this.step.toString();
         slider.value = this.value.toString();
         slider.style.display = 'inline';
+        slider.disabled = this.disabled;
 
         slider.addEventListener('input', () => {
             const val = parseInt(slider.value, 10);
