@@ -19,11 +19,11 @@ const NameLocale = new I18nText(
 );
 
 const DescriptionLocale = new I18nText(
-    'Select the graph simulation engine. Change if you encounter bugs.',
-    'Выберите движок симуляции графа. Измените в случае возникновения багов.',
-    'Виберіть двигун симуляції графа. Змініть у разі виникнення багів.',
-    'Выберыце рухавік сімуляцыі графа. Змяніце ў выпадку ўзнікнення багаў.',
-    'Sélectionnez le moteur de simulation de graphe. Modifiez en cas de bugs.',
+    'Switch the graph simulation engine if you encounter bugs',
+    'Смените движок симуляции графа, если возникают баги',
+    'Змініть двигун симуляції графа, якщо виникають баги',
+    'Змяніце рухавік сімуляцыі графа, калі ўзнікаюць памылкі',
+    'Changez le moteur de simulation de graphe si vous rencontrez des bugs',
 );
 
 const OriginalLocale = new I18nText(

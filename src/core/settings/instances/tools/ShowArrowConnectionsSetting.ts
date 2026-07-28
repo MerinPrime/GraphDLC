@@ -3,7 +3,7 @@ import { BoolSetting } from '../../types/BoolSetting';
 import { ToolsSettingGroup } from './ToolsGroup';
 
 const NameLocale = new I18nText(
-    'Show arrow connections',
+    'Show Arrow Connections',
     'Показывать связи стрелочек',
     'Показувати зв’язки стрілочок',
     'Паказваць сувязі стрэлачак',

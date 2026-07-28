@@ -11,11 +11,11 @@ const NameLocale = new I18nText(
 );
 
 const DescriptionLocale = new I18nText(
-    'Time limit per frame for asynchronous cycle finding. Set to 0 to enable synchronous mode.',
-    'Лимит времени на кадр для асинхронного поиска циклов. Установите 0 для включения синхронного режима.',
-    'Ліміт часу на кадр для асинхронного пошуку циклів. Встановіть 0 для увімкнення синхронного режиму.',
-    'Ліміт часу на кадр для асінхроннага пошуку циклаў. Усталюйце 0 для ўключэння сінхроннага рэжыму.',
-    'Limite de temps par image pour la recherche de cycles asynchrone. Définissez sur 0 pour activer le mode synchrone.',
+    'Time limit per frame for asynchronous cycle finding\nSet to 0 to enable synchronous mode',
+    'Лимит времени на кадр для асинхронного поиска циклов\nУстановите 0 для включения синхронного режима',
+    'Ліміт часу на кадр для асинхронного пошуку циклів\nВстановіть 0 для увімкнення синхронного режиму',
+    'Ліміт часу на кадр для асінхроннага пошуку циклаў\nУсталюйце 0 для ўключэння сінхроннага рэжыму',
+    'Limite de temps par image pour la recherche de cycles asynchrone\nDéfinissez sur 0 pour activer le mode synchrone',
 );
 
 const SyncLocale = new I18nText(
