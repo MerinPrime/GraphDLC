@@ -19,7 +19,7 @@ const settings: BaseSetting<any>[] = [
     TargetFPSSetting,
     EnableSnapshotsSetting,
     // CycleBudgetSetting,
-    // TPSOverloadSetting,
+    TPSOverloadSetting,
 
     // Tools
     EnableArrowRelationsSetting,
@@ -37,7 +37,7 @@ const settings: BaseSetting<any>[] = [
 if (__DEBUG__) {
     settings.push(CycleBudgetSetting);
     settings.push(GraphDLCDesignSetting);
-    settings.push(TPSOverloadSetting);
+    // settings.push(TPSOverloadSetting);
 }
 
 export const SettingsRegistry = settings.reduce<
