@@ -29,4 +29,3 @@ export const EnableSnapshotsSetting = new BoolSetting(
         order: 2,
     },
 );
-// TODO: add interval setting

@@ -17,7 +17,8 @@ export class CycleManager implements IGraphListener {
     private static readonly removalVisited = new Set<GraphNode>();
 
     private readonly scheduler = new AsyncScheduler(
-        () => CycleBudgetSetting.value,
+        // () => CycleBudgetSetting.value,
+        () => 16,
     );
 
     public resetHead(head: GraphNode) {

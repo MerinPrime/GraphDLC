@@ -22,9 +22,11 @@ export const PatchPlayerUI: IPatcher = (
 
     patchLoader.addDefinitionPatch('PlayerUI', (_module: typeof PlayerUI) => {
         return class PlayerUI extends _module {
+            public startTickFrom: number = 0;
+
             public addSpeedController() {
                 const hasPause = PLATFORM === 'mobile';
-                this.speedController = new _UISpeedController.def(
+                this.speedController = new _UISpeedController.val(
                     document.body,
                     10,
                     hasPause,
@@ -57,13 +59,34 @@ export const PatchPlayerUI: IPatcher = (
                 );
             }
 
+            public addFpsDisplay(): void {
+                const _this = this as any as PrivatePlayerUI;
+                super.addFpsDisplay();
+                _this.fpsDisplay?.addEventListener('click', () => {
+                    const targetStartOffset =
+                        _this.game?.gameMap.graph.engine.getTick() ?? 0;
+
+                    if (this.startTickFrom === targetStartOffset) {
+                        this.startTickFrom = 0;
+                    } else {
+                        this.startTickFrom = targetStartOffset;
+                    }
+                    this.updateFpsDisplay();
+                });
+            }
+
             public updateFpsDisplay(): void {
                 const _this = this as any as PrivatePlayerUI;
                 if (_this.fpsDisplay === null || _this.game === null) return;
                 const fps = _this.game.getFPS();
                 const tps = _this.game.getTPS();
                 const tick = _this.game.gameMap.graph.engine.getTick();
-                _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: ${tick}`;
+                const tickCounter = tick - this.startTickFrom;
+                if (tickCounter < 0 || this.startTickFrom === 0) {
+                    _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: ${tick}`;
+                } else {
+                    _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: +${tickCounter}`;
+                }
             }
         };
     });

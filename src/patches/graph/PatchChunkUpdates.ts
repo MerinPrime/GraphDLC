@@ -9,6 +9,8 @@ export const PatchChunkUpdates: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {
+    const playerUI = patchLoader.getInstance<PlayerUI>('PlayerUI');
+
     patchLoader.addDefinitionPatch(
         'ChunkUpdates',
         (_module: typeof ChunkUpdates) => {
@@ -21,9 +23,8 @@ export const PatchChunkUpdates: IPatcher = (
                 } else {
                     oldUpdate(gameMap);
                 }
-                patchLoader
-                    .getInstance<PlayerUI>('PlayerUI')
-                    ?.updateFpsDisplay();
+
+                playerUI.val?.updateFpsDisplay();
             };
 
             const oldClearSignals = _module.clearSignals;
@@ -35,9 +36,8 @@ export const PatchChunkUpdates: IPatcher = (
                 } else {
                     oldClearSignals(gameMap);
                 }
-                patchLoader
-                    .getInstance<PlayerUI>('PlayerUI')
-                    ?.updateFpsDisplay();
+
+                playerUI.val?.updateFpsDisplay();
             };
         },
     );

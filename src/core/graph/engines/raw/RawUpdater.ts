@@ -22,24 +22,24 @@ export class RawGraphUpdater {
                         detectedState.signal !== NodeSignal.NONE ? 1 : 0;
                 }
             }
-        } else {
-            for (const prev of node.backLinks) {
-                const prevState = state.getNode(prev.nodeIdx);
-                if (!prevState) continue;
+        }
 
-                const isBypassedHead =
-                    prev.headType !== CycleHeadType.NONE &&
-                    prev.headType !== CycleHeadType.READ;
+        for (const prev of node.backLinks) {
+            const prevState = state.getNode(prev.nodeIdx);
+            if (!prevState) continue;
 
-                if (isBypassedHead) continue;
+            const isBypassedHead =
+                prev.headType !== CycleHeadType.NONE &&
+                prev.headType !== CycleHeadType.READ;
 
-                if (prevState.lastSignal === NodeSignal.ACTIVE) {
-                    const isBlocker = prev.type === NodeType.BLOCKER;
-                    if (isBlocker) {
-                        blockedCount++;
-                    } else {
-                        signalsCount++;
-                    }
+            if (isBypassedHead) continue;
+
+            if (prevState.lastSignal === NodeSignal.ACTIVE) {
+                const isBlocker = prev.type === NodeType.BLOCKER;
+                if (isBlocker) {
+                    blockedCount++;
+                } else if (!isDetector) {
+                    signalsCount++;
                 }
             }
         }

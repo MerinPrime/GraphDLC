@@ -1,37 +1,38 @@
-import { LangSettings } from '@logic-arrows/lang/lang-settings';
-import { LangUtils } from '@logic-arrows/lang/lang-utils';
 import { UpdateManager } from './core/credentials/UpdateManager';
-import { GraphDLC } from './core/GraphDLC';
-import { PatchLoader } from './core/PatchLoader';
-import { InjectGraphDLCv2 } from './graphdlcv2';
+import { STORAGE_KEYS } from './core/StorageKeys';
+import { DesignManager } from './redesign/DesignManager';
+import { InjectGraphDLCv2 } from './versions/graphdlcv2';
+import { InjectGraphDLCv3 } from './versions/graphdlcv3';
 
-const selectedBundle = localStorage.getItem('arrows:selectedBundleId');
-const selectedVersion = selectedBundle ?? '1_4';
-if (selectedBundle === null)
-    localStorage.setItem('arrows:selectedBundleId', '1_4');
+const versions = {
+    '1_2_1': InjectGraphDLCv2,
+    '1_4': InjectGraphDLCv3,
+} as const;
 
-if (selectedVersion === '1_2_1') {
-    localStorage.removeItem('graphdlc:unsupported');
+function handleUnsupportedVersion() {
+    new DesignManager().setup(true);
+    new UpdateManager().setup();
 
-    InjectGraphDLCv2();
-} else if (selectedVersion === '1_4') {
-    const lang: string | null = localStorage.getItem('lang');
-    if (lang !== null) {
-        LangSettings.setLanguage(LangUtils.getLanguageFromString(lang));
+    if (localStorage.getItem(STORAGE_KEYS.Unsupported) === '1') return;
+    localStorage.setItem(STORAGE_KEYS.Unsupported, '1');
+
+    alert('GraphDLC: Неподдерживаемая версия игры. Мод временно отключен.');
+}
+
+const selectedVersion = localStorage.getItem(STORAGE_KEYS.Bundle) ?? '1_4';
+
+localStorage.setItem(STORAGE_KEYS.Bundle, selectedVersion);
+
+const injector = versions[selectedVersion as keyof typeof versions];
+
+if (injector) {
+    try {
+        localStorage.removeItem(STORAGE_KEYS.Unsupported);
+        injector();
+    } catch (error) {
+        console.error(error);
+        handleUnsupportedVersion();
     }
-    localStorage.removeItem('graphdlc:unsupported');
-
-    const patchLoader = new PatchLoader();
-    patchLoader.hook();
-    const graphDLC = new GraphDLC(patchLoader);
-    graphDLC.setup();
-
-    window.graphdlc = graphDLC;
-} else if (localStorage.getItem('graphdlc:unsupported') !== '1') {
-    localStorage.setItem('graphdlc:unsupported', '1');
-    const updateManager = new UpdateManager();
-    updateManager.setup();
-    alert(
-        'GraphDLC: Неподдерживаемая версия игры. Мод временно отключен. Ожидайте обновление!',
-    );
+} else {
+    handleUnsupportedVersion();
 }

@@ -43,11 +43,7 @@ export const PatchSpeedController: IPatcher = (
 
             public elementClick(e: MouseEvent): void {
                 // WARN: _module marked as any for elementClick patching
-                if (
-                    e.target === this.customTPSField?.element ||
-                    e.target === this.customTPSField?.field
-                )
-                    return;
+                if (e.target === this.customTPSField?.field) return;
                 super.elementClick(e);
             }
         };

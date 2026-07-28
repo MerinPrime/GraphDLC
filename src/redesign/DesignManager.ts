@@ -5,6 +5,7 @@ import type { BoolSetting } from 'src/core/settings/types/BoolSetting';
 import darkStyle from 'src/redesign/dark/index.scss?raw';
 import graphDLCStyle from 'src/redesign/default/index.scss?raw';
 import qolStyle from 'src/redesign/qol/index.scss?raw';
+import updateStyle from 'src/redesign/update/index.scss?raw';
 
 interface DesignSetting {
     setting: BoolSetting;
@@ -27,56 +28,61 @@ export class DesignManager {
         },
     ];
 
-    public setup() {
-        this.designSettings.forEach(this.applySetting);
+    public setup(fallback: boolean = false) {
+        this.waitForElement('documentElement', () => {
+            if (!fallback) {
+                this.designSettings.forEach(this.applySetting.bind(this));
 
-        DarkThemeSetting.onChange.add(() => {
-            window.location.reload();
-        });
-
-        const syncSrcToCustomProperty = (img: HTMLImageElement) => {
-            if (img.src) {
-                img.style.setProperty('--icon-url', `url('${img.src}')`);
+                DarkThemeSetting.onChange.add(() => {
+                    window.location.reload();
+                });
             }
-        };
+            this.applyStyle(updateStyle);
 
-        const processNewNodes = (nodes: NodeList) => {
-            nodes.forEach((node) => {
-                if (node instanceof HTMLImageElement) {
-                    syncSrcToCustomProperty(node);
-                } else if (node instanceof Element) {
-                    node.querySelectorAll('img').forEach(
-                        syncSrcToCustomProperty,
-                    );
+            const syncSrcToCustomProperty = (img: HTMLImageElement) => {
+                if (img.src) {
+                    img.style.setProperty('--icon-url', `url('${img.src}')`);
+                }
+            };
+
+            const processNewNodes = (nodes: NodeList) => {
+                nodes.forEach((node) => {
+                    if (node instanceof HTMLImageElement) {
+                        syncSrcToCustomProperty(node);
+                    } else if (node instanceof Element) {
+                        node.querySelectorAll('img').forEach(
+                            syncSrcToCustomProperty,
+                        );
+                    }
+                });
+            };
+
+            document.querySelectorAll('img').forEach(syncSrcToCustomProperty);
+
+            const observer = new MutationObserver((mutationsList) => {
+                for (const mutation of mutationsList) {
+                    if (
+                        mutation.type === 'attributes' &&
+                        mutation.attributeName === 'src'
+                    ) {
+                        if (mutation.target instanceof HTMLImageElement) {
+                            syncSrcToCustomProperty(mutation.target);
+                        }
+                    } else if (
+                        mutation.type === 'childList' &&
+                        mutation.addedNodes.length > 0
+                    ) {
+                        processNewNodes(mutation.addedNodes);
+                    }
                 }
             });
-        };
 
-        document.querySelectorAll('img').forEach(syncSrcToCustomProperty);
-
-        const observer = new MutationObserver((mutationsList) => {
-            for (const mutation of mutationsList) {
-                if (
-                    mutation.type === 'attributes' &&
-                    mutation.attributeName === 'src'
-                ) {
-                    if (mutation.target instanceof HTMLImageElement) {
-                        syncSrcToCustomProperty(mutation.target);
-                    }
-                } else if (
-                    mutation.type === 'childList' &&
-                    mutation.addedNodes.length > 0
-                ) {
-                    processNewNodes(mutation.addedNodes);
-                }
-            }
-        });
-
-        observer.observe(document.documentElement, {
-            attributes: true,
-            childList: true,
-            subtree: true,
-            attributeFilter: ['src'],
+            observer.observe(document.documentElement, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+                attributeFilter: ['src'],
+            });
         });
     }
 
@@ -85,23 +91,9 @@ export class DesignManager {
         styleElement.textContent = style;
 
         const appendToHead = () => {
-            if (document.head) {
+            this.waitForElement('head', () => {
                 document.head.appendChild(styleElement);
-                return true;
-            }
-
-            const observer = new MutationObserver(() => {
-                if (document.head) {
-                    document.head.appendChild(styleElement);
-                    observer.disconnect();
-                }
             });
-
-            observer.observe(document.documentElement, {
-                childList: true,
-                subtree: true,
-            });
-            return false;
         };
 
         if (setting.value) {
@@ -115,5 +107,32 @@ export class DesignManager {
                 styleElement.remove();
             }
         });
+    }
+
+    private applyStyle(style: string) {
+        this.waitForElement('head', () => {
+            const styleElement = document.createElement('style');
+            styleElement.textContent = style;
+            document.head.appendChild(styleElement);
+        });
+    }
+
+    private waitForElement(
+        selector: 'documentElement' | 'head',
+        callback: () => void,
+    ) {
+        if (document[selector]) {
+            callback();
+            return;
+        }
+
+        const observer = new MutationObserver((_, obs) => {
+            if (document[selector]) {
+                obs.disconnect();
+                callback();
+            }
+        });
+
+        observer.observe(document, { childList: true, subtree: true });
     }
 }

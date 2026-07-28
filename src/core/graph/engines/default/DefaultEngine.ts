@@ -34,7 +34,7 @@ export class DefaultEngine implements IEngine {
         public readonly gameMap: GameMap,
     ) {
         this.chunkUpdates =
-            window.graphdlc.patchLoader.getDefinition('ChunkUpdates').def;
+            window.graphdlc.patchLoader.getDefinition('ChunkUpdates').val;
         this.useBreakPoints = EnableBreakpointSetting.value;
         EnableBreakpointSetting.onChange.add((newValue) => {
             this.useBreakPoints = newValue;

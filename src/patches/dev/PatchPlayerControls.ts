@@ -61,7 +61,7 @@ export const PatchPlayerControls: IPatcher = (
     patchLoader.addDefinitionPatch(
         'PlayerControls',
         (_module: typeof PlayerControls) => {
-            return class PlayerControls extends _module {
+            class PatchedPlayerControls extends _module {
                 private pathData: PathData | null = null;
 
                 public constructor(
@@ -216,10 +216,10 @@ export const PatchPlayerControls: IPatcher = (
                             const gameMap = _this.game.gameMap;
                             this.pathData.path.forEach(
                                 ({ x, y, type, rotation, flipped }) => {
-                                    const arrowOld = _ArrowData.def.fromArrow(
+                                    const arrowOld = _ArrowData.val.fromArrow(
                                         gameMap.getArrow(x, y),
                                     );
-                                    const arrowNew = _ArrowData.def.fromState(
+                                    const arrowNew = _ArrowData.val.fromState(
                                         type,
                                         rotation,
                                         flipped,
@@ -249,6 +249,14 @@ export const PatchPlayerControls: IPatcher = (
                         this.pathData = null;
                         _this.game.path = null;
                     }
+                }
+            }
+
+            return class PatchedPrivatePlayerControls extends (PatchedPlayerControls as any) {
+                public clearSignals() {
+                    super.clearSignals();
+                    const _this = this as any as PrivatePlayerControls;
+                    _this.playerUI.startTickFrom = 0;
                 }
             };
         },

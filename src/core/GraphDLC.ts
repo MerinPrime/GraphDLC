@@ -1,3 +1,4 @@
+import { PatchLangSettings } from 'src/patches/core/PatchLangSettings';
 import { PatchPlayerArrowActions } from 'src/patches/dev/PatchPlayerArrowActions';
 import { PatchPlayerControls } from 'src/patches/dev/PatchPlayerControls';
 import { PatchPlayerUI } from 'src/patches/dev/PatchPlayerUI';
@@ -63,6 +64,7 @@ export class GraphDLC {
             PatchBackend,
             PatchPlayerArrowActions,
             PatchSpeedController,
+            PatchLangSettings,
         ]);
     }
 }

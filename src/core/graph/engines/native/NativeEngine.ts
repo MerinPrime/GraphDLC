@@ -250,7 +250,11 @@ export class NativeEngine implements IEngine {
         this.exports.ensure_node_capacity_export(nodeIdx + 1);
 
         const links = node.links
-            .filter((linkedNode) => linkedNode.type !== NodeType.DETECTOR)
+            .filter(
+                (linkedNode) =>
+                    linkedNode.type !== NodeType.DETECTOR ||
+                    node.type === NodeType.BLOCKER,
+            )
             .map((linkedNode) => linkedNode.nodeIdx);
 
         const detectors = node.links

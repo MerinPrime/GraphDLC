@@ -511,26 +511,26 @@ impl GraphState {
                     0
                 };
             }
-        } else {
-            let back_links = &self.back_links[node_idx as usize];
+        }
 
-            for &back_idx in back_links {
-                let back_node = &self.nodes[back_idx as usize];
-                let is_bypassed_head = back_node.head_type() != CYCLE_HEAD_TYPE_NONE
-                    && back_node.head_type() != CYCLE_HEAD_TYPE_READ;
+        let back_links = &self.back_links[node_idx as usize];
 
-                if is_bypassed_head {
-                    continue;
-                }
+        for &back_idx in back_links {
+            let back_node = &self.nodes[back_idx as usize];
+            let is_bypassed_head = back_node.head_type() != CYCLE_HEAD_TYPE_NONE
+                && back_node.head_type() != CYCLE_HEAD_TYPE_READ;
 
-                let back_last_signal = back_node.last_signal;
-                if back_last_signal == NODE_SIGNAL_ACTIVE {
-                    let is_blocker = back_node.type_id() == NODE_TYPE_BLOCKER;
-                    if is_blocker {
-                        blocked_count += 1;
-                    } else {
-                        signals_count += 1;
-                    }
+            if is_bypassed_head {
+                continue;
+            }
+
+            let back_last_signal = back_node.last_signal;
+            if back_last_signal == NODE_SIGNAL_ACTIVE {
+                let is_blocker = back_node.type_id() == NODE_TYPE_BLOCKER;
+                if is_blocker {
+                    blocked_count += 1;
+                } else if !is_detector {
+                    signals_count += 1;
                 }
             }
         }

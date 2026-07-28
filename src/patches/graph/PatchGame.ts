@@ -45,6 +45,8 @@ export const PatchGame: IPatcher = (
 
     let adaptiveBatchSize = 100;
 
+    const uiPauseSign = patchLoader.getInstance<UIPauseSign>('UIPauseSign');
+
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public path: PathStep[] | null = null;
@@ -136,6 +138,7 @@ export const PatchGame: IPatcher = (
                 astNode.backLinks.forEach((previousNode) => {
                     if (
                         astNode.type === NodeType.DETECTOR &&
+                        previousNode.type !== NodeType.BLOCKER &&
                         astNode.detectedLink !== previousNode
                     )
                         return;
@@ -457,7 +460,7 @@ export const PatchGame: IPatcher = (
                         }
 
                         accumulator = 0;
-                    } else if (TPSOverloadSetting.value) {
+                    } else if (TPSOverloadSetting.value || isCustomTPS) {
                         const targetTPS = isCustomTPS
                             ? this.customTPS
                             : tickSpeed;
@@ -496,7 +499,7 @@ export const PatchGame: IPatcher = (
                             );
                             _this.tick += perUpdateTicks;
                             _this.updatesPerSecond += perUpdateTicks;
-                            accumulator -= perUpdateTicks;
+                            accumulator -= skip;
                         }
                     }
                     const breakMode = EnableBreakpointSetting.value;
@@ -505,9 +508,7 @@ export const PatchGame: IPatcher = (
                             this.gameMap.graph.engine.resetBreakpoint();
                         if (breakpointIdx !== false) {
                             this.playing = false;
-                            patchLoader
-                                .getInstance<UIPauseSign>('UIPauseSign')
-                                ?.setVisibility(true);
+                            uiPauseSign.val?.setVisibility(true);
                             if (breakMode === BreakpointMode.ON_ZOOM) {
                                 const breakpointNode =
                                     this.gameMap.graph.getNode(breakpointIdx);

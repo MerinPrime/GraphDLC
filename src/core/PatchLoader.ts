@@ -1,10 +1,10 @@
-export interface DefinitionPtr<T> {
-    def: T;
+export interface ObjectPtr<T> {
+    val: T;
 }
 
 export class PatchLoader {
-    private definitions: Map<string, DefinitionPtr<any>>;
-    private instances: Map<string, any>;
+    private definitions: Map<string, ObjectPtr<any>>;
+    private instances: Map<string, ObjectPtr<any>>;
     private patches: Array<
         (name: string, definition: any) => boolean | Function
     >;
@@ -106,32 +106,44 @@ export class PatchLoader {
         return currentDefinition;
     }
 
-    public getDefinition<T = any>(name: string): DefinitionPtr<T> {
+    public getDefinition<T = any>(name: string): ObjectPtr<T> {
         if (!this.hasDefinition(name)) {
-            this.definitions.set(name, { def: null });
+            this.definitions.set(name, { val: null });
         }
-        return this.definitions.get(name) as DefinitionPtr<T>;
+        return this.definitions.get(name) as ObjectPtr<T>;
     }
 
     public setDefinition<T = any>(name: string, value: T) {
         const definition = this.definitions.get(name);
         if (!definition) {
-            this.definitions.set(name, { def: value });
+            this.definitions.set(name, { val: value });
             return;
         }
-        definition.def = value;
+        definition.val = value;
     }
 
     public hasDefinition(name: string): boolean {
         return this.definitions.has(name);
     }
 
-    public getInstance<T = any>(name: string): T | undefined {
-        return this.instances.get(name) as T | undefined;
+    public getInstance<T = any>(name: string): ObjectPtr<T | null> {
+        if (!this.hasInstance(name)) {
+            this.instances.set(name, { val: null });
+        }
+        return this.instances.get(name) as ObjectPtr<T | null>;
     }
 
-    public setInstance(name: string, instance: any): void {
-        this.instances.set(name, instance);
+    public setInstance(name: string, value: any): void {
+        const instance = this.instances.get(name);
+        if (!instance) {
+            this.instances.set(name, { val: value });
+            return;
+        }
+        instance.val = value;
+    }
+
+    public hasInstance(name: string): boolean {
+        return this.instances.has(name);
     }
 
     public addManualPatch(
