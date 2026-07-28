@@ -460,7 +460,7 @@ export const PatchGame: IPatcher = (
                         }
 
                         accumulator = 0;
-                    } else if (TPSOverloadSetting.value) {
+                    } else if (TPSOverloadSetting.value || isCustomTPS) {
                         const targetTPS = isCustomTPS
                             ? this.customTPS
                             : tickSpeed;
