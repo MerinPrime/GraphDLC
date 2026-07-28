@@ -61,7 +61,7 @@ export const PatchPlayerControls: IPatcher = (
     patchLoader.addDefinitionPatch(
         'PlayerControls',
         (_module: typeof PlayerControls) => {
-            return class PlayerControls extends _module {
+            class PatchedPlayerControls extends _module {
                 private pathData: PathData | null = null;
 
                 public constructor(
@@ -249,6 +249,14 @@ export const PatchPlayerControls: IPatcher = (
                         this.pathData = null;
                         _this.game.path = null;
                     }
+                }
+            }
+
+            return class PatchedPrivatePlayerControls extends (PatchedPlayerControls as any) {
+                public clearSignals() {
+                    super.clearSignals();
+                    const _this = this as any as PrivatePlayerControls;
+                    _this.playerUI.startTickFrom = 0;
                 }
             };
         },

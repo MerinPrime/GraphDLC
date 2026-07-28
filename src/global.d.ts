@@ -79,6 +79,12 @@ declare module '@logic-arrows/player/player-arrow-actions' {
 
 declare module '@logic-arrows/ui/components/ui-speed-controller' {
     export interface UISpeedController {
-        public customTPSField: CustomTPSComponent | null = null;
+        customTPSField: CustomTPSComponent | null;
+    }
+}
+
+declare module '@logic-arrows/player/player-ui' {
+    export interface PlayerUI {
+        startTickFrom: number;
     }
 }
