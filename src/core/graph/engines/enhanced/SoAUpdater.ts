@@ -44,7 +44,7 @@ export class SoAGraphUpdater {
             ] as NodeSignal;
 
             if (backLastSignal === NodeSignal.ACTIVE) {
-                if (back.type === NodeType.BLOCKER) {
+                if (back.type === NodeType.BLOCKER && back.blockedLink === node) {
                     blockedCount++;
                 } else if (!isDetector) {
                     signalsCount++;
@@ -159,26 +159,67 @@ export class SoAGraphUpdater {
                     if (linksCount !== 0) {
                         const linksOffset = nodeIdx * SoALayout.Links.STRIDE;
                         const isBlocker = type === NodeType.BLOCKER;
-                        const targetOffsetField = isBlocker
-                            ? SoALayout.Node.BLOCKED_COUNT
-                            : SoALayout.Node.SIGNALS_COUNT;
 
                         const linksEnd = linksOffset + linksCount;
-                        for (let j = linksOffset; j < linksEnd; j++) {
-                            const edgeIdx = linkIndices[j];
-                            const edgeOffset = edgeIdx * SoALayout.Node.STRIDE;
+                        if (isBlocker) {
+                            const extra32Offset =
+                                nodeIdx * SoALayout.Extra32Node.STRIDE;
+                            const blockedLinkIdx =
+                                extra32NodeData[
+                                    extra32Offset +
+                                        SoALayout.Extra32Node.BLOCKED_LINK_IDX
+                                ];
+                            for (let j = linksOffset; j < linksEnd; j++) {
+                                const edgeIdx = linkIndices[j];
+                                const edgeOffset =
+                                    edgeIdx * SoALayout.Node.STRIDE;
+                                const targetOffsetField =
+                                    edgeIdx === blockedLinkIdx
+                                        ? SoALayout.Node.BLOCKED_COUNT
+                                        : SoALayout.Node.SIGNALS_COUNT;
 
-                            nodeData[edgeOffset + targetOffsetField] += delta;
+                                nodeData[edgeOffset + targetOffsetField] +=
+                                    delta;
 
-                            const edgeFlags =
-                                nodeData[edgeOffset + SoALayout.Node.FLAGS];
-                            if (
-                                (edgeFlags & SoALayout.Node.Flags.IsChanged) ===
-                                0
-                            ) {
-                                nodeData[edgeOffset + SoALayout.Node.FLAGS] =
-                                    edgeFlags | SoALayout.Node.Flags.IsChanged;
-                                tempChangedNodes.add(edgeIdx);
+                                const edgeFlags =
+                                    nodeData[edgeOffset + SoALayout.Node.FLAGS];
+                                if (
+                                    (edgeFlags &
+                                        SoALayout.Node.Flags.IsChanged) ===
+                                    0
+                                ) {
+                                    nodeData[
+                                        edgeOffset + SoALayout.Node.FLAGS
+                                    ] =
+                                        edgeFlags |
+                                        SoALayout.Node.Flags.IsChanged;
+                                    tempChangedNodes.add(edgeIdx);
+                                }
+                            }
+                        } else {
+                            for (let j = linksOffset; j < linksEnd; j++) {
+                                const edgeIdx = linkIndices[j];
+                                const edgeOffset =
+                                    edgeIdx * SoALayout.Node.STRIDE;
+
+                                nodeData[
+                                    edgeOffset + SoALayout.Node.SIGNALS_COUNT
+                                ] += delta;
+
+                                const edgeFlags =
+                                    nodeData[edgeOffset + SoALayout.Node.FLAGS];
+                                if (
+                                    (edgeFlags &
+                                        SoALayout.Node.Flags.IsChanged) ===
+                                    0
+                                ) {
+                                    nodeData[
+                                        edgeOffset + SoALayout.Node.FLAGS
+                                    ] =
+                                        edgeFlags |
+                                        SoALayout.Node.Flags.IsChanged;
+                                    tempChangedNodes.add(edgeIdx);
+                                }
                             }
                         }
                     }

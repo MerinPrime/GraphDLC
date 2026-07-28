@@ -33,7 +33,7 @@ export namespace SoALayout {
         export const CHUNK_IDX = 0;
         export const CYCLE_IDX = 1;
         export const CYCLE_OFFSET = 2;
-        export const _PADDING_4 = 3;
+        export const BLOCKED_LINK_IDX = 3;
 
         export const STRIDE = 4;
     }

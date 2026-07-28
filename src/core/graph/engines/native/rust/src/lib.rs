@@ -48,6 +48,7 @@ pub extern "C" fn update_node_state(
     links_count: u32,
     detectors_count: u32,
     detected_link: i32,
+    blocked_link: i32,
     reset_signal: i32,
 ) {
     let state = get_state();
@@ -108,6 +109,12 @@ pub extern "C" fn update_node_state(
         Some(detected_link as u32)
     } else {
         None
+    };
+
+    node.blocked_link = if blocked_link >= 0 {
+        blocked_link as u32
+    } else {
+        u32::MAX
     };
 
     node.links = links;

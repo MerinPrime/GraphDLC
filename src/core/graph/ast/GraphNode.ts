@@ -20,6 +20,7 @@ export class GraphNode {
     public links: GraphNode[] = [];
     public backLinks: GraphNode[] = [];
     public detectedLink: GraphNode | null = null;
+    public blockedLink: GraphNode | null = null;
 
     public isBreakpoint: boolean = false;
 

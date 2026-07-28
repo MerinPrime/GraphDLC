@@ -71,6 +71,7 @@ impl GraphState {
                 chunk_idx: 0,
                 cycle_idx: 0,
                 cycle_offset: 0,
+                blocked_link: u32::MAX,
 
                 links: [0u32; 4],
                 detectors: [0u32; 4],
@@ -269,27 +270,34 @@ impl GraphState {
                     let links_count = node.links_count as usize;
 
                     let is_blocker = node_type == NODE_TYPE_BLOCKER;
-                    if is_blocker && links_count == 1 {
-                        let edge_idx = links[0] as usize;
-                        let edge = unsafe { &mut *nodes_ptr.add(edge_idx as usize) };
-                        edge.blocked_count = edge.blocked_count.wrapping_add(delta);
-                        unsafe {
-                            GraphState::mark_node_as_changed_fast(
-                                nodes_ptr,
-                                &mut self.temp_changed_nodes,
-                                edge_idx as usize,
-                            );
+                    if is_blocker {
+                        let blocked_link_idx = node.blocked_link;
+                        for i in 0..links_count {
+                            let edge_idx = links[i] as usize;
+                            let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
+                            if edge_idx as u32 == blocked_link_idx {
+                                edge.blocked_count = edge.blocked_count.wrapping_add(delta);
+                            } else {
+                                edge.signals_count = edge.signals_count.wrapping_add(delta);
+                            }
+                            unsafe {
+                                GraphState::mark_node_as_changed_fast(
+                                    nodes_ptr,
+                                    &mut self.temp_changed_nodes,
+                                    edge_idx,
+                                );
+                            }
                         }
                     } else {
                         for i in 0..links_count {
                             let edge_idx = links[i] as usize;
-                            let edge = unsafe { &mut *nodes_ptr.add(edge_idx as usize) };
+                            let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
                             edge.signals_count = edge.signals_count.wrapping_add(delta);
                             unsafe {
                                 GraphState::mark_node_as_changed_fast(
                                     nodes_ptr,
                                     &mut self.temp_changed_nodes,
-                                    edge_idx as usize,
+                                    edge_idx,
                                 );
                             }
                         }
@@ -527,7 +535,7 @@ impl GraphState {
             let back_last_signal = back_node.last_signal;
             if back_last_signal == NODE_SIGNAL_ACTIVE {
                 let is_blocker = back_node.type_id() == NODE_TYPE_BLOCKER;
-                if is_blocker {
+                if is_blocker && back_node.blocked_link == node_idx {
                     blocked_count += 1;
                 } else if !is_detector {
                     signals_count += 1;

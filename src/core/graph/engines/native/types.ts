@@ -15,6 +15,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
         links_count: number,
         detectors_count: number,
         detected_link: number,
+        blocked_link: number,
         reset_signal: number,
     ): void;
     ensure_node_capacity_export(count: number): void;

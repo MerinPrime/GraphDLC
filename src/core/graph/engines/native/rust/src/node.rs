@@ -12,6 +12,7 @@ pub struct Node {
     pub chunk_idx: u32,
     pub cycle_idx: u32,
     pub cycle_offset: u32,
+    pub blocked_link: u32,
 
     pub links: [u32; 4],
     pub detectors: [u32; 4],

@@ -300,6 +300,8 @@ export class NativeEngine implements IEngine {
             ? node.detectedLink.nodeIdx
             : -1;
 
+        const blockedLinkIdx = node.blockedLink ? node.blockedLink.nodeIdx : -1;
+
         this.exports.update_node_state(
             nodeIdx,
             node.type,
@@ -313,6 +315,7 @@ export class NativeEngine implements IEngine {
             links.length,
             detectors.length,
             detectedLinkIdx,
+            blockedLinkIdx,
             resetSignal ? 1 : 0,
         );
     }

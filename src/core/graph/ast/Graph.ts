@@ -180,6 +180,20 @@ export class Graph {
             detectorLink = this.getOrCreateNodeByCoords(backX, backY);
         }
 
+        let blockedLink: GraphNode | null = null;
+        if (node.type === NodeType.BLOCKER) {
+            const { x: backX, y: backY } = getRelativePosition(
+                node.globalX,
+                node.globalY,
+                node.rotation,
+                node.flipped,
+                -1,
+                0,
+            );
+            blockedLink = this.getOrCreateNodeByCoords(backX, backY);
+        }
+        node.blockedLink = blockedLink;
+
         if (node.detectedLink !== detectorLink) {
             if (node.detectedLink) {
                 this.removeNodeLink(node.detectedLink, node);
