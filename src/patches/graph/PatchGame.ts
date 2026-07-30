@@ -520,6 +520,8 @@ export const PatchGame: IPatcher = (
                             }
                         }
                     }
+                } else {
+                    accumulator = 0;
                 }
 
                 if (performance.now() - _this.updateTime > 1000) {
