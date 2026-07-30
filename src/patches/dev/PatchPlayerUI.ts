@@ -57,6 +57,8 @@ export const PatchPlayerUI: IPatcher = (
                         return '';
                     },
                 );
+                const _this = this as any as PrivatePlayerUI;
+                if (_this.game) _this.game.updateSpeedLevel = 1;
             }
 
             public addFpsDisplay(): void {
