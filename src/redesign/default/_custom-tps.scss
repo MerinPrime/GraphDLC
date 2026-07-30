@@ -1,17 +1,15 @@
 .custom-tps-input {
-  position: inherit;
-  left: 0;
   z-index: 2;
-  width: 19.5vmin;
+  width: 19.5vmin !important;
   height: 3.5vmin;
   border-radius: 1vmin;
   border: none;
   margin: 0;
-  position: absolute;
+  position: absolute !important;
   top: 0;
   font-size: 2vmin;
   padding: 0.25vmin;
-  font-family: 'Nunito', 'Trebuchet MS', 'Lucida Sans', Arial, serif;
+  font-family: "Nunito", "Trebuchet MS", "Lucida Sans", Arial, serif;
   left: 4vmin;
   background-color: var(--bg-surface) !important;
 
@@ -20,8 +18,8 @@
   }
 
   &.has-pause {
-    width: 17.5vmin;
-    left: 6vmin
+    width: 17.5vmin !important;
+    left: 6vmin !important;
   }
 
   -moz-appearance: textfield;
@@ -31,5 +29,19 @@
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+  }
+}
+
+body.platform-mobile {
+  @media (orientation: portrait) {
+    .custom-tps-input {
+      width: 20.5vw !important;
+      height: 5.5vw;
+      border-radius: 2vw;
+
+      &.has-pause {
+        left: 9vw !important;
+      }
+    }
   }
 }
