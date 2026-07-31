@@ -24,7 +24,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     run_tick(): void;
     run_many_ticks(count: number): void;
     get_tick(): number;
-    reset_breakpoint(): number;
+    get_breakpoint(do_reset: boolean): number;
     is_changed(): number;
     make_dirty_chunk_export(chunk_idx: number): void;
     make_undirty_chunk_export(chunk_idx: number): void;

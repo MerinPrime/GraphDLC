@@ -505,7 +505,7 @@ export const PatchGame: IPatcher = (
                     const breakMode = EnableBreakpointSetting.value;
                     if (breakMode !== BreakpointMode.OFF) {
                         const breakpointIdx =
-                            this.gameMap.graph.engine.resetBreakpoint();
+                            this.gameMap.graph.engine.getBreakpoint();
                         if (breakpointIdx !== false) {
                             this.playing = false;
                             uiPauseSign.val?.setVisibility(true);

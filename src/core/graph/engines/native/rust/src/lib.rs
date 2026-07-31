@@ -195,11 +195,11 @@ pub extern "C" fn get_tick() -> u32 {
 }
 
 #[no_mangle]
-pub extern "C" fn reset_breakpoint() -> i32 {
+pub extern "C" fn get_breakpoint(do_reset: bool) -> i32 {
     let state = get_state();
     let old = state.break_point;
-    state.break_point = false;
     if old {
+        state.break_point = !do_reset;
         state.break_point_node as i32
     } else {
         -1

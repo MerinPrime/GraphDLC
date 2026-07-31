@@ -172,9 +172,9 @@ export class DefaultEngine implements IEngine {
         return this.tick;
     }
 
-    public resetBreakpoint(): number | false {
+    public getBreakpoint(doReset: boolean = false): number | false {
         if (this.isBreakPoint) {
-            this.isBreakPoint = false;
+            this.isBreakPoint = !doReset;
             return this.breakPointNode;
         }
         return false;

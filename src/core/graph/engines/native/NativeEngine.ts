@@ -118,8 +118,8 @@ export class NativeEngine implements IEngine {
         return this.exports.get_tick();
     }
 
-    public resetBreakpoint(): number | false {
-        const breakPointNode = this.exports.reset_breakpoint();
+    public getBreakpoint(doReset: boolean = false): number | false {
+        const breakPointNode = this.exports.get_breakpoint(doReset);
         if (breakPointNode === -1) return false;
         return breakPointNode;
     }

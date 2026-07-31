@@ -107,9 +107,9 @@ export class SoAEngine implements IEngine {
         return this.state.tick;
     }
 
-    public resetBreakpoint(): number | false {
+    public getBreakpoint(doReset: boolean = false): number | false {
         if (this.state.breakPoint) {
-            this.state.breakPoint = false;
+            this.state.breakPoint = !doReset;
             return this.state.breakPointNode;
         }
         return false;

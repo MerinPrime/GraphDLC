@@ -13,7 +13,7 @@ export interface IEngine {
     rewindToTick(targetTick: number): void;
 
     getTick(): number;
-    resetBreakpoint(): number | false;
+    getBreakpoint(doReset?: boolean): number | false;
     isChanged(): boolean;
 
     getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]];
