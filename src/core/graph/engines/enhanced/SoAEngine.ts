@@ -1,5 +1,4 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -22,14 +21,7 @@ export class SoAEngine implements IEngine {
     private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
         new Map();
 
-    private saveSnapshots: boolean;
-
-    public constructor() {
-        this.saveSnapshots = EnableSnapshotsSetting.value;
-        EnableSnapshotsSetting.onChange.add((newValue) => {
-            this.saveSnapshots = newValue;
-        });
-    }
+    private saveSnapshots: boolean = false;
 
     public runTick(): void {
         if (this.saveSnapshots) {
@@ -223,6 +215,12 @@ export class SoAEngine implements IEngine {
 
         this.state.changedNodes.add(nodeIdx);
         this.state.makeDirtyChunk(chunkIdx);
+    }
+
+    public setBreakpointState(_: boolean): void {}
+
+    public setSnapshotsState(newState: boolean): void {
+        this.saveSnapshots = newState;
     }
 
     public clear(): void {

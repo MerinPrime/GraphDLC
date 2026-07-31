@@ -1,8 +1,6 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { ChunkUpdates } from '@logic-arrows/game-logic/chunk-updates';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
-import { EnableBreakpointSetting } from 'src/core/settings/instances/tools/EnableBreakpointSetting';
 import { ACTIVE_SIGNALS, ArrowSignal } from 'src/core/utils/ArrowSignal';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import type { GraphCycle } from '../../ast/CycleTypes';
@@ -35,14 +33,6 @@ export class DefaultEngine implements IEngine {
     ) {
         this.chunkUpdates =
             window.graphdlc.patchLoader.getDefinition('ChunkUpdates').val;
-        this.useBreakPoints = EnableBreakpointSetting.value;
-        EnableBreakpointSetting.onChange.add((newValue) => {
-            this.useBreakPoints = newValue;
-        });
-        this.saveSnapshots = EnableSnapshotsSetting.value;
-        EnableSnapshotsSetting.onChange.add((newValue) => {
-            this.saveSnapshots = newValue;
-        });
     }
 
     public makeSnapshot(): DefaultSnapshot {
@@ -111,7 +101,6 @@ export class DefaultEngine implements IEngine {
             });
         }
         this.breakPoints;
-        //@ts-expect-error
         this.chunkUpdates.oldUpdate(this.gameMap);
         this.tick += 1;
     }
@@ -219,7 +208,6 @@ export class DefaultEngine implements IEngine {
     }
 
     public reset(): void {
-        //@ts-expect-error
         this.chunkUpdates.oldClearSignals(this.gameMap);
         this.tick = 0;
     }
@@ -267,6 +255,14 @@ export class DefaultEngine implements IEngine {
         const chunk = this.graph.getChunkByIdx(node.chunkIdx);
         chunk.markRenderDirty();
         chunk.setUpdated();
+    }
+
+    public setBreakpointState(newState: boolean): void {
+        this.useBreakPoints = newState;
+    }
+
+    public setSnapshotsState(newState: boolean): void {
+        this.saveSnapshots = newState;
     }
 
     public clear(): void {
