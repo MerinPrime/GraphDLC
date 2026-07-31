@@ -192,7 +192,10 @@ export class Graph {
             );
             blockedLink = this.getOrCreateNodeByCoords(backX, backY);
         }
-        node.blockedLink = blockedLink;
+        if (node.blockedLink !== blockedLink) {
+            node.blockedLink = blockedLink;
+            this.engine.updateNodeState(node, false);
+        }
 
         if (node.detectedLink !== detectorLink) {
             if (node.detectedLink) {
