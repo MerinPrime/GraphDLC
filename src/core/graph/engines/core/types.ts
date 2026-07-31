@@ -8,8 +8,8 @@ export interface ISnapshot {
 }
 
 export interface IEngine {
-    runTick(): void;
-    runManyTicks(ticksCount: number): void;
+    runTick(): boolean;
+    runManyTicks(ticksCount: number): boolean;
     rewindToTick(targetTick: number): void;
 
     getTick(): number;

@@ -22,7 +22,7 @@ export class RawEngine implements IEngine {
 
     private saveSnapshots: boolean = false;
 
-    public runTick(): void {
+    public runTick(): boolean {
         if (this.saveSnapshots) {
             const curSignals = this.extraSignalsHistory.get(this.getTick());
             const signals = curSignals ?? new Map<number, NodeSignal>();
@@ -47,12 +47,15 @@ export class RawEngine implements IEngine {
             }
         }
         this.updater.updateState(this.state);
+        return this.state.breakPoint;
     }
 
-    public runManyTicks(ticksCount: number): void {
+    public runManyTicks(ticksCount: number): boolean {
         for (let i = 0; i < ticksCount; i++) {
-            this.runTick();
+            const breakPoint = this.runTick();
+            if (breakPoint) return breakPoint;
         }
+        return false;
     }
 
     private applyRecordedSignals(tick: number): void {

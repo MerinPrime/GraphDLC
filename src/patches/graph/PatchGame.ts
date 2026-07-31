@@ -396,6 +396,9 @@ export const PatchGame: IPatcher = (
                 const UPDATE_BUDGET = 1000 / 30;
 
                 if (this.gameMap.graph.engine.isChanged()) {
+                    const breakMode = EnableBreakpointSetting.value;
+                    const isBreakEnabled = breakMode !== BreakpointMode.OFF;
+                    const startTick = this.gameMap.graph.engine.getTick();
                     if (isMaxTPS) {
                         const frameBudget = 1000 / TargetFPSSetting.value;
 
@@ -408,8 +411,12 @@ export const PatchGame: IPatcher = (
                             browserOverhead;
 
                         let currentTime = performance.now();
+                        let breakPoint = false;
 
-                        while (currentTime < timeLimit - 0.5) {
+                        while (
+                            currentTime < timeLimit - 0.5 &&
+                            (!breakPoint || !isBreakEnabled)
+                        ) {
                             const remainingTime = timeLimit - currentTime;
 
                             const currentBatch = Math.max(
@@ -420,15 +427,14 @@ export const PatchGame: IPatcher = (
                             const startBatch = performance.now();
 
                             payload();
-                            this.gameMap.graph.engine.runManyTicks(
-                                currentBatch,
-                            );
+                            breakPoint =
+                                this.gameMap.graph.engine.runManyTicks(
+                                    currentBatch,
+                                );
 
                             const endBatch = performance.now();
                             const elapsed = endBatch - startBatch;
 
-                            _this.tick += currentBatch;
-                            _this.updatesPerSecond += currentBatch;
                             currentTime = endBatch;
 
                             if (elapsed > 0.5) {
@@ -474,38 +480,41 @@ export const PatchGame: IPatcher = (
                             const maxTickBatch =
                                 Math.round(targetTPS / 60 / 100) + 1;
                             const startTime = performance.now();
+                            let breakPoint = false;
                             while (
                                 performance.now() - startTime < UPDATE_BUDGET &&
-                                runTicks > 0
+                                runTicks > 0 &&
+                                (!breakPoint || !isBreakEnabled)
                             ) {
                                 const tickBatch = Math.min(
                                     runTicks,
                                     maxTickBatch,
                                 );
-                                this.gameMap.graph.engine.runManyTicks(
-                                    tickBatch,
-                                );
-                                _this.tick += tickBatch;
-                                _this.updatesPerSecond += tickBatch;
+                                breakPoint =
+                                    this.gameMap.graph.engine.runManyTicks(
+                                        tickBatch,
+                                    );
                                 accumulator -= tickBatch * customSkipDelta;
                                 runTicks -= tickBatch;
                             }
                         }
                     } else {
-                        while (accumulator >= skip) {
+                        let breakPoint = false;
+                        while (
+                            accumulator >= skip &&
+                            (!breakPoint || !isBreakEnabled)
+                        ) {
                             payload();
-                            this.gameMap.graph.engine.runManyTicks(
-                                perUpdateTicks,
-                            );
-                            _this.tick += perUpdateTicks;
-                            _this.updatesPerSecond += perUpdateTicks;
+                            breakPoint =
+                                this.gameMap.graph.engine.runManyTicks(
+                                    perUpdateTicks,
+                                );
                             accumulator -= skip;
                         }
                     }
-                    const breakMode = EnableBreakpointSetting.value;
-                    if (breakMode !== BreakpointMode.OFF) {
+                    if (isBreakEnabled) {
                         const breakpointIdx =
-                            this.gameMap.graph.engine.getBreakpoint();
+                            this.gameMap.graph.engine.getBreakpoint(true);
                         if (breakpointIdx !== false) {
                             this.playing = false;
                             uiPauseSign.val?.setVisibility(true);
@@ -520,6 +529,10 @@ export const PatchGame: IPatcher = (
                             }
                         }
                     }
+                    const endTick = this.gameMap.graph.engine.getTick();
+                    const deltaTicks = endTick - startTick;
+                    _this.tick += deltaTicks;
+                    _this.updatesPerSecond += deltaTicks;
                 } else {
                     accumulator = 0;
                 }
