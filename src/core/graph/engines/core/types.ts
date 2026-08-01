@@ -8,12 +8,12 @@ export interface ISnapshot {
 }
 
 export interface IEngine {
-    runTick(): void;
-    runManyTicks(ticksCount: number): void;
+    runTick(): boolean;
+    runManyTicks(ticksCount: number): boolean;
     rewindToTick(targetTick: number): void;
 
     getTick(): number;
-    resetBreakpoint(): number | false;
+    getBreakpoint(doReset?: boolean): number | false;
     isChanged(): boolean;
 
     getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]];
@@ -35,6 +35,9 @@ export interface IEngine {
 
     doPressButton(nodeIdx: number, state: boolean): void;
     doArrowSignal(nodeIdx: number, state: boolean): void;
+
+    setBreakpointState(newState: boolean): void;
+    setSnapshotsState(newState: boolean): void;
 
     clear(): void;
 }

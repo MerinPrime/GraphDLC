@@ -1,8 +1,6 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { ChunkUpdates } from '@logic-arrows/game-logic/chunk-updates';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
-import { EnableBreakpointSetting } from 'src/core/settings/instances/tools/EnableBreakpointSetting';
 import { ACTIVE_SIGNALS, ArrowSignal } from 'src/core/utils/ArrowSignal';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import type { GraphCycle } from '../../ast/CycleTypes';
@@ -35,14 +33,6 @@ export class DefaultEngine implements IEngine {
     ) {
         this.chunkUpdates =
             window.graphdlc.patchLoader.getDefinition('ChunkUpdates').val;
-        this.useBreakPoints = EnableBreakpointSetting.value;
-        EnableBreakpointSetting.onChange.add((newValue) => {
-            this.useBreakPoints = newValue;
-        });
-        this.saveSnapshots = EnableSnapshotsSetting.value;
-        EnableSnapshotsSetting.onChange.add((newValue) => {
-            this.saveSnapshots = newValue;
-        });
     }
 
     public makeSnapshot(): DefaultSnapshot {
@@ -73,7 +63,7 @@ export class DefaultEngine implements IEngine {
         });
     }
 
-    public runTick(): void {
+    public runTick(): boolean {
         if (this.saveSnapshots) {
             const curSignals = this.extraSignalsHistory.get(this.getTick());
             const signals = curSignals ?? new Map<number, NodeSignal>();
@@ -98,6 +88,7 @@ export class DefaultEngine implements IEngine {
             }
         }
         this.runTickInternal();
+        return this.isBreakPoint;
     }
 
     private runTickInternal() {
@@ -111,15 +102,16 @@ export class DefaultEngine implements IEngine {
             });
         }
         this.breakPoints;
-        //@ts-expect-error
         this.chunkUpdates.oldUpdate(this.gameMap);
         this.tick += 1;
     }
 
-    public runManyTicks(ticksCount: number): void {
+    public runManyTicks(ticksCount: number): boolean {
         for (let i = 0; i < ticksCount; i++) {
-            this.runTick();
+            const breakPoint = this.runTick();
+            if (breakPoint) return breakPoint;
         }
+        return false;
     }
 
     private applyRecordedSignals(tick: number): void {
@@ -183,9 +175,9 @@ export class DefaultEngine implements IEngine {
         return this.tick;
     }
 
-    public resetBreakpoint(): number | false {
+    public getBreakpoint(doReset: boolean = false): number | false {
         if (this.isBreakPoint) {
-            this.isBreakPoint = false;
+            this.isBreakPoint = !doReset;
             return this.breakPointNode;
         }
         return false;
@@ -219,7 +211,6 @@ export class DefaultEngine implements IEngine {
     }
 
     public reset(): void {
-        //@ts-expect-error
         this.chunkUpdates.oldClearSignals(this.gameMap);
         this.tick = 0;
     }
@@ -267,6 +258,14 @@ export class DefaultEngine implements IEngine {
         const chunk = this.graph.getChunkByIdx(node.chunkIdx);
         chunk.markRenderDirty();
         chunk.setUpdated();
+    }
+
+    public setBreakpointState(newState: boolean): void {
+        this.useBreakPoints = newState;
+    }
+
+    public setSnapshotsState(newState: boolean): void {
+        this.saveSnapshots = newState;
     }
 
     public clear(): void {

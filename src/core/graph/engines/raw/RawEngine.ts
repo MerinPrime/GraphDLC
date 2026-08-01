@@ -1,5 +1,4 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -21,16 +20,9 @@ export class RawEngine implements IEngine {
     private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
         new Map();
 
-    private saveSnapshots: boolean;
+    private saveSnapshots: boolean = false;
 
-    public constructor() {
-        this.saveSnapshots = EnableSnapshotsSetting.value;
-        EnableSnapshotsSetting.onChange.add((newValue) => {
-            this.saveSnapshots = newValue;
-        });
-    }
-
-    public runTick(): void {
+    public runTick(): boolean {
         if (this.saveSnapshots) {
             const curSignals = this.extraSignalsHistory.get(this.getTick());
             const signals = curSignals ?? new Map<number, NodeSignal>();
@@ -55,12 +47,15 @@ export class RawEngine implements IEngine {
             }
         }
         this.updater.updateState(this.state);
+        return this.state.breakPoint;
     }
 
-    public runManyTicks(ticksCount: number): void {
+    public runManyTicks(ticksCount: number): boolean {
         for (let i = 0; i < ticksCount; i++) {
-            this.runTick();
+            const breakPoint = this.runTick();
+            if (breakPoint) return breakPoint;
         }
+        return false;
     }
 
     private applyRecordedSignals(tick: number): void {
@@ -117,9 +112,9 @@ export class RawEngine implements IEngine {
         return this.state.tick;
     }
 
-    public resetBreakpoint(): number | false {
+    public getBreakpoint(doReset: boolean = false): number | false {
         if (this.state.breakPoint) {
-            this.state.breakPoint = false;
+            this.state.breakPoint = !doReset;
             return this.state.breakPointNode;
         }
         return false;
@@ -210,6 +205,12 @@ export class RawEngine implements IEngine {
 
         this.state.changedNodes.push(astState);
         this.state.makeDirtyChunk(astState.chunkIdx);
+    }
+
+    public setBreakpointState(_: boolean): void {}
+
+    public setSnapshotsState(newState: boolean): void {
+        this.saveSnapshots = newState;
     }
 
     public clear(): void {

@@ -177,16 +177,22 @@ pub extern "C" fn reset_export() {
 }
 
 #[no_mangle]
-pub extern "C" fn run_tick() {
-    get_state().update_state();
+pub extern "C" fn run_tick() -> bool {
+    let state = get_state();
+    state.update_state();
+    return state.break_point;
 }
 
 #[no_mangle]
-pub extern "C" fn run_many_ticks(count: u32) {
+pub extern "C" fn run_many_ticks(count: u32) -> bool {
     let state = get_state();
     for _ in 0..count {
         state.update_state();
+        if state.break_point {
+            return state.break_point;
+        }
     }
+    return false;
 }
 
 #[no_mangle]
@@ -195,11 +201,11 @@ pub extern "C" fn get_tick() -> u32 {
 }
 
 #[no_mangle]
-pub extern "C" fn reset_breakpoint() -> i32 {
+pub extern "C" fn get_breakpoint(do_reset: bool) -> i32 {
     let state = get_state();
     let old = state.break_point;
-    state.break_point = false;
     if old {
+        state.break_point = !do_reset;
         state.break_point_node as i32
     } else {
         -1

@@ -2,10 +2,15 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
+import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import {
     GraphEngine,
     GraphEngineSetting,
 } from 'src/core/settings/instances/performance/GraphEngineSetting';
+import {
+    BreakpointMode,
+    EnableBreakpointSetting,
+} from 'src/core/settings/instances/tools/EnableBreakpointSetting';
 import type { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
@@ -64,6 +69,14 @@ export class Graph {
 
         this.engine = engine;
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
+
+        EnableBreakpointSetting.onChange.add((newState) => {
+            this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
+        });
+
+        EnableSnapshotsSetting.onChange.add((newState) => {
+            this.engine.setSnapshotsState(newState);
+        });
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
@@ -192,7 +205,10 @@ export class Graph {
             );
             blockedLink = this.getOrCreateNodeByCoords(backX, backY);
         }
-        node.blockedLink = blockedLink;
+        if (node.blockedLink !== blockedLink) {
+            node.blockedLink = blockedLink;
+            this.engine.updateNodeState(node, false);
+        }
 
         if (node.detectedLink !== detectorLink) {
             if (node.detectedLink) {

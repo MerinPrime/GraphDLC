@@ -1,5 +1,4 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -23,7 +22,7 @@ export class NativeEngine implements IEngine {
     private extraRewindNodes: Set<number> = new Set();
     private extraSignalsHistory: Map<number, Map<number, number>> = new Map();
 
-    private saveSnapshots: boolean;
+    private saveSnapshots: boolean = false;
 
     private _getNewRngState(): BigInt {
         const arr = new Uint32Array(2);
@@ -36,11 +35,6 @@ export class NativeEngine implements IEngine {
         this.exports = instantiateRustEngine();
         this.exports.init(this._getNewRngState());
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
-
-        this.saveSnapshots = EnableSnapshotsSetting.value;
-        EnableSnapshotsSetting.onChange.add((newValue) => {
-            this.saveSnapshots = newValue;
-        });
     }
 
     public runTick(): void {
@@ -124,8 +118,8 @@ export class NativeEngine implements IEngine {
         return this.exports.get_tick();
     }
 
-    public resetBreakpoint(): number | false {
-        const breakPointNode = this.exports.reset_breakpoint();
+    public getBreakpoint(doReset: boolean = false): number | false {
+        const breakPointNode = this.exports.get_breakpoint(doReset);
         if (breakPointNode === -1) return false;
         return breakPointNode;
     }
@@ -348,6 +342,12 @@ export class NativeEngine implements IEngine {
                 recordedSignals.set(nodeIdx, signal);
             }
         }
+    }
+
+    public setBreakpointState(_: boolean): void {}
+
+    public setSnapshotsState(newState: boolean): void {
+        this.saveSnapshots = newState;
     }
 
     public clear(): void {
