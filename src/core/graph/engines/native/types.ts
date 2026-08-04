@@ -21,8 +21,8 @@ export interface RustEngineExports extends WebAssembly.Exports {
     ensure_node_capacity_export(count: number): void;
     ensure_chunk_capacity_export(count: number): void;
     reset_export(): void;
-    run_tick(): void;
-    run_many_ticks(count: number): void;
+    run_tick(): boolean;
+    run_many_ticks(count: number): boolean;
     get_tick(): number;
     get_breakpoint(do_reset: boolean): number;
     is_changed(): number;

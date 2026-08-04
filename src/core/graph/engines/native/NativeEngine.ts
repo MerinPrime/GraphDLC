@@ -37,7 +37,7 @@ export class NativeEngine implements IEngine {
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
     }
 
-    public runTick(): void {
+    public runTick(): boolean {
         if (this.saveSnapshots) {
             const curSignals = this.extraSignalsHistory.get(this.getTick());
             const signals = curSignals ?? new Map<number, NodeSignal>();
@@ -61,17 +61,20 @@ export class NativeEngine implements IEngine {
                 }
             }
         }
-        this.exports.run_tick();
+        const breakPoint = this.exports.run_tick();
+        return breakPoint;
     }
 
-    public runManyTicks(ticksCount: number): void {
+    public runManyTicks(ticksCount: number): boolean {
         if (!this.saveSnapshots) {
-            this.exports.run_many_ticks(ticksCount);
-            return;
+            const breakPoint = this.exports.run_many_ticks(ticksCount);
+            return breakPoint;
         }
         for (let i = 0; i < ticksCount; i++) {
-            this.runTick();
+            const breakPoint = this.runTick();
+            if (breakPoint) return breakPoint;
         }
+        return false;
     }
 
     private applyRecordedSignals(tick: number): void {
