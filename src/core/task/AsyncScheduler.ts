@@ -60,7 +60,6 @@ export class AsyncScheduler {
             const budget = this.getBudget();
 
             if (budget === 0) {
-                this.clear();
                 return;
             }
 
