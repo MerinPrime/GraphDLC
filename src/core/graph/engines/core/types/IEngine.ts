@@ -1,11 +1,7 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from '../../ast/CycleTypes';
-import type { GraphNode } from '../../ast/GraphNode';
-import type { NodeSignal } from './NodeSignal';
-
-export interface ISnapshot {
-    tick: number;
-}
+import type { GraphCycle } from 'src/core/graph/ast/CycleTypes';
+import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import type { NodeSignal } from '../NodeSignal';
 
 export interface IEngine {
     runTick(): boolean;

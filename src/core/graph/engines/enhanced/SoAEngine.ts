@@ -2,26 +2,26 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
-import { StateRewinder } from '../core/StateRewinder';
-import type { IEngine } from '../core/types';
+import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import { SoALayout } from './SoALayout';
 import type { SoASnapshot } from './SoASnapshot';
 import { SoAGraphState } from './SoAState';
 import { SoAStateSynchronizer } from './SoAStateSynchronizer';
 import { SoAGraphUpdater } from './SoAUpdater';
 
-export class SoAEngine implements IEngine {
+interface SoAEngineTypes extends EngineTypes {
+    Snapshot: SoASnapshot;
+}
+
+export class SoAEngine extends BaseEngine<SoAEngineTypes> {
     private readonly state: SoAGraphState = new SoAGraphState();
     private readonly updater: SoAGraphUpdater = new SoAGraphUpdater();
     private readonly synchronizer: SoAStateSynchronizer =
         new SoAStateSynchronizer(this.updater);
-    private readonly rewinder: StateRewinder<SoASnapshot> = new StateRewinder();
 
     private extraRewindNodes: Set<number> = new Set();
     private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
         new Map();
-
-    private saveSnapshots: boolean = false;
 
     public runTick(): boolean {
         if (this.saveSnapshots) {
@@ -219,12 +219,6 @@ export class SoAEngine implements IEngine {
 
         this.state.changedNodes.add(nodeIdx);
         this.state.makeDirtyChunk(chunkIdx);
-    }
-
-    public setBreakpointState(_: boolean): void {}
-
-    public setSnapshotsState(newState: boolean): void {
-        this.saveSnapshots = newState;
     }
 
     public clear(): void {

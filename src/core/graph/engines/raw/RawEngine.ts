@@ -2,25 +2,25 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
-import { StateRewinder } from '../core/StateRewinder';
-import type { IEngine } from '../core/types';
+import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import type { RawSnapshot } from './RawSnapshot';
 import { RawGraphState } from './RawState';
 import { RawStateSynchronizer } from './RawStateSynchronizer';
 import { RawGraphUpdater } from './RawUpdater';
 
-export class RawEngine implements IEngine {
+interface RawEngineTypes extends EngineTypes {
+    Snapshot: RawSnapshot;
+}
+
+export class RawEngine extends BaseEngine<RawEngineTypes> {
     private readonly state: RawGraphState = new RawGraphState();
     private readonly updater: RawGraphUpdater = new RawGraphUpdater();
     private readonly synchronizer: RawStateSynchronizer =
         new RawStateSynchronizer(this.updater);
-    private readonly rewinder: StateRewinder<RawSnapshot> = new StateRewinder();
 
     private extraRewindNodes: Set<number> = new Set();
     private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
         new Map();
-
-    private saveSnapshots: boolean = false;
 
     public runTick(): boolean {
         if (this.saveSnapshots) {

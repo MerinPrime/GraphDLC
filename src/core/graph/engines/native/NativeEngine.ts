@@ -3,8 +3,8 @@ import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType } from '../core/NodeType';
-import { StateRewinder } from '../core/StateRewinder';
-import type { IEngine, ISnapshot } from '../core/types';
+import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
+import type { ISnapshot } from '../core/types/ISnapshot';
 import { instantiateRustEngine } from './loader';
 import type { RustEngineExports } from './types';
 
@@ -13,16 +13,16 @@ export interface NativeSnapshot extends ISnapshot {
     data: Uint8Array;
 }
 
-export class NativeEngine implements IEngine {
+interface NativeEngineTypes extends EngineTypes {
+    Snapshot: NativeSnapshot;
+}
+
+export class NativeEngine extends BaseEngine<NativeEngineTypes> {
     private readonly exports: RustEngineExports;
     private readonly stagingBufferPtr: number;
-    private readonly rewinder: StateRewinder<NativeSnapshot> =
-        new StateRewinder();
 
     private extraRewindNodes: Set<number> = new Set();
     private extraSignalsHistory: Map<number, Map<number, number>> = new Map();
-
-    private saveSnapshots: boolean = false;
 
     private _getNewRngState(): BigInt {
         const arr = new Uint32Array(2);
@@ -32,6 +32,7 @@ export class NativeEngine implements IEngine {
     }
 
     public constructor() {
+        super();
         this.exports = instantiateRustEngine();
         this.exports.init(this._getNewRngState());
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
@@ -345,12 +346,6 @@ export class NativeEngine implements IEngine {
                 recordedSignals.set(nodeIdx, signal);
             }
         }
-    }
-
-    public setBreakpointState(_: boolean): void {}
-
-    public setSnapshotsState(newState: boolean): void {
-        this.saveSnapshots = newState;
     }
 
     public clear(): void {

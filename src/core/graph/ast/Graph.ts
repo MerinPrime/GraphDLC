@@ -17,7 +17,7 @@ import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
-import type { IEngine } from '../engines/core/types';
+import type { IEngine } from '../engines/core/types/IEngine';
 import { DefaultEngine } from '../engines/default/DefaultEngine';
 import { SoAEngine } from '../engines/enhanced/SoAEngine';
 import { NativeEngine } from '../engines/native/NativeEngine';

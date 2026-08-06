@@ -7,22 +7,22 @@ import type { GraphCycle } from '../../ast/CycleTypes';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
-import { StateRewinder } from '../core/StateRewinder';
-import type { IEngine } from '../core/types';
+import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import { ChunkSnapshot, DefaultSnapshot } from './DefaultSnapshot';
 
-export class DefaultEngine implements IEngine {
+interface DefaultEngineTypes extends EngineTypes {
+    Snapshot: DefaultSnapshot;
+}
+
+export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
     public chunkUpdates: typeof ChunkUpdates;
-    public rewinder: StateRewinder<DefaultSnapshot> = new StateRewinder();
 
     private extraRewindNodes: Set<number> = new Set();
-    private saveSnapshots: boolean = false;
     private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
         new Map();
 
     private tick: number = 0;
 
-    private useBreakPoints: boolean = false;
     private isBreakPoint: boolean = false;
     private breakPointNode: number = 0;
     private breakPoints: number[] = [];
@@ -31,6 +31,7 @@ export class DefaultEngine implements IEngine {
         public readonly graph: Graph,
         public readonly gameMap: GameMap,
     ) {
+        super();
         this.chunkUpdates =
             window.graphdlc.patchLoader.getDefinition('ChunkUpdates').val;
     }
@@ -264,14 +265,6 @@ export class DefaultEngine implements IEngine {
         const chunk = this.graph.getChunkByIdx(node.chunkIdx);
         chunk.markRenderDirty();
         chunk.setUpdated();
-    }
-
-    public setBreakpointState(newState: boolean): void {
-        this.useBreakPoints = newState;
-    }
-
-    public setSnapshotsState(newState: boolean): void {
-        this.saveSnapshots = newState;
     }
 
     public clear(): void {

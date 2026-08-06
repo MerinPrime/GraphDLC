@@ -1,4 +1,4 @@
-import type { ISnapshot } from './types';
+import type { ISnapshot } from './types/ISnapshot';
 
 interface WrappedSnapshot<TSnapshot extends ISnapshot> {
     timestamp: number;
