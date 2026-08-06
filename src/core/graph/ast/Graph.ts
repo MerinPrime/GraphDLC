@@ -207,7 +207,7 @@ export class Graph {
         }
         if (node.blockedLink !== blockedLink) {
             node.blockedLink = blockedLink;
-            this.engine.updateNodeState(node, false);
+            this.engine.updateNodeState(node);
         }
 
         if (node.detectedLink !== detectorLink) {
@@ -346,6 +346,9 @@ export class Graph {
     ) {
         const oldType = node.type;
 
+        if (node.arrowType !== type) {
+            this.engine.resetNodeSignal(node);
+        }
         node.setType(type);
         node.setRotation(rotation);
         node.setFlipped(flipped);
@@ -369,6 +372,7 @@ export class Graph {
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
+        this.engine.resetNodeSignal(node);
         node.setType(type);
         this.updateNodeRelations(node);
         this.listeners.forEach((listener) => {
@@ -377,7 +381,7 @@ export class Graph {
         node.backLinks.forEach((backLinkedNode) => {
             this.engine.updateNodeState(backLinkedNode);
         });
-        this.engine.updateNodeState(node, true);
+        this.engine.updateNodeState(node);
         if (
             node.type === NodeType.DIRECTIONAL_BUTTON ||
             node.type === NodeType.BUTTON ||

@@ -35,6 +35,16 @@ pub extern "C" fn clear(rng_state: u64) {
 }
 
 #[no_mangle]
+pub extern "C" fn reset_node_signal(node_idx: u32) {
+    let state = get_state();
+    state.ensure_node_capacity((node_idx + 1) as usize);
+
+    let node = &mut state.nodes[node_idx as usize];
+    node.signal = NODE_SIGNAL_NONE;
+    node.last_signal = NODE_SIGNAL_NONE;
+}
+
+#[no_mangle]
 pub extern "C" fn update_node_state(
     node_idx: u32,
     node_type: u8,
@@ -49,7 +59,6 @@ pub extern "C" fn update_node_state(
     detectors_count: u32,
     detected_link: i32,
     blocked_link: i32,
-    reset_signal: i32,
 ) {
     let state = get_state();
     state.ensure_node_capacity((node_idx + 1) as usize);
@@ -121,11 +130,6 @@ pub extern "C" fn update_node_state(
     node.links_count = safe_links_count as u8;
     node.detectors = detectors;
     node.detectors_count = safe_detectors_count as u8;
-
-    if reset_signal != 0 {
-        node.signal = NODE_SIGNAL_NONE;
-        node.last_signal = NODE_SIGNAL_NONE;
-    }
 
     node.flags = flags;
 

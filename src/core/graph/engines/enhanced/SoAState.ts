@@ -124,7 +124,13 @@ export class SoAGraphState {
         this.chunks = tempChunks;
     }
 
-    public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
+    public resetNodeSignal(node: GraphNode) {
+        const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
+        this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = 0;
+        this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;
+    }
+
+    public updateNodeState(node: GraphNode) {
         const nodeIdx = node.nodeIdx;
 
         this.ensureNodeCapacity(nodeIdx + 1);
@@ -213,12 +219,7 @@ export class SoAGraphState {
 
         this.extra32NodeData[
             extra32NodeOffset + SoALayout.Extra32Node.BLOCKED_LINK_IDX
-        ] = node.blockedLink !== null ? node.blockedLink.nodeIdx : 0xFFFFFFFF;
-
-        if (resetSignal) {
-            this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = 0;
-            this.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;
-        }
+        ] = node.blockedLink !== null ? node.blockedLink.nodeIdx : 0xffffffff;
 
         this.changedNodes.add(nodeIdx);
     }

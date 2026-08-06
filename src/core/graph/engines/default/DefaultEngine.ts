@@ -226,10 +226,16 @@ export class DefaultEngine implements IEngine {
         }
     }
 
-    public updateNodeState(_node: GraphNode, _resetSignal?: boolean): void {
-        removeWithSwap(this.breakPoints, _node.nodeIdx);
-        if (_node.isBreakpoint) {
-            this.breakPoints.push(_node.nodeIdx);
+    public resetNodeSignal(node: GraphNode): void {
+        const arrow = this.graph.getArrow(node.nodeIdx);
+        arrow.lastSignal = ArrowSignal.NONE;
+        arrow.signal = ArrowSignal.NONE;
+    }
+
+    public updateNodeState(node: GraphNode): void {
+        removeWithSwap(this.breakPoints, node.nodeIdx);
+        if (node.isBreakpoint) {
+            this.breakPoints.push(node.nodeIdx);
         }
     }
 

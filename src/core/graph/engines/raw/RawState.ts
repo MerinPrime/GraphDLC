@@ -75,7 +75,13 @@ export class RawGraphState {
         return this.nodes[nodeIdx];
     }
 
-    public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
+    public resetNodeSignal(node: GraphNode) {
+        const nodeState = this.nodes[node.nodeIdx];
+        nodeState.lastSignal = 0;
+        nodeState.signal = 0;
+    }
+
+    public updateNodeState(node: GraphNode) {
         if (this.nodes[node.nodeIdx] === undefined) {
             this.nodes[node.nodeIdx] = new RawNodeState(
                 node,
@@ -115,10 +121,6 @@ export class RawGraphState {
             nodeState.cycleIdx = null;
             nodeState.headType = CycleHeadType.NONE;
             nodeState.cycleOffset = 0;
-        }
-        if (resetSignal) {
-            nodeState.lastSignal = 0;
-            nodeState.signal = 0;
         }
 
         nodeState.cycleOffset = node.cycleOffset;

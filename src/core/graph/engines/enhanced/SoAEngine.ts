@@ -165,11 +165,12 @@ export class SoAEngine implements IEngine {
         );
     }
 
-    public updateNodeState(
-        node: GraphNode,
-        resetSignal: boolean = false,
-    ): void {
-        this.state.updateNodeState(node, resetSignal);
+    public resetNodeSignal(node: GraphNode): void {
+        this.state.resetNodeSignal(node);
+    }
+
+    public updateNodeState(node: GraphNode): void {
+        this.state.updateNodeState(node);
     }
 
     public updateChunk(chunk: Chunk): void {

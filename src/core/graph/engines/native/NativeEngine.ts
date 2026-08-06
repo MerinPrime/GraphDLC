@@ -239,10 +239,11 @@ export class NativeEngine implements IEngine {
         );
     }
 
-    public updateNodeState(
-        node: GraphNode,
-        resetSignal: boolean = false,
-    ): void {
+    public resetNodeSignal(node: GraphNode): void {
+        this.exports.reset_node_signal(node.nodeIdx);
+    }
+
+    public updateNodeState(node: GraphNode): void {
         const nodeIdx = node.nodeIdx;
         this.exports.ensure_node_capacity_export(nodeIdx + 1);
 
@@ -313,7 +314,6 @@ export class NativeEngine implements IEngine {
             detectors.length,
             detectedLinkIdx,
             blockedLinkIdx,
-            resetSignal ? 1 : 0,
         );
     }
 
