@@ -182,7 +182,7 @@ export class RawGraphState {
         this.chunks[chunkIdx].isDirty = false;
     }
 
-    public makeAllChunksDirty() {
+    public markAllChunksDirty() {
         this.chunks.forEach((chunk) => {
             chunk.isDirty = true;
         });
@@ -337,5 +337,12 @@ export class RawGraphState {
     public markNodeTempChanged(nodeState: RawNodeState) {
         nodeState.isChanged = true;
         this.tempChangedNodes.push(nodeState);
+    }
+
+    public setNodeSignal(nodeIdx: number, signal: NodeSignal) {
+        const nodeState = this.getNode(nodeIdx);
+        nodeState.signal = signal;
+        this.markNodeChanged(nodeState);
+        this.makeDirtyChunk(nodeState.chunkIdx);
     }
 }

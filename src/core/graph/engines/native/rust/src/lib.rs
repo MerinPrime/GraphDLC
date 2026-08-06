@@ -232,6 +232,14 @@ pub extern "C" fn make_dirty_chunk_export(chunk_idx: u32) {
 }
 
 #[no_mangle]
+pub extern "C" fn mark_all_chunks_dirty() {
+    let state = get_state();
+    state.chunks.iter_mut().for_each(|chunk| {
+        chunk.flags |= CHUNK_FLAG_IS_DIRTY;
+    });
+}
+
+#[no_mangle]
 pub extern "C" fn make_undirty_chunk_export(chunk_idx: u32) {
     get_state().make_undirty_chunk(chunk_idx);
 }
@@ -278,7 +286,6 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     node.signal = signal;
     let chunk_idx = node.chunk_idx;
 
-    state.mark_node_as_changed(node_idx);
     state.mark_node_as_changed_non_temp(node_idx);
     state.make_dirty_chunk(chunk_idx);
 }

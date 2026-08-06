@@ -17,7 +17,6 @@ export interface RustEngineExports extends WebAssembly.Exports {
         detectors_count: number,
         detected_link: number,
         blocked_link: number,
-        reset_signal: number,
     ): void;
     ensure_node_capacity_export(count: number): void;
     ensure_chunk_capacity_export(count: number): void;
@@ -27,6 +26,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     get_tick(): number;
     get_breakpoint(do_reset: boolean): number;
     is_changed(): number;
+    mark_all_chunks_dirty(): void;
     make_dirty_chunk_export(chunk_idx: number): void;
     make_undirty_chunk_export(chunk_idx: number): void;
     get_node_signal_export(node_idx: number): number;

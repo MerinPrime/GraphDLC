@@ -298,7 +298,7 @@ export class SoAGraphState {
             ~SoALayout.Chunk.Flags.IsDirty;
     }
 
-    public makeAllChunksDirty() {
+    public markAllChunksDirty() {
         for (let chunkIdx = 0; chunkIdx < this.chunkCount; chunkIdx++) {
             const chunkOffset = chunkIdx * SoALayout.Chunk.STRIDE;
             this.chunks[chunkOffset + SoALayout.Chunk.FLAGS] |=
@@ -501,5 +501,17 @@ export class SoAGraphState {
         this.nodeData[nodeOffset + SoALayout.Node.FLAGS] |=
             SoALayout.Node.Flags.IsChanged;
         this.tempChangedNodes.add(nodeIdx);
+    }
+
+    public setNodeSignal(nodeIdx: number, signal: NodeSignal): void {
+        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+        const extra32NodeOffset = nodeIdx * SoALayout.Extra32Node.STRIDE;
+        const chunkIdx =
+            this.extra32NodeData[
+                extra32NodeOffset + SoALayout.Extra32Node.CHUNK_IDX
+            ];
+        this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
+        this.markNodeChanged(nodeIdx);
+        this.makeDirtyChunk(chunkIdx);
     }
 }

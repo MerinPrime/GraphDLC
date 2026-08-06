@@ -17,7 +17,7 @@ import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
-import type { IEngine } from '../engines/core/types/IEngine';
+import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
 import { DefaultEngine } from '../engines/default/DefaultEngine';
 import { SoAEngine } from '../engines/enhanced/SoAEngine';
 import { NativeEngine } from '../engines/native/NativeEngine';
@@ -46,7 +46,7 @@ export class Graph {
 
     private listeners: IGraphListener[] = [this.cycleManager, this.debugger];
 
-    public engine: IEngine;
+    public engine: BaseEngine<EngineTypes>;
 
     private readonly handleBreakpointChange = (newState: BreakpointMode) => {
         this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
@@ -60,7 +60,7 @@ export class Graph {
         this.gameMap = gameMap;
         this.privateGameMap = gameMap as any as PrivateGameMap;
 
-        let engine: IEngine;
+        let engine: BaseEngine<EngineTypes>;
 
         switch (GraphEngineSetting.value) {
             case GraphEngine.ORIGINAL:

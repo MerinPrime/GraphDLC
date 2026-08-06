@@ -1,7 +1,7 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
-import { NodeSignal } from '../core/NodeSignal';
+import type { NodeSignal } from '../core/NodeSignal';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import type { RawSnapshot } from './RawSnapshot';
 import { RawGraphState } from './RawState';
@@ -18,94 +18,25 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
     private readonly synchronizer: RawStateSynchronizer =
         new RawStateSynchronizer(this.updater);
 
-    private extraRewindNodes: Set<number> = new Set();
-    private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
-        new Map();
-
-    public runTick(): boolean {
-        if (this.saveSnapshots) {
-            const curSignals = this.extraSignalsHistory.get(this.getTick());
-            const signals = curSignals ?? new Map<number, NodeSignal>();
-            for (const nodeIdx of this.extraRewindNodes) {
-                const signal = this.getNodeSignal(nodeIdx);
-                if (signal === NodeSignal.NONE) {
-                    continue;
-                }
-                signals.set(nodeIdx, signal);
-            }
-            this.extraSignalsHistory.set(this.getTick(), signals);
-
-            if (this.rewinder.canDoSnapshot(this.getTick())) {
-                this.rewinder.saveSnapshot(this.state.makeSnapshot());
-
-                const oldestTick = this.rewinder.getOldestSnapshotTick();
-                for (const tick of this.extraSignalsHistory.keys()) {
-                    if (tick < oldestTick) {
-                        this.extraSignalsHistory.delete(tick);
-                    }
-                }
-            }
-        }
+    protected runTickInternal(): boolean {
         this.updater.updateState(this.state);
         return this.state.breakPoint;
     }
 
-    public runManyTicks(ticksCount: number): boolean {
-        for (let i = 0; i < ticksCount; i++) {
-            const breakPoint = this.runTick();
-            if (breakPoint) return breakPoint;
-        }
-        return false;
+    protected makeSnapshot(): RawSnapshot {
+        return this.state.makeSnapshot();
     }
 
-    private applyRecordedSignals(tick: number): void {
-        const recordedSignals = this.extraSignalsHistory.get(tick);
-        if (!recordedSignals) {
-            return;
-        }
-        for (const nodeIdx of this.extraRewindNodes) {
-            const nodeState = this.state.getNode(nodeIdx);
-            if (nodeState) {
-                nodeState.signal = NodeSignal.NONE;
-                this.state.changedNodes.push(nodeState);
-            }
-        }
-        for (const [nodeIdx, signal] of recordedSignals) {
-            const nodeState = this.state.getNode(nodeIdx);
-            if (nodeState) {
-                nodeState.signal = signal;
-                this.state.changedNodes.push(nodeState);
-            }
-        }
+    protected loadSnapshot(snapshot: RawSnapshot): void {
+        this.state.loadSnapshot(snapshot);
     }
 
-    public rewindToTick(targetTick: number): void {
-        const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
-        if (!closestSnapshot) {
-            return;
-        }
+    protected markAllChunksDirty(): void {
+        this.state.markAllChunksDirty();
+    }
 
-        const stepsToSimulate = targetTick - closestSnapshot.tick;
-        if (stepsToSimulate > 1000000) {
-            this.rewinder.reset();
-            return;
-        }
-
-        this.state.loadSnapshot(closestSnapshot);
-        for (let i = 0; i < stepsToSimulate; i++) {
-            this.applyRecordedSignals(this.getTick());
-            this.updater.updateState(this.state);
-        }
-        this.applyRecordedSignals(targetTick);
-
-        const savedTicks = Array.from(this.extraSignalsHistory.keys());
-        savedTicks.forEach((savedTick) => {
-            if (savedTick > targetTick) {
-                this.extraSignalsHistory.delete(savedTick);
-            }
-        });
-
-        this.state.makeAllChunksDirty();
+    public setNodeSignalInternal(nodeIdx: number, signal: NodeSignal): void {
+        this.state.setNodeSignal(nodeIdx, signal);
     }
 
     public getTick(): number {
@@ -138,10 +69,6 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
         return this.state.getNodeSignal(nodeIdx);
-    }
-
-    public setExtraRewindNodes(nodeIndices: Set<number>): void {
-        this.extraRewindNodes = nodeIndices;
     }
 
     public reset(): void {
@@ -177,35 +104,6 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
 
     public updateChunk(chunk: Chunk): void {
         this.state.updateChunk(chunk);
-    }
-
-    public doPressButton(nodeIdx: number, state: boolean): void {
-        const astState = this.state.getNode(nodeIdx);
-        astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-        this.updater.markNodeAsChanged(this.state, astState);
-        this.state.changedNodes.push(astState);
-        this.state.makeDirtyChunk(astState.chunkIdx);
-    }
-
-    public doArrowSignal(nodeIdx: number, state: boolean): void {
-        const astState = this.state.getNode(nodeIdx);
-        astState.signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-
-        if (this.saveSnapshots) {
-            const currentTick = this.getTick();
-            let recordedSignals = this.extraSignalsHistory.get(currentTick);
-
-            if (!recordedSignals) {
-                recordedSignals = new Map<number, NodeSignal>();
-                this.extraSignalsHistory.set(currentTick, recordedSignals);
-            }
-
-            const signal = this.getNodeSignal(nodeIdx);
-            recordedSignals.set(nodeIdx, signal);
-        }
-
-        this.state.changedNodes.push(astState);
-        this.state.makeDirtyChunk(astState.chunkIdx);
     }
 
     public setBreakpointState(_: boolean): void {}

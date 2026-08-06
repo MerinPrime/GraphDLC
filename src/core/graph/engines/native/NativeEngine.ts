@@ -1,8 +1,8 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
-import { NodeSignal } from '../core/NodeSignal';
-import { NodeType } from '../core/NodeType';
+import type { NodeSignal } from '../core/NodeSignal';
+import { NodeType, NodeTypes } from '../core/NodeType';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import type { ISnapshot } from '../core/types/ISnapshot';
 import { instantiateRustEngine } from './loader';
@@ -21,9 +21,6 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
     private readonly exports: RustEngineExports;
     private readonly stagingBufferPtr: number;
 
-    private extraRewindNodes: Set<number> = new Set();
-    private extraSignalsHistory: Map<number, Map<number, number>> = new Map();
-
     private _getNewRngState(): BigInt {
         const arr = new Uint32Array(2);
         crypto.getRandomValues(arr);
@@ -38,84 +35,22 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
     }
 
-    public runTick(): boolean {
-        if (this.saveSnapshots) {
-            const curSignals = this.extraSignalsHistory.get(this.getTick());
-            const signals = curSignals ?? new Map<number, NodeSignal>();
-            for (const nodeIdx of this.extraRewindNodes) {
-                const signal = this.getNodeSignal(nodeIdx);
-                if (signal === NodeSignal.NONE) {
-                    continue;
-                }
-                signals.set(nodeIdx, signal);
-            }
-            this.extraSignalsHistory.set(this.getTick(), signals);
-
-            if (this.rewinder.canDoSnapshot(this.getTick())) {
-                this.rewinder.saveSnapshot(this.makeSnapshot());
-
-                const oldestTick = this.rewinder.getOldestSnapshotTick();
-                for (const tick of this.extraSignalsHistory.keys()) {
-                    if (tick < oldestTick) {
-                        this.extraSignalsHistory.delete(tick);
-                    }
-                }
-            }
-        }
+    protected runTickInternal(): boolean {
         const breakPoint = this.exports.run_tick();
         return breakPoint;
     }
 
-    public runManyTicks(ticksCount: number): boolean {
-        if (!this.saveSnapshots) {
-            const breakPoint = this.exports.run_many_ticks(ticksCount);
-            return breakPoint;
-        }
-        for (let i = 0; i < ticksCount; i++) {
-            const breakPoint = this.runTick();
-            if (breakPoint) return breakPoint;
-        }
-        return false;
+    protected runManyTicksInternal(ticksCount: number): boolean {
+        const breakPoint = this.exports.run_many_ticks(ticksCount);
+        return breakPoint;
     }
 
-    private applyRecordedSignals(tick: number): void {
-        const recordedSignals = this.extraSignalsHistory.get(tick);
-        if (!recordedSignals) {
-            return;
-        }
-        for (const nodeIdx of this.extraRewindNodes) {
-            this.exports.set_node_signal_export(nodeIdx, NodeSignal.NONE);
-        }
-        for (const [nodeIdx, signal] of recordedSignals) {
-            this.exports.set_node_signal_export(nodeIdx, signal);
-        }
+    public markAllChunksDirty(): void {
+        this.exports.mark_all_chunks_dirty();
     }
 
-    public rewindToTick(targetTick: number): void {
-        const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
-        if (!closestSnapshot) {
-            return;
-        }
-
-        const stepsToSimulate = targetTick - closestSnapshot.tick;
-        if (stepsToSimulate > 1000000) {
-            this.rewinder.reset();
-            return;
-        }
-
-        this.loadSnapshot(closestSnapshot);
-        for (let i = 0; i < stepsToSimulate; i++) {
-            this.applyRecordedSignals(this.getTick());
-            this.exports.run_tick();
-        }
-        this.applyRecordedSignals(targetTick);
-
-        const savedTicks = Array.from(this.extraSignalsHistory.keys());
-        savedTicks.forEach((savedTick) => {
-            if (savedTick > targetTick) {
-                this.extraSignalsHistory.delete(savedTick);
-            }
-        });
+    public setNodeSignalInternal(nodeIdx: number, signal: NodeSignal): void {
+        this.exports.set_node_signal_export(nodeIdx, signal);
     }
 
     public getTick(): number {
@@ -156,10 +91,6 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
         return this.exports.get_node_signal_export(nodeIdx) as NodeSignal;
-    }
-
-    public setExtraRewindNodes(nodeIndices: Set<number>): void {
-        this.extraRewindNodes = nodeIndices;
     }
 
     public reset(): void {
@@ -278,18 +209,9 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
             stagingView[links.length + idx] = detIdx;
         });
 
-        const isEntryPoint =
-            node.type === NodeType.SOURCE ||
-            node.type === NodeType.IMPULSE ||
-            node.type === NodeType.LOGIC_NOT ||
-            node.type === NodeType.BUTTON ||
-            node.type === NodeType.DIRECTIONAL_BUTTON;
+        const isEntryPoint = NodeTypes.isEntryPoint(node.type);
 
-        const isAdditionalUpdate =
-            node.type === NodeType.DELAY ||
-            node.type === NodeType.IMPULSE ||
-            node.type === NodeType.FLIP_FLOP ||
-            node.type === NodeType.RANDOM;
+        const isAdditionalUpdate = NodeTypes.isAdditionalUpdate(node.type);
 
         const cycleIdx = node.cycleRef ? node.cycleRef.index : -1;
         const cycleOffset = node.cycleRef ? node.cycleOffset : 0;
@@ -323,36 +245,11 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
         this.exports.ensure_chunk_capacity_export(chunk.astIndex + 1);
     }
 
-    public doPressButton(nodeIdx: number, state: boolean): void {
-        this.exports.do_press_button_export(nodeIdx, state ? 1 : 0);
-    }
-
-    public doArrowSignal(nodeIdx: number, state: boolean): void {
-        this.exports.do_press_button_export(nodeIdx, state ? 1 : 0);
-
-        if (this.saveSnapshots) {
-            const currentTick = this.getTick();
-            let recordedSignals = this.extraSignalsHistory.get(currentTick);
-
-            if (!recordedSignals) {
-                recordedSignals = new Map<number, NodeSignal>();
-                this.extraSignalsHistory.set(currentTick, recordedSignals);
-            }
-
-            const signal = this.getNodeSignal(nodeIdx);
-            if (signal === NodeSignal.NONE) {
-                recordedSignals.delete(nodeIdx);
-            } else {
-                recordedSignals.set(nodeIdx, signal);
-            }
-        }
-    }
-
     public clear(): void {
         this.exports.clear(this._getNewRngState());
     }
 
-    private makeSnapshot(): NativeSnapshot {
+    protected makeSnapshot(): NativeSnapshot {
         const ptr = this.exports.serialize_state_export();
         const len = this.exports.get_serialized_length();
         const buffer = this.exports.memory.buffer as ArrayBuffer;
@@ -367,7 +264,7 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
         };
     }
 
-    private loadSnapshot(snapshot: NativeSnapshot): void {
+    protected loadSnapshot(snapshot: NativeSnapshot): void {
         const buffer = this.exports.memory.buffer as ArrayBuffer;
         const wasmView = new Uint8Array(
             buffer,
