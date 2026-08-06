@@ -33,6 +33,7 @@ interface PrivateGameMap {
 
 export class Graph {
     private gameMap: GameMap;
+    private privateGameMap: PrivateGameMap;
     private nodes: GraphNode[] = [];
     private arrows: Arrow[] = [];
     private chunks: Chunk[] = [];
@@ -47,8 +48,17 @@ export class Graph {
 
     public engine: IEngine;
 
+    private readonly handleBreakpointChange = (newState: BreakpointMode) => {
+        this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
+    };
+
+    private readonly handleSnapshotsChange = (newState: boolean) => {
+        this.engine.setSnapshotsState(newState);
+    };
+
     public constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
+        this.privateGameMap = gameMap as any as PrivateGameMap;
 
         let engine: IEngine;
 
@@ -70,21 +80,12 @@ export class Graph {
         this.engine = engine;
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
-        EnableBreakpointSetting.onChange.add((newState) => {
-            this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
-        });
-
-        EnableSnapshotsSetting.onChange.add((newState) => {
-            this.engine.setSnapshotsState(newState);
-        });
+        EnableBreakpointSetting.onChange.add(this.handleBreakpointChange);
+        EnableSnapshotsSetting.onChange.add(this.handleSnapshotsChange);
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
         return this.chunks[chunkIdx];
-    }
-
-    public getAllChunks(): readonly Chunk[] {
-        return this.chunks;
     }
 
     public markCyclesChunksDirty() {
@@ -122,9 +123,10 @@ export class Graph {
 
         const newTargets: GraphNode[] = [];
         const relations = getArrowRelations(node.arrowType);
-        const chunk = (
-            this.gameMap as any as PrivateGameMap
-        ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
+        const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
+            node.globalX,
+            node.globalY,
+        );
         relations.forEach(([relX, relY]) => {
             const relativeArrow = getRelativeArrow(
                 chunk,
@@ -271,9 +273,10 @@ export class Graph {
         globalX: number,
         globalY: number,
     ): GraphNode {
-        const chunk = (
-            this.gameMap as any as PrivateGameMap
-        ).getOrCreateChunkByArrowCoordinates(globalX, globalY);
+        const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
+            globalX,
+            globalY,
+        );
         const arrow: Arrow = chunk.getArrow(
             globalX - chunk.x * CHUNK_SIZE,
             globalY - chunk.y * CHUNK_SIZE,
@@ -284,6 +287,9 @@ export class Graph {
     }
 
     public clear() {
+        EnableBreakpointSetting.onChange.remove(this.handleBreakpointChange);
+        EnableSnapshotsSetting.onChange.remove(this.handleSnapshotsChange);
+
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;

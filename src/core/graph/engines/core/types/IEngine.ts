@@ -12,7 +12,7 @@ export interface IEngine {
     getBreakpoint(doReset?: boolean): number | false;
     isChanged(): boolean;
 
-    getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]];
+    getDirtyChunks(markUndirty: boolean): ReadonlyArray<number>;
     makeDirtyChunk(chunkIdx: number): void;
     makeUndirtyChunk(chunkIdx: number): void;
     getNodeSignal(nodeIdx: number): NodeSignal;

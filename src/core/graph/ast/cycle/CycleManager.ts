@@ -10,11 +10,11 @@ import { CycleSearchTask } from './CycleSearchTask';
 import { canBeInCycle } from './utils';
 
 export class CycleManager implements IGraphListener {
-    private static readonly bfsQueue: GraphNode[] = [];
-    private static readonly bfsParentMap = new Map<GraphNode, GraphNode>();
-    private static readonly validationSet = new Set<GraphNode>();
-    private static readonly removalQueue: GraphNode[] = [];
-    private static readonly removalVisited = new Set<GraphNode>();
+    private readonly bfsQueue: GraphNode[] = [];
+    private readonly bfsParentMap = new Map<GraphNode, GraphNode>();
+    private readonly validationSet = new Set<GraphNode>();
+    private readonly removalQueue: GraphNode[] = [];
+    private readonly removalVisited = new Set<GraphNode>();
 
     private readonly scheduler = new AsyncScheduler(
         // () => CycleBudgetSetting.value,
@@ -67,7 +67,7 @@ export class CycleManager implements IGraphListener {
         }
         heads.length = 0;
 
-        const cycleSet = CycleManager.validationSet;
+        const cycleSet = this.validationSet;
         cycleSet.clear();
         const cycleNodes = cycle.nodes;
         const cycleLen = cycleNodes.length;
@@ -205,7 +205,7 @@ export class CycleManager implements IGraphListener {
     }
 
     public isValidCycle(cyclePath: GraphNode[]): boolean {
-        const cycleSet = CycleManager.validationSet;
+        const cycleSet = this.validationSet;
         cycleSet.clear();
         const pathLen = cyclePath.length;
         for (let i = 0; i < pathLen; i++) {
@@ -308,8 +308,8 @@ export class CycleManager implements IGraphListener {
         startNode: GraphNode,
         targetNode: GraphNode,
     ): GraphNode[] | null {
-        const queue = CycleManager.bfsQueue;
-        const parentMap = CycleManager.bfsParentMap;
+        const queue = this.bfsQueue;
+        const parentMap = this.bfsParentMap;
 
         queue.length = 0;
         parentMap.clear();
@@ -386,8 +386,8 @@ export class CycleManager implements IGraphListener {
             this.findCyclePathSync(startNode, startNode) !== null;
 
         if (!isStillInCycle) {
-            const queue = CycleManager.removalQueue;
-            const visited = CycleManager.removalVisited;
+            const queue = this.removalQueue;
+            const visited = this.removalVisited;
 
             queue.length = 0;
             visited.clear();

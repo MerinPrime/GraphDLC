@@ -28,7 +28,6 @@ export class GraphNode {
     public cycleRef: GraphCycle | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
     public cycleOffset: number = 0;
-    public origCycleOffset: number = 0;
 
     public constructor(
         nodeIdx: number,

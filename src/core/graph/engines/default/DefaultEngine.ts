@@ -102,7 +102,6 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
                 }
             });
         }
-        this.breakPoints;
         this.chunkUpdates.oldUpdate(this.gameMap);
         this.tick += 1;
     }
@@ -188,7 +187,7 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
         return true;
     }
 
-    public getDirtyChunks(_markUndirty: boolean): [...chunkIdx: number[]] {
+    public getDirtyChunks(_markUndirty: boolean): ReadonlyArray<number> {
         return [];
     }
 
