@@ -260,6 +260,10 @@ export class Graph {
         arrow.astIndex = nodeIdx;
         this.engine.updateNodeState(node);
 
+        this.listeners.forEach((listener) => {
+            listener.onNodeAdded(this, node);
+        });
+
         return node;
     }
 
