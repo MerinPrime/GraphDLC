@@ -1,4 +1,7 @@
-import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
+import {
+    CycleHeadType,
+    type GraphCycle,
+} from 'src/core/graph/ast/cycle/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { SoALayout } from './SoALayout';

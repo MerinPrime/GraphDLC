@@ -1,4 +1,4 @@
-import { CycleHeadType } from '../../ast/CycleTypes';
+import { CycleHeadType } from 'src/core/graph/ast/cycle/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType } from '../core/NodeType';
@@ -44,7 +44,10 @@ export class SoAGraphUpdater {
             ] as NodeSignal;
 
             if (backLastSignal === NodeSignal.ACTIVE) {
-                if (back.type === NodeType.BLOCKER && back.blockedLink === node) {
+                if (
+                    back.type === NodeType.BLOCKER &&
+                    back.blockedLink === node
+                ) {
                     blockedCount++;
                 } else if (!isDetector) {
                     signalsCount++;

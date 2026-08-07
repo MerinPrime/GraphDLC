@@ -1,7 +1,10 @@
+import {
+    CycleHeadType,
+    type GraphCycle,
+} from 'src/core/graph/ast/cycle/CycleTypes';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { NodeType, NodeTypes } from '../engines/core/NodeType';
-import { CycleHeadType, type GraphCycle } from './CycleTypes';
 
 export class GraphNode {
     public readonly nodeIdx: number;

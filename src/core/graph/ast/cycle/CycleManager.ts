@@ -1,8 +1,11 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
+import {
+    CycleHeadType,
+    type GraphCycle,
+} from 'src/core/graph/ast/cycle/CycleTypes';
 import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { NodeType, NodeTypes } from '../../engines/core/NodeType';
-import { CycleHeadType, type GraphCycle } from '../CycleTypes';
 import type { Graph } from '../Graph';
 import type { GraphNode } from '../GraphNode';
 import type { IGraphListener } from '../IGraphListener';
@@ -21,10 +24,17 @@ export class CycleManager implements IGraphListener {
         () => 16,
     );
 
-    public resetHead(head: GraphNode) {
+    public resetHead(head: GraphNode): void {
         head.cycleRef = null;
         head.headType = CycleHeadType.NONE;
         head.cycleOffset = 0;
+    }
+
+    private resetNodeCycleState(node: GraphNode): void {
+        node.isCycle = false;
+        node.cycleRef = null;
+        node.headType = CycleHeadType.NONE;
+        node.cycleOffset = 0;
     }
 
     private assignCycleHead(
@@ -32,142 +42,108 @@ export class CycleManager implements IGraphListener {
         cycle: GraphCycle,
         headType: CycleHeadType,
         offset: number,
-    ) {
+    ): void {
         headNode.cycleRef = cycle;
         headNode.headType = headType;
         headNode.cycleOffset = offset;
         cycle.heads.push(headNode);
     }
 
-    private validateOrDismantle(
-        graph: Graph,
-        cycle: GraphCycle | null,
-    ): boolean {
-        if (!cycle) return false;
-        if (!this.isValidCycle(cycle.nodes)) {
-            graph.removeCycle(cycle);
-            return true;
-        } else {
-            this.refreshCycleIO(cycle);
+    private tryAddCycle(graph: Graph, path: GraphNode[] | null): boolean {
+        if (!path || !this.isValidCycle(path)) {
             return false;
         }
-    }
 
-    private updateCycleStatusIfActive(node: GraphNode) {
-        if (node.isCycle) {
-            this.updateCycleStatusAfterRemoval(node);
+        for (let i = 0; i < path.length; i++) {
+            if (path[i].cycleRef !== null) return false;
         }
+
+        graph.addCycle(path);
+        return true;
     }
 
-    public refreshCycleIO(cycle: GraphCycle) {
-        const heads = cycle.heads;
-        const headsLen = heads.length;
-        for (let i = 0; i < headsLen; i++) {
+    public refreshCycleIO(cycle: GraphCycle): void {
+        const { heads, nodes: cycleNodes } = cycle;
+
+        for (let i = 0; i < heads.length; i++) {
             this.resetHead(heads[i]);
         }
         heads.length = 0;
 
         const cycleSet = this.validationSet;
         cycleSet.clear();
-        const cycleNodes = cycle.nodes;
+
         const cycleLen = cycleNodes.length;
         for (let i = 0; i < cycleLen; i++) {
             cycleSet.add(cycleNodes[i]);
         }
 
-        for (let i = 0; i < cycleLen; i++) {
-            const node = cycleNodes[cycleLen - i - 1];
-            node.cycleOffset = i;
+        try {
+            for (let i = 0; i < cycleLen; i++) {
+                const node = cycleNodes[cycleLen - i - 1];
+                node.cycleOffset = i;
 
-            const links = node.links;
-            const linksLen = links.length;
-            for (let j = 0; j < linksLen; j++) {
-                const linkedNode = links[j];
-                if (
-                    linkedNode.type === NodeType.LOGIC_AND &&
-                    !cycleSet.has(linkedNode)
-                ) {
-                    this.assignCycleHead(
-                        linkedNode,
-                        cycle,
-                        CycleHeadType.READ,
-                        i,
-                    );
-                }
-            }
-
-            const backLinks = node.backLinks;
-            const backLinksLen = backLinks.length;
-            for (let j = 0; j < backLinksLen; j++) {
-                const backLinkedNode = backLinks[j];
-                if (!cycleSet.has(backLinkedNode)) {
-                    const offset = (i + 1) % cycleLen;
-                    let headType = CycleHeadType.WRITE;
-
-                    if (backLinkedNode.type === NodeType.BLOCKER) {
-                        headType = CycleHeadType.CLEAR;
-                    } else if (node.type === NodeType.LOGIC_XOR) {
-                        headType = CycleHeadType.XOR_WRITE;
+                for (let j = 0; j < node.links.length; j++) {
+                    const linkedNode = node.links[j];
+                    if (
+                        linkedNode.type === NodeType.LOGIC_AND &&
+                        !cycleSet.has(linkedNode)
+                    ) {
+                        this.assignCycleHead(
+                            linkedNode,
+                            cycle,
+                            CycleHeadType.READ,
+                            i,
+                        );
                     }
+                }
 
-                    this.assignCycleHead(
-                        backLinkedNode,
-                        cycle,
-                        headType,
-                        offset,
-                    );
+                for (let j = 0; j < node.backLinks.length; j++) {
+                    const backLinkedNode = node.backLinks[j];
+                    if (!cycleSet.has(backLinkedNode)) {
+                        const offset = (i + 1) % cycleLen;
+                        let headType = CycleHeadType.WRITE;
+
+                        if (backLinkedNode.type === NodeType.BLOCKER) {
+                            headType = CycleHeadType.CLEAR;
+                        } else if (node.type === NodeType.LOGIC_XOR) {
+                            headType = CycleHeadType.XOR_WRITE;
+                        }
+
+                        this.assignCycleHead(
+                            backLinkedNode,
+                            cycle,
+                            headType,
+                            offset,
+                        );
+                    }
                 }
             }
+        } finally {
+            cycleSet.clear();
         }
-        cycleSet.clear();
     }
 
-    public tryRebuildCycle(graph: Graph, startNode: GraphNode) {
+    public tryRebuildCycle(graph: Graph, startNode: GraphNode): void {
         if (startNode.cycleRef !== null || !canBeInCycle(startNode)) {
             return;
         }
 
-        const budget = CycleBudgetSetting.value;
-        if (budget === 0) {
+        if (CycleBudgetSetting.value === 0) {
             const cyclePath = this.findCyclePathSync(startNode, startNode);
-            if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                let allNull = true;
-                for (let i = 0; i < cyclePath.length; i++) {
-                    if (cyclePath[i].cycleRef !== null) {
-                        allNull = false;
-                        break;
-                    }
-                }
-                if (allNull) {
-                    graph.addCycle(cyclePath);
-                }
-            }
+            this.tryAddCycle(graph, cyclePath);
             return;
         }
 
         const task = new CycleSearchTask(startNode, startNode);
-
         this.scheduler.schedule(
             task,
-            (path) => {
-                if (path !== null && this.isValidCycle(path)) {
-                    let allNull = true;
-                    for (let i = 0; i < path.length; i++) {
-                        if (path[i].cycleRef !== null) {
-                            allNull = false;
-                            break;
-                        }
-                    }
-                    if (allNull) {
-                        graph.addCycle(path);
-                    }
-                }
-            },
+            (path) => this.tryAddCycle(graph, path),
             startNode,
         );
     }
 
-    public reevaluateParentCycles(graph: Graph, node: GraphNode) {
+    public reevaluateParentCycles(graph: Graph, node: GraphNode): void {
         this.reevaluateParentCyclesTrack(graph, node);
     }
 
@@ -176,12 +152,10 @@ export class CycleManager implements IGraphListener {
         node: GraphNode,
     ): boolean {
         let dismantled = false;
-        const backLinks = node.backLinks;
-        const backLinksLen = backLinks.length;
+        const { backLinks } = node;
 
-        for (let i = 0; i < backLinksLen; i++) {
-            const parent = backLinks[i];
-            const ref = parent.cycleRef;
+        for (let i = 0; i < backLinks.length; i++) {
+            const ref = backLinks[i].cycleRef;
             if (ref !== null) {
                 if (!this.isValidCycle(ref.nodes)) {
                     graph.removeCycle(ref);
@@ -193,7 +167,7 @@ export class CycleManager implements IGraphListener {
         }
 
         if (dismantled) {
-            for (let i = 0; i < backLinksLen; i++) {
+            for (let i = 0; i < backLinks.length; i++) {
                 const parent = backLinks[i];
                 if (parent.cycleRef === null) {
                     this.tryRebuildCycle(graph, parent);
@@ -207,100 +181,87 @@ export class CycleManager implements IGraphListener {
     public isValidCycle(cyclePath: GraphNode[]): boolean {
         const cycleSet = this.validationSet;
         cycleSet.clear();
+
         const pathLen = cyclePath.length;
         for (let i = 0; i < pathLen; i++) {
             cycleSet.add(cyclePath[i]);
         }
 
-        for (let i = 0; i < pathLen; i++) {
-            const cycleNode = cyclePath[i];
-            const nextCycleNode = cyclePath[(i + 1) % pathLen];
+        try {
+            for (let i = 0; i < pathLen; i++) {
+                const cycleNode = cyclePath[i];
+                const nextCycleNode = cyclePath[(i + 1) % pathLen];
 
-            let hasExternalLinks = false;
-            const links = cycleNode.links;
-            const linksLen = links.length;
-            for (let j = 0; j < linksLen; j++) {
-                const neighbor = links[j];
-                if (
-                    !cycleSet.has(neighbor) &&
-                    neighbor.type !== NodeType.EMPTY
-                ) {
-                    hasExternalLinks = true;
-                    break;
-                }
-            }
-
-            if (hasExternalLinks) {
-                let hasExternalPreviousInLink = false;
-                const backLinks = nextCycleNode.backLinks;
-                const backLinksLen = backLinks.length;
-                for (let j = 0; j < backLinksLen; j++) {
-                    const neighbor = backLinks[j];
-                    if (!cycleSet.has(neighbor)) {
-                        hasExternalPreviousInLink = true;
-                        break;
-                    }
-                }
-
-                if (hasExternalPreviousInLink) {
-                    cycleSet.clear();
+                if (!this.validateNodeIO(cycleNode, nextCycleNode, cycleSet)) {
                     return false;
                 }
             }
+            return true;
+        } finally {
+            cycleSet.clear();
+        }
+    }
 
-            let hasReadLink = false;
-            for (let j = 0; j < linksLen; j++) {
-                const neighbor = links[j];
-                if (!cycleSet.has(neighbor)) {
-                    if (
-                        neighbor.type !== NodeType.EMPTY &&
-                        neighbor.type !== NodeType.LOGIC_AND
-                    ) {
-                        cycleSet.clear();
-                        return false;
-                    }
-                } else {
-                    if (hasReadLink) {
-                        cycleSet.clear();
-                        return false;
-                    }
-                    hasReadLink = true;
-                }
+    private validateNodeIO(
+        cycleNode: GraphNode,
+        nextCycleNode: GraphNode,
+        cycleSet: Set<GraphNode>,
+    ): boolean {
+        const { links, backLinks: nodeBackLinks } = cycleNode;
+
+        let hasExternalLinks = false;
+        for (let j = 0; j < links.length; j++) {
+            const neighbor = links[j];
+            if (!cycleSet.has(neighbor) && neighbor.type !== NodeType.EMPTY) {
+                hasExternalLinks = true;
+                break;
             }
+        }
 
-            let hasWriteLink = false;
-            const nodeBackLinks = cycleNode.backLinks;
-            const nodeBackLinksLen = nodeBackLinks.length;
-            for (let j = 0; j < nodeBackLinksLen; j++) {
-                const neighbor = nodeBackLinks[j];
-                if (!cycleSet.has(neighbor)) {
-                    if (neighbor.links.length !== 1) {
-                        cycleSet.clear();
-                        return false;
-                    }
-
-                    const type = neighbor.type;
-                    const isInvalidEntryPoint =
-                        NodeTypes.isEntryPoint(type) ||
-                        type === NodeType.RANDOM ||
-                        type === NodeType.DELAY ||
-                        type === NodeType.LATCH ||
-                        type === NodeType.FLIP_FLOP;
-
-                    if (isInvalidEntryPoint) {
-                        cycleSet.clear();
-                        return false;
-                    }
-                    if (hasWriteLink) {
-                        cycleSet.clear();
-                        return false;
-                    }
-                    hasWriteLink = true;
+        if (hasExternalLinks) {
+            const { backLinks } = nextCycleNode;
+            for (let j = 0; j < backLinks.length; j++) {
+                if (!cycleSet.has(backLinks[j])) {
+                    return false;
                 }
             }
         }
 
-        cycleSet.clear();
+        let hasReadLink = false;
+        for (let j = 0; j < links.length; j++) {
+            const neighbor = links[j];
+            if (!cycleSet.has(neighbor)) {
+                if (
+                    neighbor.type !== NodeType.EMPTY &&
+                    neighbor.type !== NodeType.LOGIC_AND
+                ) {
+                    return false;
+                }
+            } else {
+                if (hasReadLink) return false;
+                hasReadLink = true;
+            }
+        }
+
+        let hasWriteLink = false;
+        for (let j = 0; j < nodeBackLinks.length; j++) {
+            const neighbor = nodeBackLinks[j];
+            if (!cycleSet.has(neighbor)) {
+                if (neighbor.links.length !== 1) return false;
+
+                const { type } = neighbor;
+                const isInvalidEntryPoint =
+                    NodeTypes.isEntryPoint(type) ||
+                    type === NodeType.RANDOM ||
+                    type === NodeType.DELAY ||
+                    type === NodeType.LATCH ||
+                    type === NodeType.FLIP_FLOP;
+
+                if (isInvalidEntryPoint || hasWriteLink) return false;
+                hasWriteLink = true;
+            }
+        }
+
         return true;
     }
 
@@ -315,77 +276,71 @@ export class CycleManager implements IGraphListener {
         parentMap.clear();
         let head = 0;
 
-        if (startNode === targetNode) {
-            const links = startNode.links;
-            const linksLen = links.length;
-            for (let i = 0; i < linksLen; i++) {
-                const child = links[i];
-                if (canBeInCycle(child)) {
-                    queue.push(child);
-                    parentMap.set(child, startNode);
+        try {
+            if (startNode === targetNode) {
+                const { links } = startNode;
+                for (let i = 0; i < links.length; i++) {
+                    const child = links[i];
+                    if (canBeInCycle(child)) {
+                        queue.push(child);
+                        parentMap.set(child, startNode);
+                    }
                 }
+            } else {
+                queue.push(startNode);
+                parentMap.set(startNode, startNode);
             }
-        } else {
-            queue.push(startNode);
-            parentMap.set(startNode, startNode);
-        }
 
-        let found = false;
-        let lastNode = startNode;
+            let found = false;
+            let lastNode = startNode;
 
-        while (head < queue.length) {
-            const current = queue[head++];
-            const links = current.links;
-            const linksLen = links.length;
+            while (head < queue.length) {
+                const current = queue[head++];
+                const { links } = current;
 
-            for (let i = 0; i < linksLen; i++) {
-                const child = links[i];
-                if (child === targetNode) {
-                    found = true;
-                    lastNode = current;
-                    break;
+                for (let i = 0; i < links.length; i++) {
+                    const child = links[i];
+                    if (child === targetNode) {
+                        found = true;
+                        lastNode = current;
+                        break;
+                    }
+
+                    if (!canBeInCycle(child)) continue;
+
+                    if (!parentMap.has(child)) {
+                        parentMap.set(child, current);
+                        queue.push(child);
+                    }
                 }
+                if (found) break;
+            }
 
-                if (!canBeInCycle(child)) continue;
+            if (found) {
+                const path: GraphNode[] = [targetNode];
+                let curr: GraphNode | undefined = lastNode;
 
-                if (!parentMap.has(child)) {
-                    parentMap.set(child, current);
-                    queue.push(child);
+                while (curr !== undefined && curr !== startNode) {
+                    path.push(curr);
+                    curr = parentMap.get(curr);
                 }
+                if (startNode !== targetNode) {
+                    path.push(startNode);
+                }
+                return path.reverse();
             }
-            if (found) break;
-        }
 
-        if (found) {
-            const path: GraphNode[] = [targetNode];
-            let curr: GraphNode | undefined = lastNode;
-
-            while (curr !== undefined && curr !== startNode) {
-                path.push(curr);
-                curr = parentMap.get(curr);
-            }
-            if (startNode !== targetNode) {
-                path.push(startNode);
-            }
+            return null;
+        } finally {
             queue.length = 0;
             parentMap.clear();
-            return path.reverse();
         }
-
-        queue.length = 0;
-        parentMap.clear();
-        return null;
     }
 
-    public updateCycleStatusAfterRemoval(startNode: GraphNode) {
-        if (startNode.cycleRef !== null) {
-            return;
-        }
+    public updateCycleStatusAfterRemoval(startNode: GraphNode): void {
+        if (startNode.cycleRef !== null) return;
 
-        const isStillInCycle =
-            this.findCyclePathSync(startNode, startNode) !== null;
-
-        if (!isStillInCycle) {
+        if (this.findCyclePathSync(startNode, startNode) === null) {
             const queue = this.removalQueue;
             const visited = this.removalVisited;
 
@@ -399,97 +354,72 @@ export class CycleManager implements IGraphListener {
             let head = 0;
             while (head < queue.length) {
                 const current = queue[head++];
-
-                const links = current.links;
-                const linksLen = links.length;
-                for (let i = 0; i < linksLen; i++) {
-                    const neighbor = links[i];
-                    if (neighbor.isCycle && !visited.has(neighbor)) {
-                        visited.add(neighbor);
-                        const neighborStillInCycle = neighbor.cycleRef !== null;
-
-                        if (!neighborStillInCycle) {
-                            neighbor.isCycle = false;
-                            neighbor.cycleRef = null;
-                            neighbor.headType = CycleHeadType.NONE;
-                            neighbor.cycleOffset = 0;
-                            queue.push(neighbor);
-                        }
-                    }
-                }
-
-                const backLinks = current.backLinks;
-                const backLinksLen = backLinks.length;
-                for (let i = 0; i < backLinksLen; i++) {
-                    const neighbor = backLinks[i];
-                    if (neighbor.isCycle && !visited.has(neighbor)) {
-                        visited.add(neighbor);
-                        const neighborStillInCycle = neighbor.cycleRef !== null;
-
-                        if (!neighborStillInCycle) {
-                            neighbor.isCycle = false;
-                            neighbor.cycleRef = null;
-                            neighbor.headType = CycleHeadType.NONE;
-                            neighbor.cycleOffset = 0;
-                            queue.push(neighbor);
-                        }
-                    }
-                }
+                this.processRemovalNeighbors(current.links, queue, visited);
+                this.processRemovalNeighbors(current.backLinks, queue, visited);
             }
+
             queue.length = 0;
             visited.clear();
         }
     }
 
-    public onLinkAdded(graph: Graph, node: GraphNode, target: GraphNode) {
-        let cycleCreated = false;
-
-        if (canBeInCycle(node) && canBeInCycle(target)) {
-            const budget = CycleBudgetSetting.value;
-            if (budget === 0) {
-                const cyclePath = this.findCyclePathSync(target, node);
-                if (cyclePath !== null && this.isValidCycle(cyclePath)) {
-                    let allNull = true;
-                    for (let i = 0; i < cyclePath.length; i++) {
-                        if (cyclePath[i].cycleRef !== null) {
-                            allNull = false;
-                            break;
-                        }
-                    }
-                    if (allNull) {
-                        graph.addCycle(cyclePath);
-                        cycleCreated = true;
-                    }
+    private processRemovalNeighbors(
+        neighbors: readonly GraphNode[],
+        queue: GraphNode[],
+        visited: Set<GraphNode>,
+    ): void {
+        for (let i = 0; i < neighbors.length; i++) {
+            const neighbor = neighbors[i];
+            if (neighbor.isCycle && !visited.has(neighbor)) {
+                visited.add(neighbor);
+                if (neighbor.cycleRef === null) {
+                    this.resetNodeCycleState(neighbor);
+                    queue.push(neighbor);
                 }
+            }
+        }
+    }
+
+    private validateOrDismantle(
+        graph: Graph,
+        cycle: GraphCycle | null,
+    ): boolean {
+        if (!cycle) return false;
+        if (!this.isValidCycle(cycle.nodes)) {
+            graph.removeCycle(cycle);
+            return true;
+        }
+        this.refreshCycleIO(cycle);
+        return false;
+    }
+
+    private updateCycleStatusIfActive(node: GraphNode): void {
+        if (node.isCycle) {
+            this.updateCycleStatusAfterRemoval(node);
+        }
+    }
+
+    public onLinkAdded(graph: Graph, node: GraphNode, target: GraphNode): void {
+        if (canBeInCycle(node) && canBeInCycle(target)) {
+            if (CycleBudgetSetting.value === 0) {
+                const cyclePath = this.findCyclePathSync(target, node);
+                if (this.tryAddCycle(graph, cyclePath)) return;
             } else {
                 const task = new CycleSearchTask(target, node);
                 this.scheduler.schedule(
                     task,
                     (path) => {
-                        if (path !== null && this.isValidCycle(path)) {
-                            let allNull = true;
-                            for (let i = 0; i < path.length; i++) {
-                                if (path[i].cycleRef !== null) {
-                                    allNull = false;
-                                    break;
-                                }
-                            }
-                            if (allNull) {
-                                graph.addCycle(path);
-                                if (node.cycleRef !== null) {
-                                    this.refreshCycleIO(node.cycleRef);
-                                }
-                            }
+                        if (
+                            this.tryAddCycle(graph, path) &&
+                            node.cycleRef !== null
+                        ) {
+                            this.refreshCycleIO(node.cycleRef);
                         }
                     },
                     target,
                 );
                 return;
             }
-        }
-
-        if (cycleCreated) {
-            return;
         }
 
         const nodeCycleRef = node.cycleRef;
@@ -505,9 +435,8 @@ export class CycleManager implements IGraphListener {
                 this.validateOrDismantle(graph, targetCycleRef) || dismantled;
         }
 
-        const backLinks = node.backLinks;
-        for (let i = 0; i < backLinks.length; i++) {
-            const ref = backLinks[i].cycleRef;
+        for (let i = 0; i < node.backLinks.length; i++) {
+            const ref = node.backLinks[i].cycleRef;
             if (
                 ref !== null &&
                 ref !== nodeCycleRef &&
@@ -517,9 +446,8 @@ export class CycleManager implements IGraphListener {
             }
         }
 
-        const targetLinks = target.links;
-        for (let i = 0; i < targetLinks.length; i++) {
-            const ref = targetLinks[i].cycleRef;
+        for (let i = 0; i < target.links.length; i++) {
+            const ref = target.links[i].cycleRef;
             if (
                 ref !== null &&
                 ref !== nodeCycleRef &&
@@ -556,10 +484,7 @@ export class CycleManager implements IGraphListener {
             graph,
             fromNode,
         );
-
-        const anyDismantled = cycleDismantled || parentsDismantled;
-
-        if (anyDismantled) {
+        if (cycleDismantled || parentsDismantled) {
             this.tryRebuildCycle(graph, fromNode);
             this.tryRebuildCycle(graph, toNode);
         }
@@ -575,18 +500,13 @@ export class CycleManager implements IGraphListener {
         }
     }
 
-    public onNodeTypeChanged(graph: Graph, node: GraphNode) {
+    public onNodeTypeChanged(graph: Graph, node: GraphNode): void {
         this.scheduler.cancel(node);
 
-        const backLinks = node.backLinks;
-        for (let i = 0; i < backLinks.length; i++) {
+        const { backLinks, links } = node;
+        for (let i = 0; i < backLinks.length; i++)
             this.scheduler.cancel(backLinks[i]);
-        }
-
-        const links = node.links;
-        for (let i = 0; i < links.length; i++) {
-            this.scheduler.cancel(links[i]);
-        }
+        for (let i = 0; i < links.length; i++) this.scheduler.cancel(links[i]);
 
         let dismantled = false;
 
@@ -602,12 +522,11 @@ export class CycleManager implements IGraphListener {
             }
         }
 
-        const parentsDismantled = this.reevaluateParentCyclesTrack(graph, node);
-        dismantled = dismantled || parentsDismantled;
+        dismantled =
+            this.reevaluateParentCyclesTrack(graph, node) || dismantled;
 
         for (let i = 0; i < links.length; i++) {
-            const next = links[i];
-            const ref = next.cycleRef;
+            const ref = links[i].cycleRef;
             if (ref !== null && ref !== node.cycleRef) {
                 if (!this.isValidCycle(ref.nodes)) {
                     graph.removeCycle(ref);
@@ -618,27 +537,21 @@ export class CycleManager implements IGraphListener {
             }
         }
 
-        const canCreateCycle = !node.isCycle && canBeInCycle(node);
-
-        if (dismantled || canCreateCycle) {
+        if (dismantled || (!node.isCycle && canBeInCycle(node))) {
             this.tryRebuildCycle(graph, node);
-
             for (let i = 0; i < links.length; i++) {
                 this.tryRebuildCycle(graph, links[i]);
             }
         }
 
         this.updateCycleStatusIfActive(node);
-
-        for (let i = 0; i < backLinks.length; i++) {
+        for (let i = 0; i < backLinks.length; i++)
             this.updateCycleStatusIfActive(backLinks[i]);
-        }
-        for (let i = 0; i < links.length; i++) {
+        for (let i = 0; i < links.length; i++)
             this.updateCycleStatusIfActive(links[i]);
-        }
     }
 
-    public attachNodesToCycle(cycle: GraphCycle, nodes: GraphNode[]) {
+    public attachNodesToCycle(cycle: GraphCycle, nodes: GraphNode[]): void {
         for (let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
             node.isCycle = true;
@@ -647,17 +560,12 @@ export class CycleManager implements IGraphListener {
         this.refreshCycleIO(cycle);
     }
 
-    public detachNodesFromCycle(cycle: GraphCycle) {
-        const nodes = cycle.nodes;
-        for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-            node.isCycle = false;
-            node.cycleRef = null;
-            node.headType = CycleHeadType.NONE;
-            node.cycleOffset = 0;
-        }
+    public detachNodesFromCycle(cycle: GraphCycle): void {
+        const { nodes, heads } = cycle;
 
-        const heads = cycle.heads;
+        for (let i = 0; i < nodes.length; i++) {
+            this.resetNodeCycleState(nodes[i]);
+        }
         for (let i = 0; i < heads.length; i++) {
             this.resetHead(heads[i]);
         }

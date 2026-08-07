@@ -1,9 +1,9 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { ChunkUpdates } from '@logic-arrows/game-logic/chunk-updates';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
 import { ACTIVE_SIGNALS, ArrowSignal } from 'src/core/utils/ArrowSignal';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
-import type { GraphCycle } from '../../ast/CycleTypes';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';

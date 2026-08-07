@@ -2,6 +2,7 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import {
     GraphEngine,
@@ -22,7 +23,6 @@ import { DefaultEngine } from '../engines/default/DefaultEngine';
 import { SoAEngine } from '../engines/enhanced/SoAEngine';
 import { NativeEngine } from '../engines/native/NativeEngine';
 import { RawEngine } from '../engines/raw/RawEngine';
-import type { GraphCycle } from './CycleTypes';
 import { CycleManager } from './cycle/CycleManager';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';

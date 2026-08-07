@@ -1,5 +1,8 @@
+import {
+    CycleHeadType,
+    type GraphCycle,
+} from 'src/core/graph/ast/cycle/CycleTypes';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
-import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import type { RawGraphState } from './RawState';
