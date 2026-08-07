@@ -3,6 +3,7 @@ import {
     GraphDLCPrefix,
     LatestVersionTextLocale,
     OutdatedVersionLocale,
+    TestVersionTextLocale,
     VersionUnknownLocale,
 } from 'src/core/credentials/Locale';
 import { VersionState } from 'src/core/credentials/version/VersionState';
@@ -45,9 +46,17 @@ export const PatchSettingsPage: IPatcher = (
                     );
                     VersionState.subscribe((state) => {
                         if (state === 'latest') {
-                            versionUpdate(
-                                GraphDLCPrefix + LatestVersionTextLocale.get(),
-                            );
+                            if (__CURRENT_VERSION__.endsWith('-test')) {
+                                versionUpdate(
+                                    GraphDLCPrefix +
+                                        TestVersionTextLocale.get(),
+                                );
+                            } else {
+                                versionUpdate(
+                                    GraphDLCPrefix +
+                                        LatestVersionTextLocale.get(),
+                                );
+                            }
                         } else if (state === 'outdated') {
                             versionUpdate(
                                 GraphDLCPrefix +
