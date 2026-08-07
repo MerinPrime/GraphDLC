@@ -145,9 +145,9 @@ export const PatchPlayerControls: IPatcher = (
                                     arrow.type === ArrowType.DELAY ||
                                     arrow.type === ArrowType.IMPULSE;
                                 let newSignal =
-                                    arrow.type === ArrowType.IMPULSE
-                                        ? NodeSignal.ACTIVE
-                                        : NodeSignal.PENDING;
+                                    arrow.type === ArrowType.DELAY
+                                        ? NodeSignal.PENDING
+                                        : NodeSignal.ACTIVE;
                                 if (
                                     hasPendingPhase &&
                                     signal === NodeSignal.PENDING
