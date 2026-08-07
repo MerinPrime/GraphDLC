@@ -14,6 +14,11 @@ import { PatchBackend } from 'src/patches/map_protection/PatchBackend';
 import { ApplyPatches } from 'src/patches/Patcher';
 import { PatchGameRender } from 'src/patches/render/PatchGameRender';
 import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
+import { Save_PatchBackend } from 'src/patches/save/PatchBackend';
+import { Save_PatchGameMap } from 'src/patches/save/PatchGameMap';
+import { Save_PatchGamePage } from 'src/patches/save/PatchGamePage';
+import { Save_PatchPlayerControls } from 'src/patches/save/PatchPlayerControls';
+import { Save_PatchUIMenu } from 'src/patches/save/PatchUIMenu';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
@@ -65,6 +70,11 @@ export class GraphDLC {
             PatchPlayerArrowActions,
             PatchSpeedController,
             PatchLangSettings,
+            Save_PatchGamePage,
+            Save_PatchGameMap,
+            Save_PatchBackend,
+            Save_PatchUIMenu,
+            Save_PatchPlayerControls,
         ]);
     }
 }
