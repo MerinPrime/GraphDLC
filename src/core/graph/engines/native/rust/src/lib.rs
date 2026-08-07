@@ -287,6 +287,7 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     let chunk_idx = node.chunk_idx;
 
     state.mark_node_as_changed_non_temp(node_idx);
+    state.mark_node_as_changed(node_idx);
     state.make_dirty_chunk(chunk_idx);
 }
 

@@ -346,6 +346,7 @@ export class RawGraphState {
         const nodeState = this.getNode(nodeIdx);
         nodeState.signal = signal;
         this.markNodeChanged(nodeState);
+        if (!nodeState.isChanged) this.markNodeTempChanged(nodeState);
         this.makeDirtyChunk(nodeState.chunkIdx);
     }
 }

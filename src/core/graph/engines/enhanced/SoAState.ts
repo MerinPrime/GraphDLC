@@ -513,8 +513,13 @@ export class SoAGraphState {
             this.extra32NodeData[
                 extra32NodeOffset + SoALayout.Extra32Node.CHUNK_IDX
             ];
+        const isChanged =
+            (this.nodeData[nodeOffset + SoALayout.Node.FLAGS] &
+                SoALayout.Node.Flags.IsChanged) !==
+            0;
         this.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
         this.markNodeChanged(nodeIdx);
+        if (!isChanged) this.markNodeTempChanged(nodeIdx);
         this.makeDirtyChunk(chunkIdx);
     }
 }
