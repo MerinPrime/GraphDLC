@@ -30,9 +30,6 @@ export interface IEngine {
     updateNodeState(node: GraphNode): void;
     updateChunk(chunk: Chunk): void;
 
-    doPressButton(nodeIdx: number, state: boolean): void;
-    doArrowSignal(nodeIdx: number, state: boolean): void;
-
     setBreakpointState(newState: boolean): void;
     setSnapshotsState(newState: boolean): void;
 

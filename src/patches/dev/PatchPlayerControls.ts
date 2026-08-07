@@ -11,6 +11,7 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
+import { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerControls {
@@ -96,7 +97,13 @@ export const PatchPlayerControls: IPatcher = (
                                     const engine =
                                         _this.game.gameMap.graph.engine;
                                     const state = arrow.signal !== 0;
-                                    engine.doPressButton(arrow.astIndex, state);
+                                    const signal = state
+                                        ? NodeSignal.ACTIVE
+                                        : NodeSignal.NONE;
+                                    engine.setNodeSignal(
+                                        arrow.astIndex,
+                                        signal,
+                                    );
                                 }
                             }
                         }
@@ -134,8 +141,26 @@ export const PatchPlayerControls: IPatcher = (
                                 const signal = engine.getNodeSignal(
                                     arrow.astIndex,
                                 );
-                                const state = signal === NodeSignal.NONE;
-                                engine.doArrowSignal(arrow.astIndex, state);
+                                const hasPendingPhase =
+                                    arrow.type === ArrowType.DELAY ||
+                                    arrow.type === ArrowType.IMPULSE;
+                                let newSignal =
+                                    arrow.type === ArrowType.IMPULSE
+                                        ? NodeSignal.ACTIVE
+                                        : NodeSignal.PENDING;
+                                if (
+                                    hasPendingPhase &&
+                                    signal === NodeSignal.PENDING
+                                )
+                                    newSignal = NodeSignal.ACTIVE;
+                                if (
+                                    hasPendingPhase &&
+                                    signal === NodeSignal.ACTIVE
+                                )
+                                    newSignal = NodeSignal.PENDING;
+                                if (_this.keyboardHandler.getShiftPressed())
+                                    newSignal = NodeSignal.NONE;
+                                engine.setNodeSignal(arrow.astIndex, newSignal);
                                 return;
                             }
                         }

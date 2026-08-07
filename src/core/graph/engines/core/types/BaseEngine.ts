@@ -162,16 +162,6 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     public abstract updateNodeState(node: GraphNode): void;
     public abstract updateChunk(chunk: Chunk): void;
 
-    public doPressButton(nodeIdx: number, state: boolean): void {
-        const signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-        this.setNodeSignal(nodeIdx, signal);
-    }
-
-    public doArrowSignal(nodeIdx: number, state: boolean): void {
-        const signal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-        this.setNodeSignal(nodeIdx, signal);
-    }
-
     public setBreakpointState(newState: boolean): void {
         this.useBreakPoints = newState;
     }
