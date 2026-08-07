@@ -18,8 +18,8 @@ export class RawNodeState {
     public links: RawNodeState[] = [];
     public detectorLinks: RawNodeState[] = [];
 
-    public signal: number = 0;
-    public lastSignal: number = 0;
+    public signal: NodeSignal = 0;
+    public lastSignal: NodeSignal = 0;
     public signalsCount: number = 0;
     public blockedCount: number = 0;
 

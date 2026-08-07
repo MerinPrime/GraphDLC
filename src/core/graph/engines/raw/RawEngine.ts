@@ -13,7 +13,7 @@ interface RawEngineTypes extends EngineTypes {
 }
 
 export class RawEngine extends BaseEngine<RawEngineTypes> {
-    private readonly state: RawGraphState = new RawGraphState();
+    public readonly state: RawGraphState = new RawGraphState();
     private readonly updater: RawGraphUpdater = new RawGraphUpdater();
     private readonly synchronizer: RawStateSynchronizer =
         new RawStateSynchronizer(this.updater);
