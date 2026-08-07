@@ -16,6 +16,8 @@ export class CustomTPSComponent {
         this.field.value = '1';
         this.field.classList.add('custom-tps-input');
 
+        this.field.inputMode = 'numeric';
+
         if (hasPause) {
             this.field.classList.add('has-pause');
         }
@@ -27,15 +29,21 @@ export class CustomTPSComponent {
             this.field.value = this.tps.toString(10);
         });
 
+        this.field.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.focus();
+        });
+        this.field.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.focus();
+        });
+        this.field.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.focus();
+        });
+
         this.parent.appendChild(this.field);
         this.setVisibility(false);
-
-        this.field.setAttribute('inputmode', 'none');
-
-        this.field.addEventListener('click', () => {
-            this.field.setAttribute('inputmode', 'numeric');
-            this.field.focus();
-        });
     }
 
     public getTicksPerFrame(): number {
@@ -57,11 +65,7 @@ export class CustomTPSComponent {
 
     public setVisibility(visibility: boolean): void {
         if (this.isRemoved) return;
-        const beHidden = this.field.hidden;
         this.field.hidden = !visibility;
-        if (beHidden && visibility) {
-            this.focus();
-        }
     }
 
     public remove() {
