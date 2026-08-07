@@ -126,9 +126,10 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
         const arrow = this.graph.getArrow(nodeIdx);
+        if (arrow.signal === ACTIVE_SIGNALS[arrow.type])
+            return NodeSignal.ACTIVE;
         if (arrow.signal === ArrowSignal.BLUE) return NodeSignal.PENDING;
-        if (arrow.signal === ArrowSignal.NONE) return NodeSignal.NONE;
-        return NodeSignal.ACTIVE;
+        return NodeSignal.NONE;
     }
 
     public reset(): void {
