@@ -38,7 +38,7 @@ export const PatchPlayerUI: IPatcher = (
                 const hasPause = PLATFORM === 'mobile';
                 this.speedController = new _UISpeedController.val(
                     document.body,
-                    10,
+                    11,
                     hasPause,
                     (e: number) => {
                         if (hasPause) {
@@ -55,6 +55,7 @@ export const PatchPlayerUI: IPatcher = (
                             '6000',
                             '30000',
                             '120000',
+                            '600000',
                             'MAX',
                         ];
                         return `${TPS_LIMITS[e]} TPS`;
