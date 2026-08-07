@@ -1,7 +1,7 @@
 {
     "name": "graphdlc",
     "displayName": "GraphDLC",
-    "version": "3.0.3",
+    "version": "3.0.3.1-test",
     "description": "GraphDLC для стрелочек...",
     "main": "index.js",
     "scripts": {
