@@ -26,7 +26,6 @@ import { UpdateManager } from './credentials/UpdateManager';
 import { checkVersion } from './credentials/version/VersionState';
 import type { PatchLoader } from './PatchLoader';
 import { PathFinder } from './path_finder/PathFinder';
-import { UnsavedWarnSetting } from './settings/instances/tools/UnsavedWarnSetting';
 import { SettingsManager } from './settings/Manager';
 
 export class GraphDLC {
@@ -73,14 +72,13 @@ export class GraphDLC {
             PatchLangSettings,
         ]);
 
-        if (UnsavedWarnSetting.value) {
-            ApplyPatches(this.patchLoader, this, [
-                Save_PatchGamePage,
-                Save_PatchGameMap,
-                Save_PatchBackend,
-                Save_PatchUIMenu,
-                Save_PatchPlayerControls,
-            ]);
-        }
+        // if (UnsavedWarnSetting.value)
+        ApplyPatches(this.patchLoader, this, [
+            Save_PatchGamePage,
+            Save_PatchGameMap,
+            Save_PatchBackend,
+            Save_PatchUIMenu,
+            Save_PatchPlayerControls,
+        ]);
     }
 }

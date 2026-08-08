@@ -21,7 +21,7 @@ const DescriptionLocale = new I18nText(
 export const UnsavedWarnSetting = new BoolSetting('UnsavedWarn', true, {
     name: NameLocale,
     description: DescriptionLocale,
-    reloadOnChange: true,
+    reloadOnChange: false,
     isMapSetting: false,
     group: ToolsSettingGroup,
     order: 6,
