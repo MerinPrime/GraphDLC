@@ -17,6 +17,7 @@ export const Save_PatchUIMenu: IPatcher = (
         const _save = patchLoader.getInstance<typeof save>('save');
         const _Utils = patchLoader.getInstance<typeof Utils>('Utils');
 
+        // @ts-expect-error
         return class UIMenu extends _module {
             public constructor(
                 parent: HTMLElement,
@@ -32,6 +33,11 @@ export const Save_PatchUIMenu: IPatcher = (
                         GamePage.val?.updateIsMapChanged(false);
                     }
                 }
+            }
+
+            public async saveMap(mapInfo: MapInfo, game: Game): Promise<void> {
+                // @ts-expect-error
+                await super.saveMap(mapInfo, game);
             }
         };
     });

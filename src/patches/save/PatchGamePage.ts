@@ -57,12 +57,18 @@ export const Save_PatchGamePage: IPatcher = (
 
                     if (isCtrlOrCmd && isKeyS) {
                         event.preventDefault();
-                        // @ts-expect-error
-                        this.autosave();
+                        this.doMapSave();
                     }
                 };
                 window.addEventListener('keydown', this.keydownHandler);
             }
+
+            public async doMapSave(): Promise<void> {
+                // @ts-expect-error
+                super.autosave();
+            }
+
+            public async autosave(): Promise<void> {}
 
             public async dispose(): Promise<void> {
                 await super.dispose();

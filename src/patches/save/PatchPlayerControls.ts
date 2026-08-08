@@ -1,4 +1,5 @@
 import type { KeyboardHandler } from '@logic-arrows/controls/keyboard-handler';
+import type { GamePage } from '@logic-arrows/pages/game-page';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
@@ -18,6 +19,8 @@ export const Save_PatchPlayerControls: IPatcher = (
     patchLoader.addDefinitionPatch(
         'PlayerControls',
         (_module: typeof PlayerControls) => {
+            const GamePage = patchLoader.getInstance<GamePage>('GamePage');
+
             return class PlayerControls extends _module {
                 public constructor(
                     cnv: HTMLCanvasElement,
@@ -37,8 +40,10 @@ export const Save_PatchPlayerControls: IPatcher = (
                         if (
                             code === 'KeyS' &&
                             _this.keyboardHandler.getCtrlPressed()
-                        )
+                        ) {
+                            GamePage.val?.doMapSave();
                             return;
+                        }
                         if (oldKeyDownCallback) oldKeyDownCallback(code, key);
                     };
                 }

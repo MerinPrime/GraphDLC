@@ -91,6 +91,7 @@ declare module '@logic-arrows/player/player-ui' {
 
 declare module '@logic-arrows/pages/game-page' {
     export interface GamePage {
+        doMapSave(): Promise<void>;
         updateIsMapChanged(state: boolean): void;
     }
 }
