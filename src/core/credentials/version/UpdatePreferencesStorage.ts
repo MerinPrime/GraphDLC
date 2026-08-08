@@ -5,12 +5,12 @@ type UpdatePreferences = {
     ignoredVersion?: string;
 };
 
-export class UpdatePreferencesStorage {
-    static save(data: UpdatePreferences) {
+export namespace UpdatePreferencesStorage {
+    export function save(data: UpdatePreferences): void {
         localStorage.setItem(STORAGE_KEYS.UpdatePref, JSON.stringify(data));
     }
 
-    static get(): UpdatePreferences | undefined {
+    export function get(): UpdatePreferences | undefined {
         const value = localStorage.getItem(STORAGE_KEYS.UpdatePref);
 
         if (!value) return undefined;
@@ -18,12 +18,12 @@ export class UpdatePreferencesStorage {
         try {
             return JSON.parse(value);
         } catch {
-            UpdatePreferencesStorage.clear();
+            clear();
             return undefined;
         }
     }
 
-    static clear() {
+    export function clear(): void {
         localStorage.removeItem(STORAGE_KEYS.UpdatePref);
     }
 }

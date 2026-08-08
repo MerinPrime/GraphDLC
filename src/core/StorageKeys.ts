@@ -1,4 +1,4 @@
-export enum STORAGE_KEYS {
+export const enum STORAGE_KEYS {
     Bundle = 'arrows:selectedBundleId',
     Unsupported = 'graphdlc:unsupported',
     UpdatePref = 'graphdlc:update-preferences',

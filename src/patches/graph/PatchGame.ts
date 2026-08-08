@@ -36,7 +36,7 @@ interface PrivateGame {
 
 export const PatchGame: IPatcher = (
     patchLoader: PatchLoader,
-    graphDLC: GraphDLC,
+    _graphDLC: GraphDLC,
 ) => {
     let renderDelta = 0;
     let lastUpdateTime = -1;

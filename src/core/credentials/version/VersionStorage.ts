@@ -5,20 +5,18 @@ type VersionCache = {
 
 const VERSION_KEY = 'graphdlc:latest-version';
 
-export class VersionStorage {
-    static save(data: VersionCache) {
+export namespace VersionStorage {
+    export function save(data: VersionCache): void {
         localStorage.setItem(VERSION_KEY, JSON.stringify(data));
     }
 
-    static get(): VersionCache | undefined {
+    export function get(): VersionCache | undefined {
         const value = localStorage.getItem(VERSION_KEY);
-
         if (!value) return undefined;
-
         return JSON.parse(value);
     }
 
-    static clear() {
+    export function clear(): void {
         localStorage.removeItem(VERSION_KEY);
     }
 }

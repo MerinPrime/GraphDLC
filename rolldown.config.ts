@@ -80,7 +80,7 @@ const rustWasmPlugin = (): RolldownPlugin => ({
                 let libName = 'graph';
 
                 const libMatch = cargoToml.match(
-                    /\[lib\][^]*?name\s*=\s*"([^"]+)"/,
+                    /\[lib\].*?name\s*=\s*"([^"]+)"/s,
                 );
                 if (libMatch) {
                     libName = libMatch[1].replace(/-/g, '_');

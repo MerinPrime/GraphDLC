@@ -174,60 +174,60 @@ const originalElementAppend = Element.prototype.appendChild;
 const originalElementInsertBefore = Element.prototype.insertBefore;
 const originalDocAppend = Document.prototype.appendChild;
 
-function handleScriptInjection(element: HTMLElement): boolean {
-    let url: string | null = null;
+function getScriptUrl(element: HTMLElement): string | null {
+    if (element instanceof HTMLScriptElement && element.src) return element.src;
+    if (element instanceof HTMLLinkElement && element.href) return element.href;
+    return null;
+}
 
-    if (element instanceof HTMLScriptElement && element.src) {
-        url = element.src;
-    } else if (element instanceof HTMLLinkElement && element.href) {
-        url = element.href;
+function handleScriptInjection(element: HTMLElement): boolean {
+    const url = getScriptUrl(element);
+
+    if (!url?.includes('bundle.js') || url?.includes('bundle-shell.js')) {
+        return false;
     }
 
-    if (url?.includes('bundle.js') && !url.includes('bundle-shell.js')) {
-        fetch(url)
-            .then((res) => res.text())
-            .then((gameCode) => {
-                const searchStr = 'function s';
-                const lastIndex = gameCode.lastIndexOf(searchStr);
+    fetch(url)
+        .then((res) => res.text())
+        .then((gameCode) => {
+            const searchStr = 'function s';
+            const lastIndex = gameCode.lastIndexOf(searchStr);
 
-                let patchedCode = gameCode;
-                if (lastIndex !== -1) {
-                    patchedCode =
-                        gameCode.slice(0, lastIndex) +
-                        '(window.patchWebpackModules(e));' +
-                        gameCode.slice(lastIndex);
-                } else {
-                    console.error(
-                        "[GraphDLC] hook pattern 'function s' not found in that bundle.js!",
-                    );
-                    alert(
-                        "[GraphDLC] hook pattern 'function s' not found in that bundle.js!",
-                    );
-                }
+            let patchedCode = gameCode;
+            if (lastIndex !== -1) {
+                patchedCode =
+                    gameCode.slice(0, lastIndex) +
+                    '(window.patchWebpackModules(e));' +
+                    gameCode.slice(lastIndex);
+            } else {
+                console.error(
+                    "[GraphDLC] hook pattern 'function s' not found in that bundle.js!",
+                );
+                alert(
+                    "[GraphDLC] hook pattern 'function s' not found in that bundle.js!",
+                );
+            }
 
-                const patchedScript = document.createElement('script');
-                patchedScript.textContent = `${patchedCode}\n//# sourceURL=${url.split('?')[0]}`;
+            const patchedScript = document.createElement('script');
+            patchedScript.textContent = `${patchedCode}\n//# sourceURL=${url.split('?')[0]}`;
 
-                if (element instanceof HTMLScriptElement) {
-                    for (let i = 0; i < element.attributes.length; i++) {
-                        const attr = element.attributes[i];
-                        if (attr.name !== 'src') {
-                            patchedScript.setAttribute(attr.name, attr.value);
-                        }
+            if (element instanceof HTMLScriptElement) {
+                for (let i = 0; i < element.attributes.length; i++) {
+                    const attr = element.attributes[i];
+                    if (attr.name !== 'src') {
+                        patchedScript.setAttribute(attr.name, attr.value);
                     }
                 }
+            }
 
-                originalElementAppend.call(document.head, patchedScript);
-            })
-            .catch((err) => {
-                console.error('[GraphDLC] Error fetch-hook bundle.js:', err);
-                alert(`[GraphDLC] Error fetch-hook bundle.js: ${err}`);
-            });
+            originalElementAppend.call(document.head, patchedScript);
+        })
+        .catch((err) => {
+            console.error('[GraphDLC] Error fetch-hook bundle.js:', err);
+            alert(`[GraphDLC] Error fetch-hook bundle.js: ${err}`);
+        });
 
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 Element.prototype.appendChild = function <T extends Node>(newChild: T): T {

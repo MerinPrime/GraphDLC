@@ -8,7 +8,7 @@ import { DebuggerMode } from '../DebuggerMode';
 import type { DebugColor, INodeDebugData } from '../types';
 
 const ALPHA = 0.25;
-const HASH_COLORS: DebugColor[] = [
+const HASH_COLORS: readonly DebugColor[] = [
     [0.8, 0.2, 0.2, ALPHA],
     [0.2, 0.8, 0.2, ALPHA],
     [0.2, 0.2, 0.8, ALPHA],

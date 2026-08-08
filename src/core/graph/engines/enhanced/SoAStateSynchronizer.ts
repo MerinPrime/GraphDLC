@@ -15,45 +15,48 @@ export class SoAStateSynchronizer {
         this.updater = updater;
     }
 
-    public onCycleBuild(state: SoAGraphState, cycle: GraphCycle) {
+    public onCycleBuild(state: SoAGraphState, cycle: GraphCycle): void {
         state.addCycle(cycle);
         const cycleState = state.cycles[cycle.index];
         if (!cycleState) return;
 
-        for (const node of cycle.nodes) {
-            const nodeOffset = node.nodeIdx * SoALayout.Node.STRIDE;
+        const nodeStorage = state.storage;
+        const nodeData = nodeStorage.nodeData;
+
+        for (let i = 0; i < cycle.nodes.length; i++) {
+            const node = cycle.nodes[i];
+            const nodeOffset = nodeStorage.inlineNodeOffset(node.nodeIdx);
 
             if (
-                state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] ===
+                nodeData[nodeOffset + SoALayout.Node.SIGNAL] ===
                 NodeSignal.ACTIVE
             ) {
                 cycleState.writeBit(state.tick, node.cycleOffset);
             }
 
-            state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
-                NodeSignal.NONE;
-            state.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] =
-                NodeSignal.NONE;
+            nodeData[nodeOffset + SoALayout.Node.SIGNAL] = NodeSignal.NONE;
+            nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = NodeSignal.NONE;
             state.makeDirtyChunk(node.chunkIdx);
         }
 
-        for (const node of cycle.nodes) {
+        for (let i = 0; i < cycle.nodes.length; i++) {
+            const node = cycle.nodes[i];
             const nodeIdx = node.nodeIdx;
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+            const nodeOffset = nodeStorage.inlineNodeOffset(nodeIdx);
+            const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
+
             const isHead =
                 node.headType !== CycleHeadType.NONE &&
                 node.headType !== CycleHeadType.READ;
 
             if (!isHead) {
                 const isChanged =
-                    (state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &
-                        SoALayout.Node.Flags.IsChanged) !==
+                    (nodeData[flagsOffset] & SoALayout.Node.Flags.IsChanged) !==
                     0;
                 if (isChanged) {
                     state.changedNodes.removeElement(nodeIdx);
                     state.tempChangedNodes.removeElement(nodeIdx);
-                    state.nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
-                        ~SoALayout.Node.Flags.IsChanged;
+                    nodeData[flagsOffset] &= ~SoALayout.Node.Flags.IsChanged;
                 }
             } else {
                 this.updater.markNodeAsChangedNonTemp(state, nodeIdx);
@@ -61,10 +64,9 @@ export class SoAStateSynchronizer {
             }
         }
 
-        for (const headNode of cycle.heads) {
-            if (headNode.cycleRef === cycle) {
-                continue;
-            }
+        for (let i = 0; i < cycle.heads.length; i++) {
+            const headNode = cycle.heads[i];
+            if (headNode.cycleRef === cycle) continue;
 
             if (headNode.headType !== CycleHeadType.NONE) {
                 this.updater.markNodeAsChangedNonTemp(state, headNode.nodeIdx);
@@ -72,32 +74,20 @@ export class SoAStateSynchronizer {
             }
         }
 
-        const affectedNodes = new Set<GraphNode>();
-        for (const node of cycle.nodes) {
-            affectedNodes.add(node);
-            for (const next of node.links) {
-                affectedNodes.add(next);
-            }
-        }
-        for (const head of cycle.heads) {
-            affectedNodes.add(head);
-            for (const next of head.links) {
-                affectedNodes.add(next);
-            }
-        }
-
-        for (const affectedNode of affectedNodes) {
-            this.updater.fullNodeStateCalculate(state, affectedNode);
-        }
+        this.recalculateCycleAffectedNodes(state, cycle);
     }
 
-    public onCycleDismantle(state: SoAGraphState, cycle: GraphCycle) {
+    public onCycleDismantle(state: SoAGraphState, cycle: GraphCycle): void {
         const cycleState = state.cycles[cycle.index];
+        const nodeStorage = state.storage;
+        const nodeData = nodeStorage.nodeData;
+        const extra32Data = nodeStorage.extra32NodeData;
 
-        for (const node of cycle.nodes) {
+        for (let i = 0; i < cycle.nodes.length; i++) {
+            const node = cycle.nodes[i];
             const nodeIdx = node.nodeIdx;
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-            const extra32Offset = nodeIdx * SoALayout.Extra32Node.STRIDE;
+            const nodeOffset = nodeStorage.inlineNodeOffset(nodeIdx);
+            const extra32Offset = nodeStorage.inlineExtra32Offset(nodeIdx);
 
             const signalOffset = nodeOffset + SoALayout.Node.SIGNAL;
             const lastSignalOffset = nodeOffset + SoALayout.Node.LAST_SIGNAL;
@@ -112,43 +102,25 @@ export class SoAStateSynchronizer {
                 );
 
                 if (isActive) {
-                    state.nodeData[signalOffset] = NodeSignal.ACTIVE;
-                    state.nodeData[lastSignalOffset] = NodeSignal.ACTIVE;
-                    state.makeDirtyChunk(node.chunkIdx);
+                    nodeData[signalOffset] = NodeSignal.ACTIVE;
+                    nodeData[lastSignalOffset] = NodeSignal.ACTIVE;
                 } else {
-                    if (state.nodeData[signalOffset] !== NodeSignal.ACTIVE) {
-                        state.nodeData[signalOffset] = NodeSignal.NONE;
+                    if (nodeData[signalOffset] !== NodeSignal.ACTIVE) {
+                        nodeData[signalOffset] = NodeSignal.NONE;
                     }
-                    state.nodeData[lastSignalOffset] =
-                        state.nodeData[signalOffset];
-                    state.makeDirtyChunk(node.chunkIdx);
+                    nodeData[lastSignalOffset] = nodeData[signalOffset];
                 }
+                state.makeDirtyChunk(node.chunkIdx);
             }
 
-            state.extra32NodeData[cycleOffsetOffset] = 0;
-            state.nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
+            extra32Data[cycleOffsetOffset] = 0;
+            nodeData[flagsOffset] |= SoALayout.Node.Flags.IsUpdated;
 
             this.updater.markNodeAsChangedNonTemp(state, nodeIdx);
             this.updater.markNodeAsChanged(state, nodeIdx);
         }
 
-        const affectedNodes = new Set<GraphNode>();
-        for (const node of cycle.nodes) {
-            affectedNodes.add(node);
-            for (const next of node.links) {
-                affectedNodes.add(next);
-            }
-        }
-        for (const head of cycle.heads) {
-            affectedNodes.add(head);
-            for (const next of head.links) {
-                affectedNodes.add(next);
-            }
-        }
-
-        for (const affectedNode of affectedNodes) {
-            this.updater.fullNodeStateCalculate(state, affectedNode);
-        }
+        this.recalculateCycleAffectedNodes(state, cycle);
         state.removeCycle(cycle);
     }
 
@@ -157,12 +129,46 @@ export class SoAStateSynchronizer {
         node: GraphNode,
         oldLinks: GraphNode[],
         newLinks: GraphNode[],
-    ) {
-        const allNodes = new Set([...oldLinks, ...newLinks]);
-
+    ): void {
         this.updater.fullNodeStateCalculate(state, node);
+
+        const allNodes = new Set<GraphNode>();
+        for (let i = 0; i < oldLinks.length; i++) {
+            allNodes.add(oldLinks[i]);
+        }
+        for (let i = 0; i < newLinks.length; i++) {
+            allNodes.add(newLinks[i]);
+        }
+
         for (const edgeNode of allNodes) {
             this.updater.fullNodeStateCalculate(state, edgeNode);
+        }
+    }
+
+    private recalculateCycleAffectedNodes(
+        state: SoAGraphState,
+        cycle: GraphCycle,
+    ): void {
+        const affectedNodes = new Set<GraphNode>();
+
+        for (let i = 0; i < cycle.nodes.length; i++) {
+            const node = cycle.nodes[i];
+            affectedNodes.add(node);
+            for (let j = 0; j < node.links.length; j++) {
+                affectedNodes.add(node.links[j]);
+            }
+        }
+
+        for (let i = 0; i < cycle.heads.length; i++) {
+            const head = cycle.heads[i];
+            affectedNodes.add(head);
+            for (let j = 0; j < head.links.length; j++) {
+                affectedNodes.add(head.links[j]);
+            }
+        }
+
+        for (const affectedNode of affectedNodes) {
+            this.updater.fullNodeStateCalculate(state, affectedNode);
         }
     }
 }

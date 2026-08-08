@@ -17,7 +17,9 @@ export const VersionState = {
     set(s: VersionState, ver: string) {
         state = s;
         version = ver;
-        listeners.splice(0).forEach((fn) => fn(s, ver));
+        listeners.splice(0).forEach((fn) => {
+            fn(s, ver);
+        });
     },
 };
 

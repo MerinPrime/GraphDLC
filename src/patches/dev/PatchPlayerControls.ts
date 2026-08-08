@@ -92,7 +92,10 @@ export const PatchPlayerControls: IPatcher = (
                             freeCursor &&
                             !shiftPressed
                         ) {
-                            if (arrow.type === 21 || arrow.type === 24) {
+                            if (
+                                arrow.type === ArrowType.BUTTON ||
+                                arrow.type === ArrowType.DIRECTIONAL_BUTTON
+                            ) {
                                 if (arrow.astIndex != null) {
                                     const engine =
                                         _this.game.gameMap.graph.engine;

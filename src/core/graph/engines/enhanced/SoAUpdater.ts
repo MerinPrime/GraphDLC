@@ -6,25 +6,25 @@ import { SoALayout } from './SoALayout';
 import type { SoAGraphState } from './SoAState';
 
 export class SoAGraphUpdater {
-    public fullNodeStateCalculate(state: SoAGraphState, node: GraphNode) {
+    public fullNodeStateCalculate(state: SoAGraphState, node: GraphNode): void {
         const nodeIdx = node.nodeIdx;
-        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-        const nodeData = state.nodeData;
+        const storage = state.storage;
+        const nodeOffset = storage.inlineNodeOffset(nodeIdx);
+        const nodeData = storage.nodeData;
 
         let signalsCount = 0;
         let blockedCount = 0;
 
         const isDetector = node.type === NodeType.DETECTOR;
 
-        if (isDetector) {
-            if (node.detectedLink) {
-                const detectedOffset =
-                    node.detectedLink.nodeIdx * SoALayout.Node.STRIDE;
-                const detectedSignal = nodeData[
-                    detectedOffset + SoALayout.Node.SIGNAL
-                ] as NodeSignal;
-                signalsCount = detectedSignal !== NodeSignal.NONE ? 1 : 0;
-            }
+        if (isDetector && node.detectedLink) {
+            const detectedOffset = storage.inlineNodeOffset(
+                node.detectedLink.nodeIdx,
+            );
+            const detectedSignal = nodeData[
+                detectedOffset + SoALayout.Node.SIGNAL
+            ] as NodeSignal;
+            signalsCount = detectedSignal !== NodeSignal.NONE ? 1 : 0;
         }
 
         const backLinks = node.backLinks;
@@ -38,7 +38,7 @@ export class SoAGraphUpdater {
                 continue;
             }
 
-            const backOffset = back.nodeIdx * SoALayout.Node.STRIDE;
+            const backOffset = storage.inlineNodeOffset(back.nodeIdx);
             const backLastSignal = nodeData[
                 backOffset + SoALayout.Node.LAST_SIGNAL
             ] as NodeSignal;
@@ -58,24 +58,19 @@ export class SoAGraphUpdater {
         nodeData[nodeOffset + SoALayout.Node.SIGNALS_COUNT] = signalsCount;
         nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT] = blockedCount;
 
-        let flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
-        flags |= SoALayout.Node.Flags.IsUpdated;
-
-        state.changedNodes.add(nodeIdx);
-
-        if ((flags & SoALayout.Node.Flags.IsChanged) === 0) {
-            flags |= SoALayout.Node.Flags.IsChanged;
-            state.tempChangedNodes.add(nodeIdx);
-        }
-        nodeData[nodeOffset + SoALayout.Node.FLAGS] = flags;
+        nodeData[nodeOffset + SoALayout.Node.FLAGS] |=
+            SoALayout.Node.Flags.IsUpdated;
+        this.markNodeAsChangedNonTemp(state, nodeIdx);
+        this.markNodeAsChanged(state, nodeIdx);
     }
 
-    public updateState(state: SoAGraphState) {
-        const nodeData = state.nodeData;
-        const extra32NodeData = state.extra32NodeData;
-        const extra8NodeData = state.extra8NodeData;
-        const linkIndices = state.linkIndices;
-        const detectorIndices = state.detectorIndices;
+    public updateState(state: SoAGraphState): void {
+        const storage = state.storage;
+        const nodeData = storage.nodeData;
+        const extra32NodeData = storage.extra32NodeData;
+        const extra8NodeData = storage.extra8NodeData;
+        const linkIndices = storage.linkIndices;
+        const detectorIndices = storage.detectorIndices;
 
         const changedNodes = state.changedNodes;
         const tempChangedNodes = state.tempChangedNodes;
@@ -86,7 +81,7 @@ export class SoAGraphUpdater {
 
         for (let i = 0; i < changedLength; i++) {
             const nodeIdx = changedBuffer[i];
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+            const nodeOffset = storage.inlineNodeOffset(nodeIdx);
 
             const signal = nodeData[
                 nodeOffset + SoALayout.Node.SIGNAL
@@ -94,7 +89,7 @@ export class SoAGraphUpdater {
             const lastSignal = nodeData[
                 nodeOffset + SoALayout.Node.LAST_SIGNAL
             ] as NodeSignal;
-            let flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
+            const flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
 
             const isActive = signal === NodeSignal.ACTIVE;
             const isChanged = lastSignal !== signal;
@@ -103,7 +98,7 @@ export class SoAGraphUpdater {
             if ((flags & SoALayout.Node.Flags.IsCycleHead) !== 0) {
                 const blockedCount =
                     nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT];
-                const extra8Offset = nodeIdx * SoALayout.Extra8Node.STRIDE;
+                const extra8Offset = storage.inlineExtra8Offset(nodeIdx);
                 const cycleHeadType = extra8NodeData[
                     extra8Offset + SoALayout.Extra8Node.HEAD_TYPE
                 ] as CycleHeadType;
@@ -116,7 +111,7 @@ export class SoAGraphUpdater {
                     continue;
                 }
 
-                const extra32Offset = nodeIdx * SoALayout.Extra32Node.STRIDE;
+                const extra32Offset = storage.inlineExtra32Offset(nodeIdx);
                 const cycleIdx =
                     extra32NodeData[
                         extra32Offset + SoALayout.Extra32Node.CYCLE_IDX
@@ -140,11 +135,7 @@ export class SoAGraphUpdater {
                             break;
                     }
 
-                    if ((flags & SoALayout.Node.Flags.IsChanged) === 0) {
-                        flags |= SoALayout.Node.Flags.IsChanged;
-                        tempChangedNodes.add(nodeIdx);
-                        nodeData[nodeOffset + SoALayout.Node.FLAGS] = flags;
-                    }
+                    this.markNodeAsChanged(state, nodeIdx);
                 }
                 continue;
             }
@@ -160,22 +151,23 @@ export class SoAGraphUpdater {
                     const linksCount =
                         nodeData[nodeOffset + SoALayout.Node.LINKS_COUNT];
                     if (linksCount !== 0) {
-                        const linksOffset = nodeIdx * SoALayout.Links.STRIDE;
+                        const linksOffset = storage.inlineLinksOffset(nodeIdx);
                         const isBlocker = type === NodeType.BLOCKER;
-
                         const linksEnd = linksOffset + linksCount;
+
                         if (isBlocker) {
                             const extra32Offset =
-                                nodeIdx * SoALayout.Extra32Node.STRIDE;
+                                storage.inlineExtra32Offset(nodeIdx);
                             const blockedLinkIdx =
                                 extra32NodeData[
                                     extra32Offset +
                                         SoALayout.Extra32Node.BLOCKED_LINK_IDX
                                 ];
+
                             for (let j = linksOffset; j < linksEnd; j++) {
                                 const edgeIdx = linkIndices[j];
                                 const edgeOffset =
-                                    edgeIdx * SoALayout.Node.STRIDE;
+                                    storage.inlineNodeOffset(edgeIdx);
                                 const targetOffsetField =
                                     edgeIdx === blockedLinkIdx
                                         ? SoALayout.Node.BLOCKED_COUNT
@@ -183,46 +175,18 @@ export class SoAGraphUpdater {
 
                                 nodeData[edgeOffset + targetOffsetField] +=
                                     delta;
-
-                                const edgeFlags =
-                                    nodeData[edgeOffset + SoALayout.Node.FLAGS];
-                                if (
-                                    (edgeFlags &
-                                        SoALayout.Node.Flags.IsChanged) ===
-                                    0
-                                ) {
-                                    nodeData[
-                                        edgeOffset + SoALayout.Node.FLAGS
-                                    ] =
-                                        edgeFlags |
-                                        SoALayout.Node.Flags.IsChanged;
-                                    tempChangedNodes.add(edgeIdx);
-                                }
+                                this.markNodeAsChanged(state, edgeIdx);
                             }
                         } else {
                             for (let j = linksOffset; j < linksEnd; j++) {
                                 const edgeIdx = linkIndices[j];
                                 const edgeOffset =
-                                    edgeIdx * SoALayout.Node.STRIDE;
+                                    storage.inlineNodeOffset(edgeIdx);
 
                                 nodeData[
                                     edgeOffset + SoALayout.Node.SIGNALS_COUNT
                                 ] += delta;
-
-                                const edgeFlags =
-                                    nodeData[edgeOffset + SoALayout.Node.FLAGS];
-                                if (
-                                    (edgeFlags &
-                                        SoALayout.Node.Flags.IsChanged) ===
-                                    0
-                                ) {
-                                    nodeData[
-                                        edgeOffset + SoALayout.Node.FLAGS
-                                    ] =
-                                        edgeFlags |
-                                        SoALayout.Node.Flags.IsChanged;
-                                    tempChangedNodes.add(edgeIdx);
-                                }
+                                this.markNodeAsChanged(state, edgeIdx);
                             }
                         }
                     }
@@ -232,27 +196,20 @@ export class SoAGraphUpdater {
                     nodeData[nodeOffset + SoALayout.Node.DETECTORS_COUNT];
                 if (detectorsCount !== 0) {
                     const detectorsOffset =
-                        nodeIdx * SoALayout.Detectors.STRIDE;
+                        storage.inlineDetectorsOffset(nodeIdx);
                     const detectorSignalVal =
                         signal !== NodeSignal.NONE ? 1 : 0;
-
                     const detectorsEnd = detectorsOffset + detectorsCount;
+
                     for (let j = detectorsOffset; j < detectorsEnd; j++) {
                         const detectorIdx = detectorIndices[j];
                         const detectorOffset =
-                            detectorIdx * SoALayout.Node.STRIDE;
+                            storage.inlineNodeOffset(detectorIdx);
 
                         nodeData[
                             detectorOffset + SoALayout.Node.SIGNALS_COUNT
                         ] = detectorSignalVal;
-
-                        const detFlags =
-                            nodeData[detectorOffset + SoALayout.Node.FLAGS];
-                        if ((detFlags & SoALayout.Node.Flags.IsChanged) === 0) {
-                            nodeData[detectorOffset + SoALayout.Node.FLAGS] =
-                                detFlags | SoALayout.Node.Flags.IsChanged;
-                            tempChangedNodes.add(detectorIdx);
-                        }
+                        this.markNodeAsChanged(state, detectorIdx);
                     }
                 }
 
@@ -276,13 +233,9 @@ export class SoAGraphUpdater {
                     (type === NodeType.RANDOM ||
                         (flags & SoALayout.Node.Flags.IsReadHead) !== 0))
             ) {
-                flags &= ~SoALayout.Node.Flags.IsUpdated;
-
-                if ((flags & SoALayout.Node.Flags.IsChanged) === 0) {
-                    flags |= SoALayout.Node.Flags.IsChanged;
-                    tempChangedNodes.add(nodeIdx);
-                }
-                nodeData[nodeOffset + SoALayout.Node.FLAGS] = flags;
+                nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
+                    ~SoALayout.Node.Flags.IsUpdated;
+                this.markNodeAsChanged(state, nodeIdx);
             }
         }
 
@@ -296,15 +249,14 @@ export class SoAGraphUpdater {
 
         for (let i = 0; i < nextChangedLen; i++) {
             const nodeIdx = nextChangedBuffer[i];
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
+            const nodeOffset = storage.inlineNodeOffset(nodeIdx);
 
-            const flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
-            nodeData[nodeOffset + SoALayout.Node.FLAGS] =
-                flags & ~SoALayout.Node.Flags.IsChanged;
+            nodeData[nodeOffset + SoALayout.Node.FLAGS] &=
+                ~SoALayout.Node.Flags.IsChanged;
 
             const blockedCount =
                 nodeData[nodeOffset + SoALayout.Node.BLOCKED_COUNT];
-            const extra32NodeOffset = nodeIdx * SoALayout.Extra32Node.STRIDE;
+            const extra32NodeOffset = storage.inlineExtra32Offset(nodeIdx);
             const chunkIdx =
                 extra32NodeData[
                     extra32NodeOffset + SoALayout.Extra32Node.CHUNK_IDX
@@ -320,6 +272,7 @@ export class SoAGraphUpdater {
                     state.makeDirtyChunk(chunkIdx);
                 }
             } else {
+                const flags = nodeData[nodeOffset + SoALayout.Node.FLAGS];
                 const type = nodeData[
                     nodeOffset + SoALayout.Node.TYPE
                 ] as NodeType;
@@ -332,8 +285,6 @@ export class SoAGraphUpdater {
                 const signal = this.updateNodeSignal(
                     state,
                     nodeIdx,
-                    nodeOffset,
-                    nodeData,
                     type,
                     signalsCount,
                     flags,
@@ -361,15 +312,19 @@ export class SoAGraphUpdater {
         state.tick += 1;
     }
 
-    public markNodeAsChangedNonTemp(state: SoAGraphState, nodeIdx: number) {
+    public markNodeAsChangedNonTemp(
+        state: SoAGraphState,
+        nodeIdx: number,
+    ): void {
         state.changedNodes.add(nodeIdx);
     }
 
-    public markNodeAsChanged(state: SoAGraphState, nodeIdx: number) {
-        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-        const flags = state.nodeData[nodeOffset + SoALayout.Node.FLAGS];
+    public markNodeAsChanged(state: SoAGraphState, nodeIdx: number): void {
+        const nodeOffset = state.storage.inlineNodeOffset(nodeIdx);
+        const flags = state.storage.nodeData[nodeOffset + SoALayout.Node.FLAGS];
         if ((flags & SoALayout.Node.Flags.IsChanged) !== 0) return;
-        state.nodeData[nodeOffset + SoALayout.Node.FLAGS] =
+
+        state.storage.nodeData[nodeOffset + SoALayout.Node.FLAGS] =
             flags | SoALayout.Node.Flags.IsChanged;
         state.tempChangedNodes.add(nodeIdx);
     }
@@ -377,8 +332,6 @@ export class SoAGraphUpdater {
     private updateNodeSignal(
         state: SoAGraphState,
         nodeIdx: number,
-        nodeOffset: number,
-        nodeData: any,
         type: NodeType,
         signalsCount: number,
         flags: number,
@@ -388,13 +341,13 @@ export class SoAGraphUpdater {
             if (signalsCount > 1) return NodeSignal.ACTIVE;
             if (signalsCount === 0) return NodeSignal.NONE;
 
-            const extra32Offset = nodeIdx * SoALayout.Extra32Node.STRIDE;
+            const extra32Offset = state.storage.inlineExtra32Offset(nodeIdx);
             const cycleIdx =
-                state.extra32NodeData[
+                state.storage.extra32NodeData[
                     extra32Offset + SoALayout.Extra32Node.CYCLE_IDX
                 ];
             const cycleOffset =
-                state.extra32NodeData[
+                state.storage.extra32NodeData[
                     extra32Offset + SoALayout.Extra32Node.CYCLE_OFFSET
                 ];
 
@@ -412,8 +365,10 @@ export class SoAGraphUpdater {
             case NodeType.DETECTOR:
             case NodeType.DIRECTIONAL_BUTTON:
                 return signalsCount > 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
+
             case NodeType.SOURCE:
                 return NodeSignal.ACTIVE;
+
             case NodeType.DELAY: {
                 if (currentSignal === NodeSignal.PENDING) {
                     return NodeSignal.ACTIVE;
@@ -426,22 +381,28 @@ export class SoAGraphUpdater {
                 }
                 return NodeSignal.KEEP_SIGNAL;
             }
+
             case NodeType.IMPULSE: {
                 if (currentSignal === NodeSignal.NONE) return NodeSignal.ACTIVE;
                 return NodeSignal.PENDING;
             }
+
             case NodeType.LOGIC_NOT:
                 return signalsCount === 0 ? NodeSignal.ACTIVE : NodeSignal.NONE;
+
             case NodeType.LOGIC_AND:
                 return signalsCount > 1 ? NodeSignal.ACTIVE : NodeSignal.NONE;
+
             case NodeType.LOGIC_XOR:
-                return signalsCount % 2 === 1
+                return (signalsCount & 1) === 1
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
+
             case NodeType.LATCH:
                 if (signalsCount > 1) return NodeSignal.ACTIVE;
-                else if (signalsCount === 1) return NodeSignal.NONE;
+                if (signalsCount === 1) return NodeSignal.NONE;
                 return NodeSignal.KEEP_SIGNAL;
+
             case NodeType.FLIP_FLOP:
                 if (signalsCount > 0) {
                     return currentSignal === NodeSignal.ACTIVE
@@ -449,12 +410,12 @@ export class SoAGraphUpdater {
                         : NodeSignal.ACTIVE;
                 }
                 return NodeSignal.KEEP_SIGNAL;
+
             case NodeType.RANDOM:
                 return signalsCount > 0 && Math.random() > 0.5
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
-            case NodeType.BUTTON:
-                return NodeSignal.NONE;
+
             default:
                 return NodeSignal.NONE;
         }
