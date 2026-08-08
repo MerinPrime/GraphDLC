@@ -18,7 +18,7 @@ const DescriptionLocale = new I18nText(
     'Afficher une confirmation lors de la sortie avec des modifications non enregistrées',
 );
 
-export const UnsavedWarnSetting = new BoolSetting('UnsavedWarn', true, {
+export const UnsavedWarnSetting = new BoolSetting('UnsavedWarn', false, {
     name: NameLocale,
     description: DescriptionLocale,
     reloadOnChange: false,
