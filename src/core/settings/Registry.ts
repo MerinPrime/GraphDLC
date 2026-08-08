@@ -11,6 +11,7 @@ import { EnableArrowRelationsSetting } from './instances/tools/EnableArrowRelati
 import { EnableBreakpointSetting } from './instances/tools/EnableBreakpointSetting';
 import { MapProtectionSetting } from './instances/tools/MapProtectionSetting';
 import { ShowArrowConnectionsSetting } from './instances/tools/ShowArrowConnectionsSetting';
+import { UnsavedWarnSetting } from './instances/tools/UnsavedWarnSetting';
 import type { BaseSetting } from './types/BaseSetting';
 
 const settings: BaseSetting<any>[] = [
@@ -27,6 +28,7 @@ const settings: BaseSetting<any>[] = [
     MapProtectionSetting,
     DebugModeSetting,
     EnableBreakpointSetting,
+    UnsavedWarnSetting,
 
     // Visuals
     // GraphDLCDesignSetting,
