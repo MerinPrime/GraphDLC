@@ -25,8 +25,6 @@ export const Save_PatchUIMenu: IPatcher = (
             ) {
                 super(parent, mapInfo, game);
 
-                GamePage.val?.updateIsMapChanged(false);
-
                 if (_save.val && _Utils.val) {
                     const buffer: number[] = _save.val(game.gameMap);
                     const data: string = _Utils.val.arrayBufferToBase64(buffer);
