@@ -32,10 +32,6 @@ export class DesignManager {
         this.waitForElement('documentElement', () => {
             if (!fallback) {
                 this.designSettings.forEach(this.applySetting.bind(this));
-
-                DarkThemeSetting.onChange.add(() => {
-                    window.location.reload();
-                });
             }
             this.applyStyle(updateStyle);
 

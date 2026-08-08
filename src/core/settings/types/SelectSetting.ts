@@ -51,6 +51,7 @@ export class SelectSetting<T extends string | number> extends BaseSetting<T> {
             } else {
                 select.value = this.value.toString();
             }
+            if (this.meta.reloadOnChange) window.location.reload();
         });
 
         return select;

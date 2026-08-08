@@ -8,6 +8,7 @@ export interface SettingMeta {
     readonly nameColor?: TextColor;
     readonly descriptionColor?: TextColor;
 
+    readonly reloadOnChange?: boolean;
     readonly isMapSetting: boolean;
     readonly group: SettingGroup;
     readonly order: number;

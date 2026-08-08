@@ -21,6 +21,7 @@ const DescriptionLocale = new I18nText(
 export const DarkThemeSetting = new BoolSetting('DarkTheme', false, {
     name: NameLocale,
     description: DescriptionLocale,
+    reloadOnChange: true,
     isMapSetting: false,
     group: ReDesignSettingGroup,
     order: 2,
