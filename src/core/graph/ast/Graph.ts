@@ -6,10 +6,6 @@ import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
 import { CycleOptimizationSetting } from 'src/core/settings/instances/developer/CycleOptimizationSetting';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import {
-    GraphEngine,
-    GraphEngineSetting,
-} from 'src/core/settings/instances/performance/GraphEngineSetting';
-import {
     BreakpointMode,
     EnableBreakpointSetting,
 } from 'src/core/settings/instances/tools/EnableBreakpointSetting';
@@ -20,10 +16,7 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
 import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
-import { DefaultEngine } from '../engines/default/DefaultEngine';
-import { SoAEngine } from '../engines/enhanced/SoAEngine';
-import { NativeEngine } from '../engines/native/NativeEngine';
-import { RawEngine } from '../engines/raw/RawEngine';
+import { EngineFactory } from '../engines/EngineFactory';
 import { CycleManager } from './cycle/CycleManager';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
@@ -66,24 +59,7 @@ export class Graph {
             this.listeners.push(this.cycleManager);
         }
 
-        let engine: BaseEngine<EngineTypes>;
-
-        switch (GraphEngineSetting.value) {
-            case GraphEngine.ORIGINAL:
-                engine = new DefaultEngine(this, this.gameMap);
-                break;
-            case GraphEngine.STANDARD:
-                engine = new RawEngine();
-                break;
-            case GraphEngine.ENHANCED:
-                engine = new SoAEngine();
-                break;
-            case GraphEngine.NATIVE:
-                engine = new NativeEngine();
-                break;
-        }
-
-        this.engine = engine;
+        this.engine = EngineFactory.create(this, this.gameMap);
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
         EnableBreakpointSetting.onChange.add(this.handleBreakpointChange);
