@@ -9,5 +9,5 @@ export const ReDesignSettingGroup: SettingGroup = {
         'Знешні выгляд',
         'Visuels',
     ),
-    order: 2,
+    order: 3,
 };

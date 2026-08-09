@@ -7,6 +7,7 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import { DebugNodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import { RawEngine } from 'src/core/graph/engines/raw/RawEngine';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import { DeveloperModeSetting } from 'src/core/settings/instances/developer/DeveloperModeSetting';
 import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerControls {
@@ -100,7 +101,7 @@ export const PatchPlayerUI: IPatcher = (
                 } else {
                     _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: +${tickCounter}`;
                 }
-                if (__DEBUG__) {
+                if (DeveloperModeSetting.value) {
                     const graph = _this.game.gameMap.graph;
                     const engine = graph.engine;
                     const debugLines: string[] = [];

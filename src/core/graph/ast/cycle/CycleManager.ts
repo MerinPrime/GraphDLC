@@ -3,7 +3,7 @@ import {
     CycleHeadType,
     type GraphCycle,
 } from 'src/core/graph/ast/cycle/CycleTypes';
-import { CycleBudgetSetting } from 'src/core/settings/instances/performance/CycleBudgetSetting';
+import { CycleBudgetSetting } from 'src/core/settings/instances/developer/CycleBudgetSetting';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { NodeType, NodeTypes } from '../../engines/core/NodeType';
 import type { Graph } from '../Graph';
@@ -20,8 +20,7 @@ export class CycleManager implements IGraphListener {
     private readonly removalVisited = new Set<GraphNode>();
 
     private readonly scheduler = new AsyncScheduler(
-        // () => CycleBudgetSetting.value,
-        () => 16,
+        () => CycleBudgetSetting.value,
     );
 
     public resetHead(head: GraphNode): void {

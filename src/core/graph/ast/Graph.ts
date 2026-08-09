@@ -3,6 +3,7 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import { CycleOptimizationSetting } from 'src/core/settings/instances/developer/CycleOptimizationSetting';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
 import {
     GraphEngine,
@@ -44,7 +45,7 @@ export class Graph {
     private readonly cycleManager: CycleManager = new CycleManager();
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
 
-    private listeners: IGraphListener[] = [this.cycleManager, this.debugger];
+    private listeners: IGraphListener[] = [];
 
     public engine: BaseEngine<EngineTypes>;
 
@@ -59,6 +60,11 @@ export class Graph {
     public constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
         this.privateGameMap = gameMap as any as PrivateGameMap;
+
+        this.listeners.push(this.debugger);
+        if (CycleOptimizationSetting.value) {
+            this.listeners.push(this.cycleManager);
+        }
 
         let engine: BaseEngine<EngineTypes>;
 

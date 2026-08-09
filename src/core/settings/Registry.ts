@@ -1,4 +1,6 @@
-import { CycleBudgetSetting } from './instances/performance/CycleBudgetSetting';
+import { CycleBudgetSetting } from './instances/developer/CycleBudgetSetting';
+import { CycleOptimizationSetting } from './instances/developer/CycleOptimizationSetting';
+import { DeveloperModeSetting } from './instances/developer/DeveloperModeSetting';
 import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
 import { GraphEngineSetting } from './instances/performance/GraphEngineSetting';
 import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
@@ -19,7 +21,6 @@ const settings: BaseSetting<any>[] = [
     GraphEngineSetting,
     TargetFPSSetting,
     EnableSnapshotsSetting,
-    // CycleBudgetSetting,
     TPSOverloadSetting,
 
     // Tools
@@ -30,17 +31,16 @@ const settings: BaseSetting<any>[] = [
     EnableBreakpointSetting,
     UnsavedWarnSetting,
 
+    // Developer
+    DeveloperModeSetting,
+    CycleOptimizationSetting,
+    CycleBudgetSetting,
+
     // Visuals
-    // GraphDLCDesignSetting,
+    GraphDLCDesignSetting,
     QoLReDesignSetting,
     DarkThemeSetting,
 ];
-
-if (__DEBUG__) {
-    settings.push(CycleBudgetSetting);
-    settings.push(GraphDLCDesignSetting);
-    // settings.push(TPSOverloadSetting);
-}
 
 export const SettingsRegistry = settings.reduce<
     Record<string, BaseSetting<any>>
