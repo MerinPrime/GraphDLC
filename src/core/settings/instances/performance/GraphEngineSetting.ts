@@ -51,11 +51,11 @@ const EnhancedLocale = new I18nText(
 );
 
 const NativeLocale = new I18nText(
-    'Native (Experimental)',
-    'Нативный (Экспериментальный)',
-    'Нативний (Експериментальний)',
-    'Натыўны (Эксперыментальны)',
-    'Natif (Expérimental)',
+    'Native',
+    'Нативный',
+    'Нативний',
+    'Натыўны',
+    'Natif',
 );
 
 const canNative = isWasmSupported();
