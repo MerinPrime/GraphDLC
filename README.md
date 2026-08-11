@@ -1,7 +1,7 @@
 # GraphDLC
 
 **Делает стрелочки блейзинг фаст 😱 😱 ( проверено чубриком и онигири )** \
-**Поддержка:** Любой браузер на основе Chromium/Firefox〡Tampermonkey〡Via ( на телефоне ).
+**Поддержка:** Chromium〡Firefox〡Tampermonkey〡Via.
 
 ## Возможности
 
