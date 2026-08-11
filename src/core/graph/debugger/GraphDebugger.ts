@@ -12,7 +12,6 @@ import type { IGraphListener } from '../ast/IGraphListener';
 import type { DebuggerMode } from './DebuggerMode';
 import { CycleDebuggerMode } from './modes/Cycle';
 import { DeadNodeDebuggerMode } from './modes/DeadNodes';
-import { ExperimentalDeadNodeDebuggerMode } from './modes/ExperimentalDeadNode';
 import { SignalPropagationDebuggerMode } from './modes/SignalPropagation';
 import type { RenderDebugColor } from './types';
 
@@ -38,8 +37,6 @@ export class GraphDebugger implements IGraphListener {
             [DebugMode.SHOW_UNUSED_ARROWS]: new DeadNodeDebuggerMode(
                 this.asyncScheduler,
             ),
-            [DebugMode.NEW_SHOW_UNUSED_ARROWS]:
-                new ExperimentalDeadNodeDebuggerMode(this.asyncScheduler),
         };
 
         DebugModeSetting.onChange.add((newDebugMode: DebugMode) => {

@@ -7,7 +7,6 @@ export const enum DebugMode {
     SHOW_RINGS = 1,
     SHOW_SIGNAL_PROPAGATION = 2,
     SHOW_UNUSED_ARROWS = 3,
-    NEW_SHOW_UNUSED_ARROWS = 4,
 }
 
 const NameLocale = new I18nText(
@@ -52,14 +51,6 @@ const ShowUnusedArrowsLocale = new I18nText(
     'Afficher les flèches inutilisées',
 );
 
-const NewShowUnusedArrowsLocale = new I18nText(
-    'Show unused arrows ( Experimental )',
-    'Показывать неиспользуемые стрелки ( Экспериментально )',
-    'Показувати невикористані стрілки ( Експериментально )',
-    'Паказваць невыкарыстаныя стрэлкі ( Экспериментальна )',
-    'Afficher les flèches inutilisées ( Expérimental )',
-);
-
 export const DebugModeSetting = new SelectSetting<DebugMode>(
     'DebugMode',
     DebugMode.OFF,
@@ -86,10 +77,6 @@ export const DebugModeSetting = new SelectSetting<DebugMode>(
         {
             value: DebugMode.SHOW_UNUSED_ARROWS,
             label: ShowUnusedArrowsLocale,
-        },
-        {
-            value: DebugMode.NEW_SHOW_UNUSED_ARROWS,
-            label: NewShowUnusedArrowsLocale,
         },
     ],
 );
