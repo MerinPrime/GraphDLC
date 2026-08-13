@@ -13,6 +13,7 @@ import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import { NodeType } from 'src/core/graph/engines/core/NodeType';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
+import { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerControls {
@@ -65,6 +66,8 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             class PatchedPlayerControls extends _module {
                 private pathData: PathData | null = null;
+                private arrowSignalStarted: boolean = false;
+                private startArrowSignal: NodeSignal = NodeSignal.NONE;
                 private processedArrows: Set<number> = new Set();
 
                 public constructor(
@@ -166,27 +169,44 @@ export const PatchPlayerControls: IPatcher = (
                         return;
                     }
 
-                    const signal = engine.getNodeSignal(node.nodeIdx);
-                    let newSignal = NodeSignal.ACTIVE;
-
-                    if (
+                    const isDelayOrImpulse =
                         node.type === NodeType.DELAY ||
-                        node.type === NodeType.IMPULSE
-                    ) {
-                        if (signal === NodeSignal.ACTIVE) {
-                            newSignal = NodeSignal.PENDING;
-                        } else if (signal === NodeSignal.PENDING) {
-                            newSignal = NodeSignal.ACTIVE;
-                        } else {
-                            newSignal =
-                                node.type === NodeType.DELAY
-                                    ? NodeSignal.PENDING
-                                    : NodeSignal.ACTIVE;
-                        }
+                        node.type === NodeType.IMPULSE;
+
+                    if (!this.arrowSignalStarted) {
+                        this.startArrowSignal = this.computeInitialSignal(
+                            engine,
+                            node,
+                            isDelayOrImpulse,
+                        );
                     }
 
-                    engine.setNodeSignal(node.nodeIdx, newSignal);
-                    return;
+                    const targetSignal =
+                        !isDelayOrImpulse &&
+                        this.startArrowSignal === NodeSignal.PENDING
+                            ? NodeSignal.ACTIVE
+                            : this.startArrowSignal;
+
+                    engine.setNodeSignal(node.nodeIdx, targetSignal);
+                }
+
+                private computeInitialSignal(
+                    engine: any,
+                    node: GraphNode,
+                    isDelayOrImpulse: boolean,
+                ): NodeSignal {
+                    if (!isDelayOrImpulse) return NodeSignal.ACTIVE;
+
+                    const currentSignal = engine.getNodeSignal(node.nodeIdx);
+
+                    if (currentSignal === NodeSignal.ACTIVE)
+                        return NodeSignal.PENDING;
+                    if (currentSignal === NodeSignal.PENDING)
+                        return NodeSignal.ACTIVE;
+
+                    return node.type === NodeType.DELAY
+                        ? NodeSignal.PENDING
+                        : NodeSignal.ACTIVE;
                 }
 
                 public update(): void {
@@ -216,9 +236,11 @@ export const PatchPlayerControls: IPatcher = (
                         const node = _this.game.gameMap.graph.getNode(nodeIdx);
                         const doClear = _this.keyboardHandler.getShiftPressed();
                         this.trySetNodeSignal(node, doClear);
+                        this.arrowSignalStarted = true;
                         return;
-                    } else {
+                    } else if (this.arrowSignalStarted) {
                         this.processedArrows.clear();
+                        this.arrowSignalStarted = false;
                     }
 
                     const taskKey = 'player-drag-path';
