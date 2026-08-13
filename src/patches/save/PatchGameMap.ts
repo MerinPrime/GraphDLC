@@ -27,7 +27,7 @@ export const Save_PatchGameMap: IPatcher = (
                 player?: boolean,
             ): void {
                 super.setArrowType(globalX, globalY, type, player);
-                GamePage.val?.updateIsMapChanged(true);
+                if (this.isMain) GamePage.val?.updateIsMapChanged(true);
             }
 
             public setArrowRotation(
@@ -46,7 +46,7 @@ export const Save_PatchGameMap: IPatcher = (
                 if (arrow.type === ArrowType.EMPTY) return;
                 if (arrow.rotation === rotation) return;
                 super.setArrowRotation(globalX, globalY, rotation, player);
-                GamePage.val?.updateIsMapChanged(true);
+                if (this.isMain) GamePage.val?.updateIsMapChanged(true);
             }
 
             public setArrowFlipped(
@@ -65,7 +65,7 @@ export const Save_PatchGameMap: IPatcher = (
                 if (arrow.type === ArrowType.EMPTY) return;
                 if (arrow.flipped === flipped) return;
                 super.setArrowFlipped(globalX, globalY, flipped, player);
-                GamePage.val?.updateIsMapChanged(true);
+                if (this.isMain) GamePage.val?.updateIsMapChanged(true);
             }
 
             public removeArrow(
@@ -82,7 +82,7 @@ export const Save_PatchGameMap: IPatcher = (
                 );
                 if (arrow.type === ArrowType.EMPTY) return;
                 super.removeArrow(globalX, globalY, player);
-                GamePage.val?.updateIsMapChanged(true);
+                if (this.isMain) GamePage.val?.updateIsMapChanged(true);
             }
 
             public updateArrowState(
@@ -91,14 +91,15 @@ export const Save_PatchGameMap: IPatcher = (
                 chunkX: number,
                 chunkY: number,
             ) {
-                if (this.isMain)
+                if (this.isMain) {
                     this.graph.updateArrowState(arrow, chunk, chunkX, chunkY);
-                GamePage.val?.updateIsMapChanged(true);
+                    GamePage.val?.updateIsMapChanged(true);
+                }
             }
 
             public clear(): void {
                 super.clear();
-                GamePage.val?.updateIsMapChanged(true);
+                if (this.isMain) GamePage.val?.updateIsMapChanged(true);
             }
         };
     });
