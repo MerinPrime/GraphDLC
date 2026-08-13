@@ -280,22 +280,52 @@ export class SoAGraphState {
     public setNodeSignal(nodeIdx: number, signal: NodeSignal): void {
         const nodeOffset = this.storage.inlineNodeOffset(nodeIdx);
         const extra32Offset = this.storage.inlineExtra32Offset(nodeIdx);
+        const extra8Offset = this.storage.inlineExtra8Offset(nodeIdx);
         const flagsOffset = nodeOffset + SoALayout.Node.FLAGS;
 
         const chunkIdx =
             this.storage.extra32NodeData[
                 extra32Offset + SoALayout.Extra32Node.CHUNK_IDX
             ];
-        const isChanged = this.hasFlag(
+
+        const headType = this.storage.extra8NodeData[
+            extra8Offset + SoALayout.Extra8Node.HEAD_TYPE
+        ] as CycleHeadType;
+        const isInCycle = this.hasFlag(
             this.storage.nodeData,
-            flagsOffset,
-            SoALayout.Node.Flags.IsChanged,
+            nodeOffset + SoALayout.Node.FLAGS,
+            SoALayout.Node.Flags.IsInCycle,
         );
 
-        this.storage.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
-        this.markNodeChanged(nodeIdx);
+        if (isInCycle !== null && headType === CycleHeadType.NONE) {
+            const cycleIdx =
+                this.storage.extra32NodeData[
+                    extra32Offset + SoALayout.Extra32Node.CYCLE_IDX
+                ];
+            const cycleOffset =
+                this.storage.extra32NodeData[
+                    extra32Offset + SoALayout.Extra32Node.CYCLE_OFFSET
+                ];
 
-        if (!isChanged) this.markNodeTempChanged(nodeIdx);
+            const cycleState = this.cycles[cycleIdx];
+            if (!cycleState) return;
+            if (signal === NodeSignal.NONE) {
+                cycleState.clearBit(this.tick, cycleOffset);
+            } else {
+                cycleState.writeBit(this.tick, cycleOffset);
+            }
+        } else {
+            const isChanged = this.hasFlag(
+                this.storage.nodeData,
+                flagsOffset,
+                SoALayout.Node.Flags.IsChanged,
+            );
+
+            this.storage.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
+            this.markNodeChanged(nodeIdx);
+            if (!isChanged) this.markNodeTempChanged(nodeIdx);
+        }
+
         this.makeDirtyChunk(chunkIdx);
     }
 

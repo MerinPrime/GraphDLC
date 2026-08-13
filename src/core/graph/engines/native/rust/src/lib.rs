@@ -282,12 +282,34 @@ pub extern "C" fn copy_dirty_chunks(out_ptr: *mut u32, mark_undirty: i32) -> u32
 #[no_mangle]
 pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     let state = get_state();
-    let node = &mut state.nodes[node_idx as usize];
-    node.signal = signal;
-    let chunk_idx = node.chunk_idx;
 
-    state.mark_node_as_changed_non_temp(node_idx);
-    state.mark_node_as_changed(node_idx);
+    let (is_in_cycle, head_type, cycle_idx, cycle_offset, chunk_idx) = {
+        let node = &state.nodes[node_idx as usize];
+        (
+            (node.flags & FLAG_IS_IN_CYCLE) != 0,
+            node.head_type(),
+            node.cycle_idx,
+            node.cycle_offset,
+            node.chunk_idx,
+        )
+    };
+
+    if is_in_cycle && head_type == CYCLE_HEAD_TYPE_NONE {
+        let tick = state.tick;
+        let Some(ref mut cycle_state) = state.cycles[cycle_idx as usize] else {
+            return;
+        };
+        if signal == NODE_SIGNAL_NONE {
+            cycle_state.clear_bit(tick, cycle_offset);
+        } else {
+            cycle_state.write_bit(tick, cycle_offset);
+        }
+    } else {
+        state.nodes[node_idx as usize].signal = signal;
+        state.mark_node_as_changed_non_temp(node_idx);
+        state.mark_node_as_changed(node_idx);
+    }
+
     state.make_dirty_chunk(chunk_idx);
 }
 

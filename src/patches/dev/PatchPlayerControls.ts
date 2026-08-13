@@ -159,7 +159,6 @@ export const PatchPlayerControls: IPatcher = (
 
                 public trySetNodeSignal(node: GraphNode, doClear: boolean) {
                     if (node.type === NodeType.EMPTY) return;
-                    if (node.isCycle) return;
 
                     const engine = (this as any as PrivatePlayerControls).game
                         .gameMap.graph.engine;

@@ -344,9 +344,21 @@ export class RawGraphState {
 
     public setNodeSignal(nodeIdx: number, signal: NodeSignal) {
         const nodeState = this.getNode(nodeIdx);
-        nodeState.signal = signal;
-        this.markNodeChanged(nodeState);
-        if (!nodeState.isChanged) this.markNodeTempChanged(nodeState);
+
+        const cycleIdx = nodeState.cycleIdx;
+        if (cycleIdx !== null && nodeState.headType === CycleHeadType.NONE) {
+            const cycleState = this.cycles[cycleIdx];
+            if (!cycleState) return;
+            if (signal === NodeSignal.NONE) {
+                cycleState.clearBit(this.tick, nodeState.cycleOffset);
+            } else {
+                cycleState.writeBit(this.tick, nodeState.cycleOffset);
+            }
+        } else {
+            nodeState.signal = signal;
+            this.markNodeChanged(nodeState);
+            if (!nodeState.isChanged) this.markNodeTempChanged(nodeState);
+        }
         this.makeDirtyChunk(nodeState.chunkIdx);
     }
 }
