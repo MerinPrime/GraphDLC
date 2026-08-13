@@ -3,11 +3,13 @@ import {
     GraphDLCPrefix,
     LatestVersionTextLocale,
     OutdatedVersionLocale,
+    TestVersionTextLocale,
     VersionUnknownLocale,
 } from 'src/core/credentials/Locale';
 import { VersionState } from 'src/core/credentials/version/VersionState';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import { DeveloperModeSetting } from 'src/core/settings/instances/developer/DeveloperModeSetting';
 import type { SortedSettingGroup } from 'src/core/settings/Manager';
 import { TextColor } from 'src/core/utils/TextColor';
 import type { IPatcher } from '../Patcher';
@@ -39,15 +41,35 @@ export const PatchSettingsPage: IPatcher = (
                         this.addGroup(group);
                     });
                     this.addSpace(2);
-                    const versionUpdate = this.addText(
+                    const versionNode = this.addText(
                         GraphDLCPrefix + VersionUnknownLocale.get(),
                         TextColor.MUTED,
                     );
+                    const versionElement = versionNode.element;
+                    versionElement.addEventListener('click', (e) => {
+                        if (
+                            e.target instanceof Element &&
+                            e.target.closest('a')
+                        ) {
+                            return;
+                        }
+                        DeveloperModeSetting.value = true;
+                        window.location.reload();
+                    });
+                    const versionUpdate = versionNode.update;
                     VersionState.subscribe((state) => {
                         if (state === 'latest') {
-                            versionUpdate(
-                                GraphDLCPrefix + LatestVersionTextLocale.get(),
-                            );
+                            if (__CURRENT_VERSION__.endsWith('-test')) {
+                                versionUpdate(
+                                    GraphDLCPrefix +
+                                        TestVersionTextLocale.get(),
+                                );
+                            } else {
+                                versionUpdate(
+                                    GraphDLCPrefix +
+                                        LatestVersionTextLocale.get(),
+                                );
+                            }
                         } else if (state === 'outdated') {
                             versionUpdate(
                                 GraphDLCPrefix +
@@ -77,20 +99,26 @@ export const PatchSettingsPage: IPatcher = (
                 private addText(
                     label: string,
                     labelColor: TextColor = TextColor.PRIMARY,
-                ): (newText: string, newColor?: TextColor) => void {
+                ): {
+                    element: HTMLDivElement;
+                    update: (newText: string, newColor?: TextColor) => void;
+                } {
                     const labelText = document.createElement('div');
                     labelText.innerHTML = label;
                     labelText.classList.add(labelColor);
                     this.lastElement.after(labelText);
                     this.lastElement = labelText;
-                    return (
-                        newText: string,
-                        newColor: TextColor = labelColor,
-                    ) => {
-                        labelText.classList.remove(labelColor);
-                        labelText.innerHTML = newText;
-                        labelText.classList.add(newColor);
-                        labelColor = newColor;
+                    return {
+                        element: labelText,
+                        update: (
+                            newText: string,
+                            newColor: TextColor = labelColor,
+                        ) => {
+                            labelText.classList.remove(labelColor);
+                            labelText.innerHTML = newText;
+                            labelText.classList.add(newColor);
+                            labelColor = newColor;
+                        },
                     };
                 }
 

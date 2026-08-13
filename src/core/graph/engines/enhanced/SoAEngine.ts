@@ -1,109 +1,42 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from '../../ast/CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
-import { NodeSignal } from '../core/NodeSignal';
-import { StateRewinder } from '../core/StateRewinder';
-import type { IEngine } from '../core/types';
-import { SoALayout } from './SoALayout';
+import type { NodeSignal } from '../core/NodeSignal';
+import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import type { SoASnapshot } from './SoASnapshot';
 import { SoAGraphState } from './SoAState';
 import { SoAStateSynchronizer } from './SoAStateSynchronizer';
 import { SoAGraphUpdater } from './SoAUpdater';
 
-export class SoAEngine implements IEngine {
+interface SoAEngineTypes extends EngineTypes {
+    Snapshot: SoASnapshot;
+}
+
+export class SoAEngine extends BaseEngine<SoAEngineTypes> {
     private readonly state: SoAGraphState = new SoAGraphState();
     private readonly updater: SoAGraphUpdater = new SoAGraphUpdater();
     private readonly synchronizer: SoAStateSynchronizer =
         new SoAStateSynchronizer(this.updater);
-    private readonly rewinder: StateRewinder<SoASnapshot> = new StateRewinder();
 
-    private extraRewindNodes: Set<number> = new Set();
-    private extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
-        new Map();
-
-    private saveSnapshots: boolean = false;
-
-    public runTick(): boolean {
-        if (this.saveSnapshots) {
-            const curSignals = this.extraSignalsHistory.get(this.getTick());
-            const signals = curSignals ?? new Map<number, NodeSignal>();
-            for (const nodeIdx of this.extraRewindNodes) {
-                const signal = this.getNodeSignal(nodeIdx);
-                if (signal === NodeSignal.NONE) {
-                    continue;
-                }
-                signals.set(nodeIdx, signal);
-            }
-            this.extraSignalsHistory.set(this.getTick(), signals);
-
-            if (this.rewinder.canDoSnapshot(this.getTick())) {
-                this.rewinder.saveSnapshot(this.state.makeSnapshot());
-
-                const oldestTick = this.rewinder.getOldestSnapshotTick();
-                for (const tick of this.extraSignalsHistory.keys()) {
-                    if (tick < oldestTick) {
-                        this.extraSignalsHistory.delete(tick);
-                    }
-                }
-            }
-        }
+    protected runTickInternal(): boolean {
         this.updater.updateState(this.state);
         return this.state.breakPoint;
     }
 
-    public runManyTicks(ticksCount: number): boolean {
-        for (let i = 0; i < ticksCount; i++) {
-            const breakPoint = this.runTick();
-            if (breakPoint) return breakPoint;
-        }
-        return false;
+    protected makeSnapshot(): SoASnapshot {
+        return this.state.makeSnapshot();
     }
 
-    private applyRecordedSignals(tick: number): void {
-        const recordedSignals = this.extraSignalsHistory.get(tick);
-        if (!recordedSignals) {
-            return;
-        }
-        for (const nodeIdx of this.extraRewindNodes) {
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-            this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] =
-                NodeSignal.NONE;
-            this.state.changedNodes.add(nodeIdx);
-        }
-        for (const [nodeIdx, signal] of recordedSignals) {
-            const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-            this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = signal;
-            this.state.changedNodes.add(nodeIdx);
-        }
+    protected loadSnapshot(snapshot: SoASnapshot): void {
+        this.state.loadSnapshot(snapshot);
     }
 
-    public rewindToTick(targetTick: number): void {
-        const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
-        if (!closestSnapshot) {
-            return;
-        }
+    protected markAllChunksDirty(): void {
+        this.state.markAllChunksDirty();
+    }
 
-        const stepsToSimulate = targetTick - closestSnapshot.tick;
-        if (stepsToSimulate > 1000000) {
-            this.rewinder.reset();
-            return;
-        }
-
-        this.state.loadSnapshot(closestSnapshot);
-        for (let i = 0; i < stepsToSimulate; i++) {
-            this.applyRecordedSignals(this.getTick());
-            this.updater.updateState(this.state);
-        }
-        this.applyRecordedSignals(targetTick);
-
-        const savedTicks = Array.from(this.extraSignalsHistory.keys());
-        savedTicks.forEach((savedTick) => {
-            if (savedTick > targetTick) {
-                this.extraSignalsHistory.delete(savedTick);
-            }
-        });
-
-        this.state.makeAllChunksDirty();
+    public setNodeSignalInternal(nodeIdx: number, signal: NodeSignal): void {
+        this.state.setNodeSignal(nodeIdx, signal);
     }
 
     public getTick(): number {
@@ -138,10 +71,6 @@ export class SoAEngine implements IEngine {
         return this.state.getNodeSignal(nodeIdx);
     }
 
-    public setExtraRewindNodes(nodeIndices: Set<number>): void {
-        this.extraRewindNodes = nodeIndices;
-    }
-
     public reset(): void {
         this.state.reset();
         this.rewinder.reset();
@@ -165,65 +94,16 @@ export class SoAEngine implements IEngine {
         );
     }
 
-    public updateNodeState(
-        node: GraphNode,
-        resetSignal: boolean = false,
-    ): void {
-        this.state.updateNodeState(node, resetSignal);
+    public resetNodeSignal(node: GraphNode): void {
+        this.state.resetNodeSignal(node);
+    }
+
+    public updateNodeState(node: GraphNode): void {
+        this.state.updateNodeState(node);
     }
 
     public updateChunk(chunk: Chunk): void {
         this.state.updateChunk(chunk);
-    }
-
-    public doPressButton(nodeIdx: number, state: boolean): void {
-        const newSignal = state ? NodeSignal.ACTIVE : NodeSignal.NONE;
-        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-        const extraNodeOffset = nodeIdx * SoALayout.Extra8Node.STRIDE;
-        const chunkIdx =
-            this.state.extra32NodeData[
-                extraNodeOffset + SoALayout.Extra32Node.CHUNK_IDX
-            ];
-
-        this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = newSignal;
-        this.updater.markNodeAsChanged(this.state, nodeIdx);
-        this.state.changedNodes.add(nodeIdx);
-        this.state.makeDirtyChunk(chunkIdx);
-    }
-
-    public doArrowSignal(nodeIdx: number, state: boolean): void {
-        const nodeOffset = nodeIdx * SoALayout.Node.STRIDE;
-        const extraNodeOffset = nodeIdx * SoALayout.Extra8Node.STRIDE;
-        const chunkIdx =
-            this.state.extra32NodeData[
-                extraNodeOffset + SoALayout.Extra32Node.CHUNK_IDX
-            ];
-
-        this.state.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = state
-            ? NodeSignal.ACTIVE
-            : NodeSignal.NONE;
-
-        if (this.saveSnapshots) {
-            const currentTick = this.getTick();
-            let recordedSignals = this.extraSignalsHistory.get(currentTick);
-
-            if (!recordedSignals) {
-                recordedSignals = new Map<number, NodeSignal>();
-                this.extraSignalsHistory.set(currentTick, recordedSignals);
-            }
-
-            const signal = this.getNodeSignal(nodeIdx);
-            recordedSignals.set(nodeIdx, signal);
-        }
-
-        this.state.changedNodes.add(nodeIdx);
-        this.state.makeDirtyChunk(chunkIdx);
-    }
-
-    public setBreakpointState(_: boolean): void {}
-
-    public setSnapshotsState(newState: boolean): void {
-        this.saveSnapshots = newState;
     }
 
     public clear(): void {

@@ -2,7 +2,7 @@ use crate::chunk::Chunk;
 use crate::consts::*;
 use crate::cycle::CycleState;
 use crate::node::Node;
-use crate::rng::{random_bool, reset_rng};
+use crate::rng::random_bool;
 use std::collections::HashSet;
 
 pub struct GraphState {

@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { NumberSetting } from '../../types/NumberSetting';
-import { PerformanceSettingGroup } from './PerformanceGroup';
+import { DeveloperSettingGroup } from './DeveloperGroup';
 
 const NameLocale = new I18nText(
     'Cycle Search Budget',
@@ -42,8 +42,9 @@ export const CycleBudgetSetting = new NumberSetting(
         name: NameLocale,
         description: DescriptionLocale,
         isMapSetting: false,
-        group: PerformanceSettingGroup,
-        order: 3,
+        group: DeveloperSettingGroup,
+        order: 1,
+        isDeveloperOnly: true,
     },
     {
         min: 0,

@@ -59,6 +59,7 @@ export class NumberSetting extends BaseSetting<number> {
             const val = parseInt(slider.value, 10);
             this.value = val;
             label.innerText = this.formatLabel(this.value);
+            if (this.meta.reloadOnChange) window.location.reload();
         });
 
         label.innerText = this.formatLabel(this.value);

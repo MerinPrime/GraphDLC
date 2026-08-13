@@ -1,4 +1,4 @@
-import type { GraphNode } from './GraphNode';
+import type { GraphNode } from '../GraphNode';
 
 export const enum CycleHeadType {
     NONE = 0,

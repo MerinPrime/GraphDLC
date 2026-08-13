@@ -1,4 +1,8 @@
 import { Configuration } from './Configuration';
+import { CycleBudgetSetting } from './instances/developer/CycleBudgetSetting';
+import { CycleOptimizationSetting } from './instances/developer/CycleOptimizationSetting';
+import { DeveloperModeSetting } from './instances/developer/DeveloperModeSetting';
+import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
 import { SettingsRegistry } from './Registry';
 import { BaseSetting } from './types/BaseSetting';
 import type { SettingGroup } from './types/SettingGroup';
@@ -17,6 +21,15 @@ export class SettingsManager {
 
     public setup() {
         this.config.setup();
+
+        if (__DEBUG__) {
+            DeveloperModeSetting.value = true;
+        }
+        if (!DeveloperModeSetting.value) {
+            GraphDLCDesignSetting.value = true;
+            CycleBudgetSetting.value = 16;
+            CycleOptimizationSetting.value = true;
+        }
     }
 
     public get data(): {
@@ -44,6 +57,11 @@ export class SettingsManager {
                 continue;
             const property = (this.config.registry as any)[key];
             if (property instanceof BaseSetting) {
+                if (
+                    property.meta.isDeveloperOnly &&
+                    !DeveloperModeSetting.value
+                )
+                    continue;
                 if (
                     property.meta.isMapSetting === false &&
                     type === 'map-settings'

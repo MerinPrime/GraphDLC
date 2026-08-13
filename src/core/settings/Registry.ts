@@ -1,4 +1,6 @@
-import { CycleBudgetSetting } from './instances/performance/CycleBudgetSetting';
+import { CycleBudgetSetting } from './instances/developer/CycleBudgetSetting';
+import { CycleOptimizationSetting } from './instances/developer/CycleOptimizationSetting';
+import { DeveloperModeSetting } from './instances/developer/DeveloperModeSetting';
 import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
 import { GraphEngineSetting } from './instances/performance/GraphEngineSetting';
 import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
@@ -11,6 +13,7 @@ import { EnableArrowRelationsSetting } from './instances/tools/EnableArrowRelati
 import { EnableBreakpointSetting } from './instances/tools/EnableBreakpointSetting';
 import { MapProtectionSetting } from './instances/tools/MapProtectionSetting';
 import { ShowArrowConnectionsSetting } from './instances/tools/ShowArrowConnectionsSetting';
+import { UnsavedWarnSetting } from './instances/tools/UnsavedWarnSetting';
 import type { BaseSetting } from './types/BaseSetting';
 
 const settings: BaseSetting<any>[] = [
@@ -18,7 +21,6 @@ const settings: BaseSetting<any>[] = [
     GraphEngineSetting,
     TargetFPSSetting,
     EnableSnapshotsSetting,
-    // CycleBudgetSetting,
     TPSOverloadSetting,
 
     // Tools
@@ -27,18 +29,18 @@ const settings: BaseSetting<any>[] = [
     MapProtectionSetting,
     DebugModeSetting,
     EnableBreakpointSetting,
+    UnsavedWarnSetting,
+
+    // Developer
+    DeveloperModeSetting,
+    CycleOptimizationSetting,
+    CycleBudgetSetting,
 
     // Visuals
-    // GraphDLCDesignSetting,
+    GraphDLCDesignSetting,
     QoLReDesignSetting,
     DarkThemeSetting,
 ];
-
-if (__DEBUG__) {
-    settings.push(CycleBudgetSetting);
-    settings.push(GraphDLCDesignSetting);
-    // settings.push(TPSOverloadSetting);
-}
 
 export const SettingsRegistry = settings.reduce<
     Record<string, BaseSetting<any>>

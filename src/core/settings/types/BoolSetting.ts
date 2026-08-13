@@ -19,6 +19,7 @@ export class BoolSetting extends BaseSetting<boolean> {
 
         checkbox.addEventListener('change', () => {
             this.value = checkbox.checked;
+            if (this.meta.reloadOnChange) window.location.reload();
         });
 
         return checkbox;

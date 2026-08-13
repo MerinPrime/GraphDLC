@@ -1,7 +1,15 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { RepoLatestRelease } from './version/Utils';
 
-export const GraphDLCPrefix = 'GraphDLC: ';
+export const GraphDLCPrefix = `GraphDLC ${__CURRENT_VERSION__}: `;
+
+export const TestVersionTextLocale = new I18nText(
+    'Test version',
+    'Тестовая версия',
+    'Тестова версія',
+    'Тэставая версія',
+    'Version test',
+);
 
 export const LatestVersionTextLocale = new I18nText(
     'Latest version',

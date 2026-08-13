@@ -12,6 +12,7 @@ import {
 import * as sass from 'sass';
 
 const projectRoot = process.cwd();
+const isProduction = process.env.NODE_ENV === 'production';
 
 const pkg = JSON.parse(
     fs.readFileSync(path.resolve(projectRoot, 'package.json'), 'utf8'),
@@ -23,13 +24,15 @@ function zipDirectory(sourceDir: string, outPath: string): Promise<void> {
         const archive = new ZipArchive({ zlib: { level: 9 } });
 
         output.on('close', () => resolve());
-        archive.on('error', (err) => reject(err));
+        archive.on('error', (err: unknown) => reject(err));
 
         archive.pipe(output);
         archive.directory(sourceDir, false);
         archive.finalize();
     });
 }
+
+let cachedWasmBase64: string | null = null;
 
 const rustWasmPlugin = (): RolldownPlugin => ({
     name: 'rust-wasm-plugin',
@@ -39,78 +42,80 @@ const rustWasmPlugin = (): RolldownPlugin => ({
             const resolved = await this.resolve(id, importer, {
                 skipSelf: true,
             });
-            if (resolved) {
-                return resolved.id;
-            }
+            if (resolved) return resolved.id;
         }
         return null;
     },
 
     load(id) {
-        if (id.endsWith('Cargo.toml')) {
-            const rustDir = path.dirname(id);
-            console.log(`\n[Rolldown] Compiling Rust crate in: ${rustDir}...`);
+        if (!id.endsWith('Cargo.toml')) return null;
 
-            try {
-                execSync('rustc --version', { stdio: 'ignore' });
+        if (cachedWasmBase64) {
+            return `export default ${JSON.stringify(cachedWasmBase64)};`;
+        }
 
-                try {
-                    execSync(
-                        'rustup target list --installed | grep wasm32-unknown-unknown',
-                        { stdio: 'ignore' },
-                    );
-                } catch {
-                    console.log(
-                        '[Rolldown] Installing wasm32-unknown-unknown target...',
-                    );
-                    execSync('rustup target add wasm32-unknown-unknown', {
-                        stdio: 'inherit',
-                    });
+        const rustDir = path.dirname(id);
+        console.log(`\n[Rolldown] Compiling Rust crate in: ${rustDir}...`);
+
+        try {
+            execSync('rustc --version', { stdio: 'ignore' });
+
+            const installedTargets = execSync(
+                'rustup target list --installed',
+                {
+                    encoding: 'utf8',
+                    stdio: ['ignore', 'pipe', 'ignore'],
+                },
+            );
+
+            if (!installedTargets.includes('wasm32-unknown-unknown')) {
+                console.log(
+                    '[Rolldown] Installing wasm32-unknown-unknown target...',
+                );
+                execSync('rustup target add wasm32-unknown-unknown', {
+                    stdio: 'inherit',
+                });
+            }
+
+            execSync('cargo build --target wasm32-unknown-unknown --release', {
+                cwd: rustDir,
+                stdio: 'inherit',
+            });
+
+            const cargoToml = fs.readFileSync(id, 'utf8');
+            let libName = 'graph';
+
+            const libMatch = cargoToml.match(/\[lib\].*?name\s*=\s*"([^"]+)"/s);
+            if (libMatch) {
+                libName = libMatch[1].replace(/-/g, '_');
+            } else {
+                const pkgMatch = cargoToml.match(/name\s*=\s*"([^"]+)"/);
+                if (pkgMatch) {
+                    libName = pkgMatch[1].replace(/-/g, '_');
                 }
+            }
 
-                execSync(
-                    'cargo build --target wasm32-unknown-unknown --release',
-                    {
-                        cwd: rustDir,
-                        stdio: 'inherit',
-                    },
+            const targetWasm = path.resolve(
+                rustDir,
+                `target/wasm32-unknown-unknown/release/lib${libName}.wasm`,
+            );
+            const altWasm = path.resolve(
+                rustDir,
+                `target/wasm32-unknown-unknown/release/${libName}.wasm`,
+            );
+
+            let wasmPath = '';
+            if (fs.existsSync(targetWasm)) {
+                wasmPath = targetWasm;
+            } else if (fs.existsSync(altWasm)) {
+                wasmPath = altWasm;
+            } else {
+                throw new Error(
+                    `WASM file not found. Expected lib${libName}.wasm or ${libName}.wasm`,
                 );
+            }
 
-                const cargoToml = fs.readFileSync(id, 'utf8');
-                let libName = 'graph';
-
-                const libMatch = cargoToml.match(
-                    /\[lib\][^]*?name\s*=\s*"([^"]+)"/,
-                );
-                if (libMatch) {
-                    libName = libMatch[1].replace(/-/g, '_');
-                } else {
-                    const pkgMatch = cargoToml.match(/name\s*=\s*"([^"]+)"/);
-                    if (pkgMatch) {
-                        libName = pkgMatch[1].replace(/-/g, '_');
-                    }
-                }
-
-                const targetWasm = path.resolve(
-                    rustDir,
-                    `target/wasm32-unknown-unknown/release/lib${libName}.wasm`,
-                );
-                const altWasm = path.resolve(
-                    rustDir,
-                    `target/wasm32-unknown-unknown/release/${libName}.wasm`,
-                );
-
-                let wasmPath = '';
-                if (fs.existsSync(targetWasm)) {
-                    wasmPath = targetWasm;
-                } else if (fs.existsSync(altWasm)) {
-                    wasmPath = altWasm;
-                } else {
-                    throw new Error(
-                        `WASM file not found. Expected lib${libName}.wasm or ${libName}.wasm`,
-                    );
-                }
-
+            if (isProduction) {
                 try {
                     execSync('wasm-opt --version', { stdio: 'ignore' });
                     console.log('[Rolldown] Optimizing WASM with wasm-opt...');
@@ -119,22 +124,24 @@ const rustWasmPlugin = (): RolldownPlugin => ({
                         { stdio: 'inherit' },
                     );
                 } catch {}
-
-                const wasmBuffer = fs.readFileSync(wasmPath);
-                const base64 = wasmBuffer.toString('base64');
-
-                console.log(
-                    `[Rolldown] Rust compiled. WASM: ${(wasmBuffer.length / 1024).toFixed(2)} KB, Base64: ${(base64.length / 1024).toFixed(2)} KB\n`,
-                );
-
-                return `export default ${JSON.stringify(base64)};`;
-            } catch (err: any) {
-                this.error(`Rust compilation failed: ${err.message}`);
             }
+
+            const wasmBuffer = fs.readFileSync(wasmPath);
+            cachedWasmBase64 = wasmBuffer.toString('base64');
+
+            console.log(
+                `[Rolldown] Rust compiled. WASM: ${(wasmBuffer.length / 1024).toFixed(2)} KB, Base64: ${(cachedWasmBase64.length / 1024).toFixed(2)} KB\n`,
+            );
+
+            return `export default ${JSON.stringify(cachedWasmBase64)};`;
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            this.error(`Rust compilation failed: ${message}`);
         }
-        return null;
     },
 });
+
+const sassCache = new Map<string, string>();
 
 const rawPlugin = (): RolldownPlugin => ({
     name: 'raw-plugin',
@@ -142,52 +149,59 @@ const rawPlugin = (): RolldownPlugin => ({
     async resolveId(id, importer) {
         if (id.includes('?raw')) {
             const [cleanId, query] = id.split('?');
-
             const resolved = await this.resolve(cleanId, importer, {
                 skipSelf: true,
             });
 
-            if (resolved) {
-                return `${resolved.id}?${query}`;
-            }
+            if (resolved) return `${resolved.id}?${query}`;
         }
         return null;
     },
 
     load(id) {
-        if (id.includes('?raw')) {
-            const [cleanPath] = id.split('?');
+        if (!id.includes('?raw')) return null;
 
-            this.addWatchFile(cleanPath);
+        const [cleanPath] = id.split('?');
+        this.addWatchFile(cleanPath);
 
-            if (cleanPath.endsWith('.scss')) {
-                const result = sass.compile(cleanPath);
-                if (result.loadedUrls) {
-                    for (const url of result.loadedUrls) {
-                        this.addWatchFile(fileURLToPath(url));
-                    }
-                }
-                return `export default ${JSON.stringify(result.css)};`;
+        if (cleanPath.endsWith('.scss')) {
+            if (sassCache.has(cleanPath)) {
+                return `export default ${JSON.stringify(sassCache.get(cleanPath))};`;
             }
 
-            const content = fs.readFileSync(cleanPath, 'utf8');
-            return `export default ${JSON.stringify(content)};`;
-        }
-        return null;
-    },
-});
-
-const scssInjectPlugin = (): RolldownPlugin => ({
-    name: 'scss-inject-plugin',
-    transform(_code, id) {
-        if (id.endsWith('.scss') && !id.includes('?raw')) {
-            const result = sass.compile(id);
+            const result = sass.compile(cleanPath);
             if (result.loadedUrls) {
                 for (const url of result.loadedUrls) {
                     this.addWatchFile(fileURLToPath(url));
                 }
             }
             const css = result.css.toString();
+            sassCache.set(cleanPath, css);
+            return `export default ${JSON.stringify(css)};`;
+        }
+
+        const content = fs.readFileSync(cleanPath, 'utf8');
+        return `export default ${JSON.stringify(content)};`;
+    },
+});
+
+const scssInjectPlugin = (): RolldownPlugin => ({
+    name: 'scss-inject-plugin',
+
+    transform(_code, id) {
+        if (id.endsWith('.scss') && !id.includes('?raw')) {
+            let css = sassCache.get(id);
+            if (!css) {
+                const result = sass.compile(id);
+                if (result.loadedUrls) {
+                    for (const url of result.loadedUrls) {
+                        this.addWatchFile(fileURLToPath(url));
+                    }
+                }
+                css = result.css.toString();
+                sassCache.set(id, css);
+            }
+
             return {
                 code: `
                     const style = document.createElement('style');
@@ -205,6 +219,7 @@ const chromeExtensionPlugin = (
     target: 'newchrome' | 'oldchrome',
 ): RolldownPlugin => ({
     name: `chrome-extension-plugin-${target}`,
+
     async writeBundle() {
         const outDir = path.resolve(projectRoot, `dist/${target}`);
         const templateDir = path.resolve(projectRoot, `templates/${target}`);
@@ -213,7 +228,7 @@ const chromeExtensionPlugin = (
         const manifestDest = path.join(outDir, 'manifest.json');
         if (fs.existsSync(manifestSrc)) {
             const manifest = JSON.parse(fs.readFileSync(manifestSrc, 'utf8'));
-            manifest.version = pkg.version;
+            manifest.version = pkg.version.replace(/-test$/i, '');
             fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2));
         }
 
@@ -239,14 +254,17 @@ const chromeExtensionPlugin = (
     },
 });
 
-const tampermonkeyPlugin = (): RolldownPlugin => ({
-    name: 'tampermonkey-plugin',
+const userscriptPlugin = (
+    target: 'tampermonkey' | 'viamobile',
+): RolldownPlugin => ({
+    name: `userscript-plugin-${target}`,
+
     async writeBundle() {
-        const outDir = path.resolve(projectRoot, 'dist/tampermonkey');
-        const filePath = path.join(outDir, 'tampermonkey.js');
+        const outDir = path.resolve(projectRoot, `dist/${target}`);
+        const filePath = path.join(outDir, `${target}.js`);
         const templatePath = path.resolve(
             projectRoot,
-            'templates/tampermonkey.js',
+            `templates/${target}.js`,
         );
 
         if (fs.existsSync(filePath) && fs.existsSync(templatePath)) {
@@ -255,7 +273,7 @@ const tampermonkeyPlugin = (): RolldownPlugin => ({
 
             template = template
                 .replace('{{name}}', pkg.displayName)
-                .replace('{{version}}', pkg.version)
+                .replace('{{version}}', pkg.version.replace(/-test$/i, ''))
                 .replace('{{description}}', pkg.description)
                 .replace('{{author}}', pkg.author);
 
@@ -271,55 +289,13 @@ const tampermonkeyPlugin = (): RolldownPlugin => ({
             );
         }
 
-        const zipDest = path.resolve(projectRoot, 'dist/tampermonkey-dist.zip');
+        const zipDest = path.resolve(projectRoot, `dist/${target}-dist.zip`);
         await zipDirectory(outDir, zipDest);
         console.log(
-            `\n[Rolldown] Successfully packaged [tampermonkey] userscript into: ${zipDest}`,
+            `\n[Rolldown] Successfully packaged [${target}] userscript into: ${zipDest}`,
         );
     },
 });
-
-const viaMobilePlugin = (): RolldownPlugin => ({
-    name: 'viamobile-plugin',
-    async writeBundle() {
-        const outDir = path.resolve(projectRoot, 'dist/viamobile');
-        const filePath = path.join(outDir, 'viamobile.js');
-        const templatePath = path.resolve(
-            projectRoot,
-            'templates/viamobile.js',
-        );
-
-        if (fs.existsSync(filePath) && fs.existsSync(templatePath)) {
-            const bundleContent = fs.readFileSync(filePath, 'utf8');
-            let template = fs.readFileSync(templatePath, 'utf8');
-
-            template = template
-                .replace('{{name}}', pkg.displayName)
-                .replace('{{version}}', pkg.version)
-                .replace('{{description}}', pkg.description)
-                .replace('{{author}}', pkg.author);
-
-            const finalContent = template.replace(
-                '{{BUNDLE_CODE}}',
-                bundleContent,
-            );
-
-            fs.writeFileSync(filePath, finalContent);
-        } else if (!fs.existsSync(templatePath)) {
-            console.warn(
-                `\n[Rolldown] Template file not found at: ${templatePath}`,
-            );
-        }
-
-        const zipDest = path.resolve(projectRoot, 'dist/viamobile-dist.zip');
-        await zipDirectory(outDir, zipDest);
-        console.log(
-            `\n[Rolldown] Successfully packaged [viamobile] userscript into: ${zipDest}`,
-        );
-    },
-});
-
-const isProduction = process.env.NODE_ENV === 'production';
 
 const baseInputConfig = {
     input: 'src/index.ts',
@@ -336,7 +312,7 @@ const baseInputConfig = {
     },
 };
 
-const terserPlugin = terser({
+const terserUserscriptPlugin = terser({
     ecma: 2022,
     toplevel: true,
     module: true,
@@ -362,75 +338,65 @@ const terserPlugin = terser({
     },
 });
 
+const getBasePlugins = () => [
+    rustWasmPlugin(),
+    rawPlugin(),
+    scssInjectPlugin(),
+];
+
 const configs: RolldownOptions[] = [];
 
 if (isProduction) {
     configs.push(
         {
             ...baseInputConfig,
-            plugins: [
-                rustWasmPlugin(),
-                rawPlugin(),
-                scssInjectPlugin(),
-                chromeExtensionPlugin('newchrome'),
-                terserPlugin,
-            ],
+            plugins: [...getBasePlugins(), chromeExtensionPlugin('newchrome')],
             output: {
                 file: 'dist/newchrome/index.js',
-                format: 'iife' as const,
+                format: 'iife',
                 name: 'graphdlc',
-                sourcemap: 'hidden' as const,
-                minify: false,
+                sourcemap: 'hidden',
+                minify: true,
             },
         },
         {
             ...baseInputConfig,
-            plugins: [
-                rustWasmPlugin(),
-                rawPlugin(),
-                scssInjectPlugin(),
-                chromeExtensionPlugin('oldchrome'),
-                terserPlugin,
-            ],
+            plugins: [...getBasePlugins(), chromeExtensionPlugin('oldchrome')],
             output: {
                 file: 'dist/oldchrome/index.js',
-                format: 'iife' as const,
+                format: 'iife',
                 name: 'graphdlc',
-                sourcemap: 'hidden' as const,
-                minify: false,
+                sourcemap: 'hidden',
+                minify: true,
             },
         },
         {
             ...baseInputConfig,
             plugins: [
-                rustWasmPlugin(),
-                rawPlugin(),
-                scssInjectPlugin(),
-                tampermonkeyPlugin(),
-                terserPlugin,
+                ...getBasePlugins(),
+                userscriptPlugin('tampermonkey'),
+                terserUserscriptPlugin,
             ],
             output: {
                 file: 'dist/tampermonkey/tampermonkey.js',
-                format: 'iife' as const,
+                format: 'iife',
                 name: 'graphdlc',
-                sourcemap: 'hidden' as const,
+                sourcemap: 'hidden',
                 minify: false,
             },
         },
         {
             ...baseInputConfig,
             plugins: [
-                rustWasmPlugin(),
-                rawPlugin(),
-                scssInjectPlugin(),
-                viaMobilePlugin(),
-                terserPlugin,
+                ...getBasePlugins(),
+                userscriptPlugin('viamobile'),
+                terserUserscriptPlugin,
             ],
             output: {
                 file: 'dist/viamobile/viamobile.js',
-                format: 'iife' as const,
+                format: 'iife',
                 name: 'graphdlc',
-                sourcemap: 'hidden' as const,
+                sourcemap: 'hidden',
                 minify: false,
             },
         },
@@ -439,9 +405,7 @@ if (isProduction) {
     configs.push({
         ...baseInputConfig,
         plugins: [
-            rustWasmPlugin(),
-            rawPlugin(),
-            scssInjectPlugin(),
+            ...getBasePlugins(),
             {
                 name: 'dev-copy-plugin',
                 async writeBundle() {
@@ -465,13 +429,13 @@ if (isProduction) {
                     }
                 },
             },
-            terserPlugin,
         ],
         output: {
             file: 'dist/dev/graphdlc.js',
-            format: 'iife' as const,
+            format: 'iife',
             name: 'graphdlc',
             sourcemap: true,
+            minify: false,
         },
     });
 }

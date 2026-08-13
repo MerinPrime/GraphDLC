@@ -5,7 +5,7 @@ import {
 } from 'src/core/settings/instances/tools/DebugModeSetting';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import type { Bounds } from 'src/core/utils/Bounds';
-import type { GraphCycle } from '../ast/CycleTypes';
+import type { GraphCycle } from '../ast/cycle/CycleTypes';
 import type { Graph } from '../ast/Graph';
 import type { GraphNode } from '../ast/GraphNode';
 import type { IGraphListener } from '../ast/IGraphListener';

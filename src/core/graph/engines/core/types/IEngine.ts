@@ -1,11 +1,7 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from '../../ast/CycleTypes';
-import type { GraphNode } from '../../ast/GraphNode';
-import type { NodeSignal } from './NodeSignal';
-
-export interface ISnapshot {
-    tick: number;
-}
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import type { NodeSignal } from '../NodeSignal';
 
 export interface IEngine {
     runTick(): boolean;
@@ -16,7 +12,7 @@ export interface IEngine {
     getBreakpoint(doReset?: boolean): number | false;
     isChanged(): boolean;
 
-    getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]];
+    getDirtyChunks(markUndirty: boolean): ReadonlyArray<number>;
     makeDirtyChunk(chunkIdx: number): void;
     makeUndirtyChunk(chunkIdx: number): void;
     getNodeSignal(nodeIdx: number): NodeSignal;
@@ -30,11 +26,9 @@ export interface IEngine {
 
     updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void;
 
-    updateNodeState(node: GraphNode, resetSignal?: boolean): void;
+    resetNodeSignal(node: GraphNode): void;
+    updateNodeState(node: GraphNode): void;
     updateChunk(chunk: Chunk): void;
-
-    doPressButton(nodeIdx: number, state: boolean): void;
-    doArrowSignal(nodeIdx: number, state: boolean): void;
 
     setBreakpointState(newState: boolean): void;
     setSnapshotsState(newState: boolean): void;

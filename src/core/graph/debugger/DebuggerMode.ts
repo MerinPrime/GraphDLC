@@ -2,7 +2,7 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import type { ITask } from 'src/core/task/ITask';
 import type { Bounds } from 'src/core/utils/Bounds';
-import type { GraphCycle } from '../ast/CycleTypes';
+import type { GraphCycle } from '../ast/cycle/CycleTypes';
 import type { Graph } from '../ast/Graph';
 import type { GraphNode } from '../ast/GraphNode';
 import type { IGraphListener } from '../ast/IGraphListener';

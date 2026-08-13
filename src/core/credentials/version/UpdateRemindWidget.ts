@@ -10,7 +10,7 @@ import {
 export class UpdateRemindWidget {
     private element: HTMLDivElement;
 
-    constructor(
+    public constructor(
         private currentVersion: string,
         private latestVersion: string,
         private onUpdate: () => void,
@@ -51,22 +51,22 @@ export class UpdateRemindWidget {
         `;
 
         this.element
-            .querySelector('.update-remind-widget__button--update')!
-            .addEventListener('click', () => {
+            .querySelector('.update-remind-widget__button--update')
+            ?.addEventListener('click', () => {
                 this.onUpdate();
                 this.destroy();
             });
 
         this.element
-            .querySelector('.update-remind-widget__button--ignore')!
-            .addEventListener('click', () => {
+            .querySelector('.update-remind-widget__button--ignore')
+            ?.addEventListener('click', () => {
                 this.onIgnore();
                 this.destroy();
             });
 
         this.element
-            .querySelector('.update-remind-widget__button--later')!
-            .addEventListener('click', () => {
+            .querySelector('.update-remind-widget__button--later')
+            ?.addEventListener('click', () => {
                 this.onLater();
                 this.destroy();
             });

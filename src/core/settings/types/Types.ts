@@ -12,4 +12,6 @@ export interface SettingMeta {
     readonly group: SettingGroup;
     readonly order: number;
     readonly spaceAfter?: number;
+    readonly isDeveloperOnly?: boolean;
+    readonly reloadOnChange?: boolean;
 }

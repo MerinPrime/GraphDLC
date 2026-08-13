@@ -1,10 +1,10 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from '../../ast/CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
-import { NodeSignal } from '../core/NodeSignal';
-import { NodeType } from '../core/NodeType';
-import { StateRewinder } from '../core/StateRewinder';
-import type { IEngine, ISnapshot } from '../core/types';
+import type { NodeSignal } from '../core/NodeSignal';
+import { NodeType, NodeTypes } from '../core/NodeType';
+import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
+import type { ISnapshot } from '../core/types/ISnapshot';
 import { instantiateRustEngine } from './loader';
 import type { RustEngineExports } from './types';
 
@@ -13,105 +13,68 @@ export interface NativeSnapshot extends ISnapshot {
     data: Uint8Array;
 }
 
-export class NativeEngine implements IEngine {
+interface NativeEngineTypes extends EngineTypes {
+    Snapshot: NativeSnapshot;
+}
+
+export class NativeEngine extends BaseEngine<NativeEngineTypes> {
     private readonly exports: RustEngineExports;
     private readonly stagingBufferPtr: number;
-    private readonly rewinder: StateRewinder<NativeSnapshot> =
-        new StateRewinder();
-
-    private extraRewindNodes: Set<number> = new Set();
-    private extraSignalsHistory: Map<number, Map<number, number>> = new Map();
-
-    private saveSnapshots: boolean = false;
-
-    private _getNewRngState(): BigInt {
-        const arr = new Uint32Array(2);
-        crypto.getRandomValues(arr);
-
-        return (BigInt(arr[0]) << 32n) | BigInt(arr[1]);
-    }
 
     public constructor() {
+        super();
         this.exports = instantiateRustEngine();
-        this.exports.init(this._getNewRngState());
+        this.exports.init(this.generateRngSeed());
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
     }
 
-    public runTick(): void {
-        if (this.saveSnapshots) {
-            const curSignals = this.extraSignalsHistory.get(this.getTick());
-            const signals = curSignals ?? new Map<number, NodeSignal>();
-            for (const nodeIdx of this.extraRewindNodes) {
-                const signal = this.getNodeSignal(nodeIdx);
-                if (signal === NodeSignal.NONE) {
-                    continue;
-                }
-                signals.set(nodeIdx, signal);
-            }
-            this.extraSignalsHistory.set(this.getTick(), signals);
-
-            if (this.rewinder.canDoSnapshot(this.getTick())) {
-                this.rewinder.saveSnapshot(this.makeSnapshot());
-
-                const oldestTick = this.rewinder.getOldestSnapshotTick();
-                for (const tick of this.extraSignalsHistory.keys()) {
-                    if (tick < oldestTick) {
-                        this.extraSignalsHistory.delete(tick);
-                    }
-                }
-            }
-        }
-        this.exports.run_tick();
+    private get memoryBuffer(): ArrayBuffer {
+        return (this.exports.memory as any).buffer as ArrayBuffer;
     }
 
-    public runManyTicks(ticksCount: number): void {
-        if (!this.saveSnapshots) {
-            this.exports.run_many_ticks(ticksCount);
-            return;
-        }
-        for (let i = 0; i < ticksCount; i++) {
-            this.runTick();
-        }
+    private getStagingUint32View(length: number): Uint32Array {
+        return new Uint32Array(
+            this.memoryBuffer,
+            this.stagingBufferPtr,
+            length,
+        );
     }
 
-    private applyRecordedSignals(tick: number): void {
-        const recordedSignals = this.extraSignalsHistory.get(tick);
-        if (!recordedSignals) {
-            return;
-        }
-        for (const nodeIdx of this.extraRewindNodes) {
-            this.exports.set_node_signal_export(nodeIdx, NodeSignal.NONE);
-        }
-        for (const [nodeIdx, signal] of recordedSignals) {
-            this.exports.set_node_signal_export(nodeIdx, signal);
-        }
+    private getStagingUint8View(length: number): Uint8Array {
+        return new Uint8Array(this.memoryBuffer, this.stagingBufferPtr, length);
     }
 
-    public rewindToTick(targetTick: number): void {
-        const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
-        if (!closestSnapshot) {
-            return;
+    private writeNodesToStaging(...nodeGroups: GraphNode[][]): number {
+        let totalCount = 0;
+        for (let i = 0; i < nodeGroups.length; i++) {
+            totalCount += nodeGroups[i].length;
         }
 
-        const stepsToSimulate = targetTick - closestSnapshot.tick;
-        if (stepsToSimulate > 1000000) {
-            this.rewinder.reset();
-            return;
-        }
+        const view = this.getStagingUint32View(totalCount);
+        let offset = 0;
 
-        this.loadSnapshot(closestSnapshot);
-        for (let i = 0; i < stepsToSimulate; i++) {
-            this.applyRecordedSignals(this.getTick());
-            this.exports.run_tick();
-        }
-        this.applyRecordedSignals(targetTick);
-
-        const savedTicks = Array.from(this.extraSignalsHistory.keys());
-        savedTicks.forEach((savedTick) => {
-            if (savedTick > targetTick) {
-                this.extraSignalsHistory.delete(savedTick);
+        for (let g = 0; g < nodeGroups.length; g++) {
+            const group = nodeGroups[g];
+            for (let i = 0; i < group.length; i++) {
+                view[offset++] = group[i].nodeIdx;
             }
-        });
+        }
+
+        return totalCount;
+    }
+
+    private generateRngSeed(): bigint {
+        const arr = new Uint32Array(2);
+        crypto.getRandomValues(arr);
+        return (BigInt(arr[0]) << 32n) | BigInt(arr[1]);
+    }
+
+    protected runTickInternal(): boolean {
+        return this.exports.run_tick();
+    }
+
+    protected runManyTicksInternal(ticksCount: number): boolean {
+        return this.exports.run_many_ticks(ticksCount);
     }
 
     public getTick(): number {
@@ -120,26 +83,25 @@ export class NativeEngine implements IEngine {
 
     public getBreakpoint(doReset: boolean = false): number | false {
         const breakPointNode = this.exports.get_breakpoint(doReset);
-        if (breakPointNode === -1) return false;
-        return breakPointNode;
+        return breakPointNode === -1 ? false : breakPointNode;
     }
 
     public isChanged(): boolean {
         return this.exports.is_changed() !== 0;
     }
 
-    public getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]] {
-        const count = this.exports.get_dirty_chunks_count();
-        if (count === 0) {
-            return [];
-        }
-        this.exports.copy_dirty_chunks(
-            this.stagingBufferPtr,
-            markUndirty ? 1 : 0,
-        );
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
-        const view = new Uint32Array(buffer, this.stagingBufferPtr, count);
-        return Array.from(view);
+    public reset(): void {
+        this.exports.reset_export();
+        this.rewinder.reset();
+        this.extraSignalsHistory.clear();
+    }
+
+    public clear(): void {
+        this.exports.clear(this.generateRngSeed());
+    }
+
+    public markAllChunksDirty(): void {
+        this.exports.mark_all_chunks_dirty();
     }
 
     public makeDirtyChunk(chunkIdx: number): void {
@@ -150,35 +112,38 @@ export class NativeEngine implements IEngine {
         this.exports.make_undirty_chunk_export(chunkIdx);
     }
 
+    public updateChunk(chunk: Chunk): void {
+        if (chunk.astIndex != null) {
+            this.exports.ensure_chunk_capacity_export(chunk.astIndex + 1);
+        }
+    }
+
+    public getDirtyChunks(markUndirty: boolean): number[] {
+        const count = this.exports.get_dirty_chunks_count();
+        if (count === 0) return [];
+
+        this.exports.copy_dirty_chunks(
+            this.stagingBufferPtr,
+            markUndirty ? 1 : 0,
+        );
+        const view = this.getStagingUint32View(count);
+        return Array.from(view);
+    }
+
+    public setNodeSignalInternal(nodeIdx: number, signal: NodeSignal): void {
+        this.exports.set_node_signal_export(nodeIdx, signal);
+    }
+
     public getNodeSignal(nodeIdx: number): NodeSignal {
         return this.exports.get_node_signal_export(nodeIdx) as NodeSignal;
     }
 
-    public setExtraRewindNodes(nodeIndices: Set<number>): void {
-        this.extraRewindNodes = nodeIndices;
-    }
-
-    public reset(): void {
-        this.exports.reset_export();
-        this.rewinder.reset();
-        this.extraSignalsHistory.clear();
+    public resetNodeSignal(node: GraphNode): void {
+        this.exports.reset_node_signal(node.nodeIdx);
     }
 
     public onCycleBuild(cycle: GraphCycle): void {
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
-        const stagingView = new Uint32Array(
-            buffer,
-            this.stagingBufferPtr,
-            cycle.nodes.length + cycle.heads.length,
-        );
-
-        cycle.nodes.forEach((n, idx) => {
-            stagingView[idx] = n.nodeIdx;
-        });
-
-        cycle.heads.forEach((n, idx) => {
-            stagingView[cycle.nodes.length + idx] = n.nodeIdx;
-        });
+        this.writeNodesToStaging(cycle.nodes, cycle.heads);
 
         this.exports.on_cycle_build_export(
             cycle.index,
@@ -189,20 +154,7 @@ export class NativeEngine implements IEngine {
     }
 
     public onCycleDismantle(cycle: GraphCycle): void {
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
-        const stagingView = new Uint32Array(
-            buffer,
-            this.stagingBufferPtr,
-            cycle.nodes.length + cycle.heads.length,
-        );
-
-        cycle.nodes.forEach((n, idx) => {
-            stagingView[idx] = n.nodeIdx;
-        });
-
-        cycle.heads.forEach((n, idx) => {
-            stagingView[cycle.nodes.length + idx] = n.nodeIdx;
-        });
+        this.writeNodesToStaging(cycle.nodes, cycle.heads);
 
         this.exports.on_cycle_dismantle_export(
             cycle.index,
@@ -212,154 +164,65 @@ export class NativeEngine implements IEngine {
     }
 
     public updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void {
-        const newLinks = node.links;
-
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
-        const stagingView = new Uint32Array(
-            buffer,
-            this.stagingBufferPtr,
-            oldLinks.length + newLinks.length,
-        );
-
-        oldLinks.forEach((n, idx) => {
-            stagingView[idx] = n.nodeIdx;
-        });
-
-        newLinks.forEach((n, idx) => {
-            stagingView[oldLinks.length + idx] = n.nodeIdx;
-        });
+        this.writeNodesToStaging(oldLinks, node.links);
 
         this.exports.update_node_change_export(
             node.nodeIdx,
             oldLinks.length,
-            newLinks.length,
+            node.links.length,
         );
     }
 
-    public updateNodeState(
-        node: GraphNode,
-        resetSignal: boolean = false,
-    ): void {
+    public updateNodeState(node: GraphNode): void {
         const nodeIdx = node.nodeIdx;
         this.exports.ensure_node_capacity_export(nodeIdx + 1);
 
-        const links = node.links
-            .filter(
-                (linkedNode) =>
-                    linkedNode.type !== NodeType.DETECTOR ||
-                    node.type === NodeType.BLOCKER,
-            )
-            .map((linkedNode) => linkedNode.nodeIdx);
+        const linkIndices: number[] = [];
+        const detectorIndices: number[] = [];
 
-        const detectors = node.links
-            .filter(
-                (linkedNode) =>
-                    linkedNode.type === NodeType.DETECTOR &&
-                    linkedNode.detectedLink === node,
-            )
-            .map((node) => node.nodeIdx);
+        for (let i = 0; i < node.links.length; i++) {
+            const linkedNode = node.links[i];
+            const isDetector = linkedNode.type === NodeType.DETECTOR;
 
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
-        const stagingView = new Uint32Array(
-            buffer,
-            this.stagingBufferPtr,
-            links.length + detectors.length,
-        );
+            if (isDetector && node.type !== NodeType.BLOCKER) {
+                if (linkedNode.detectedLink === node) {
+                    detectorIndices.push(linkedNode.nodeIdx);
+                }
+            } else {
+                linkIndices.push(linkedNode.nodeIdx);
+            }
+        }
 
-        links.forEach((linkIdx, idx) => {
-            stagingView[idx] = linkIdx;
-        });
-        detectors.forEach((detIdx, idx) => {
-            stagingView[links.length + idx] = detIdx;
-        });
+        const totalCount = linkIndices.length + detectorIndices.length;
+        const stagingView = this.getStagingUint32View(totalCount);
 
-        const isEntryPoint =
-            node.type === NodeType.SOURCE ||
-            node.type === NodeType.IMPULSE ||
-            node.type === NodeType.LOGIC_NOT ||
-            node.type === NodeType.BUTTON ||
-            node.type === NodeType.DIRECTIONAL_BUTTON;
+        stagingView.set(linkIndices, 0);
+        stagingView.set(detectorIndices, linkIndices.length);
 
-        const isAdditionalUpdate =
-            node.type === NodeType.DELAY ||
-            node.type === NodeType.IMPULSE ||
-            node.type === NodeType.FLIP_FLOP ||
-            node.type === NodeType.RANDOM;
-
-        const cycleIdx = node.cycleRef ? node.cycleRef.index : -1;
-        const cycleOffset = node.cycleRef ? node.cycleOffset : 0;
-        const headType = node.cycleRef ? node.headType : 0;
-
-        const detectedLinkIdx = node.detectedLink
-            ? node.detectedLink.nodeIdx
-            : -1;
-
-        const blockedLinkIdx = node.blockedLink ? node.blockedLink.nodeIdx : -1;
+        const cycleRef = node.cycleRef;
 
         this.exports.update_node_state(
             nodeIdx,
             node.type,
-            isEntryPoint ? 1 : 0,
-            isAdditionalUpdate ? 1 : 0,
+            NodeTypes.isEntryPoint(node.type) ? 1 : 0,
+            NodeTypes.isAdditionalUpdate(node.type) ? 1 : 0,
             node.isBreakpoint ? 1 : 0,
-            cycleIdx,
-            cycleOffset,
-            headType,
+            cycleRef ? cycleRef.index : -1,
+            cycleRef ? node.cycleOffset : 0,
+            cycleRef ? node.headType : 0,
             node.chunkIdx,
-            links.length,
-            detectors.length,
-            detectedLinkIdx,
-            blockedLinkIdx,
-            resetSignal ? 1 : 0,
+            linkIndices.length,
+            detectorIndices.length,
+            node.detectedLink ? node.detectedLink.nodeIdx : -1,
+            node.blockedLink ? node.blockedLink.nodeIdx : -1,
         );
     }
 
-    public updateChunk(chunk: Chunk): void {
-        if (chunk.astIndex === undefined || chunk.astIndex === null) return;
-        this.exports.ensure_chunk_capacity_export(chunk.astIndex + 1);
-    }
-
-    public doPressButton(nodeIdx: number, state: boolean): void {
-        this.exports.do_press_button_export(nodeIdx, state ? 1 : 0);
-    }
-
-    public doArrowSignal(nodeIdx: number, state: boolean): void {
-        this.exports.do_press_button_export(nodeIdx, state ? 1 : 0);
-
-        if (this.saveSnapshots) {
-            const currentTick = this.getTick();
-            let recordedSignals = this.extraSignalsHistory.get(currentTick);
-
-            if (!recordedSignals) {
-                recordedSignals = new Map<number, NodeSignal>();
-                this.extraSignalsHistory.set(currentTick, recordedSignals);
-            }
-
-            const signal = this.getNodeSignal(nodeIdx);
-            if (signal === NodeSignal.NONE) {
-                recordedSignals.delete(nodeIdx);
-            } else {
-                recordedSignals.set(nodeIdx, signal);
-            }
-        }
-    }
-
-    public setBreakpointState(_: boolean): void {}
-
-    public setSnapshotsState(newState: boolean): void {
-        this.saveSnapshots = newState;
-    }
-
-    public clear(): void {
-        this.exports.clear(this._getNewRngState());
-    }
-
-    private makeSnapshot(): NativeSnapshot {
+    protected makeSnapshot(): NativeSnapshot {
         const ptr = this.exports.serialize_state_export();
         const len = this.exports.get_serialized_length();
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
 
-        const wasmView = new Uint8Array(buffer, ptr, len);
+        const wasmView = new Uint8Array(this.memoryBuffer, ptr, len);
         const data = new Uint8Array(len);
         data.set(wasmView);
 
@@ -369,13 +232,8 @@ export class NativeEngine implements IEngine {
         };
     }
 
-    private loadSnapshot(snapshot: NativeSnapshot): void {
-        const buffer = this.exports.memory.buffer as ArrayBuffer;
-        const wasmView = new Uint8Array(
-            buffer,
-            this.stagingBufferPtr,
-            snapshot.data.length,
-        );
+    protected loadSnapshot(snapshot: NativeSnapshot): void {
+        const wasmView = this.getStagingUint8View(snapshot.data.length);
         wasmView.set(snapshot.data);
 
         this.exports.deserialize_state_export(snapshot.data.length);

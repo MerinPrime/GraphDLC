@@ -17,12 +17,14 @@ export const VersionState = {
     set(s: VersionState, ver: string) {
         state = s;
         version = ver;
-        listeners.splice(0).forEach((fn) => fn(s, ver));
+        listeners.splice(0).forEach((fn) => {
+            fn(s, ver);
+        });
     },
 };
 
 export async function checkVersion() {
-    const currentVersion = __CURRENT_VERSION__;
+    const currentVersion = __CURRENT_VERSION__.replace(/-test$/i, '');
 
     const cache = VersionStorage.get();
     let latestVersion: string;

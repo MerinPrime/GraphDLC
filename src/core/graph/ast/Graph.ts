@@ -2,11 +2,9 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import { CycleOptimizationSetting } from 'src/core/settings/instances/developer/CycleOptimizationSetting';
 import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
-import {
-    GraphEngine,
-    GraphEngineSetting,
-} from 'src/core/settings/instances/performance/GraphEngineSetting';
 import {
     BreakpointMode,
     EnableBreakpointSetting,
@@ -17,12 +15,8 @@ import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
-import type { IEngine } from '../engines/core/types';
-import { DefaultEngine } from '../engines/default/DefaultEngine';
-import { SoAEngine } from '../engines/enhanced/SoAEngine';
-import { NativeEngine } from '../engines/native/NativeEngine';
-import { RawEngine } from '../engines/raw/RawEngine';
-import type { GraphCycle } from './CycleTypes';
+import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
+import { EngineFactory } from '../engines/EngineFactory';
 import { CycleManager } from './cycle/CycleManager';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
@@ -33,6 +27,7 @@ interface PrivateGameMap {
 
 export class Graph {
     private gameMap: GameMap;
+    private privateGameMap: PrivateGameMap;
     private nodes: GraphNode[] = [];
     private arrows: Arrow[] = [];
     private chunks: Chunk[] = [];
@@ -43,48 +38,36 @@ export class Graph {
     private readonly cycleManager: CycleManager = new CycleManager();
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
 
-    private listeners: IGraphListener[] = [this.cycleManager, this.debugger];
+    private listeners: IGraphListener[] = [];
 
-    public engine: IEngine;
+    public engine: BaseEngine<EngineTypes>;
+
+    private readonly handleBreakpointChange = (newState: BreakpointMode) => {
+        this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
+    };
+
+    private readonly handleSnapshotsChange = (newState: boolean) => {
+        this.engine.setSnapshotsState(newState);
+    };
 
     public constructor(gameMap: GameMap) {
         this.gameMap = gameMap;
+        this.privateGameMap = gameMap as any as PrivateGameMap;
 
-        let engine: IEngine;
-
-        switch (GraphEngineSetting.value) {
-            case GraphEngine.ORIGINAL:
-                engine = new DefaultEngine(this, this.gameMap);
-                break;
-            case GraphEngine.STANDARD:
-                engine = new RawEngine();
-                break;
-            case GraphEngine.ENHANCED:
-                engine = new SoAEngine();
-                break;
-            case GraphEngine.NATIVE:
-                engine = new NativeEngine();
-                break;
+        this.listeners.push(this.debugger);
+        if (CycleOptimizationSetting.value) {
+            this.listeners.push(this.cycleManager);
         }
 
-        this.engine = engine;
+        this.engine = EngineFactory.create(this, this.gameMap);
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
-        EnableBreakpointSetting.onChange.add((newState) => {
-            this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
-        });
-
-        EnableSnapshotsSetting.onChange.add((newState) => {
-            this.engine.setSnapshotsState(newState);
-        });
+        EnableBreakpointSetting.onChange.add(this.handleBreakpointChange);
+        EnableSnapshotsSetting.onChange.add(this.handleSnapshotsChange);
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
         return this.chunks[chunkIdx];
-    }
-
-    public getAllChunks(): readonly Chunk[] {
-        return this.chunks;
     }
 
     public markCyclesChunksDirty() {
@@ -122,9 +105,10 @@ export class Graph {
 
         const newTargets: GraphNode[] = [];
         const relations = getArrowRelations(node.arrowType);
-        const chunk = (
-            this.gameMap as any as PrivateGameMap
-        ).getOrCreateChunkByArrowCoordinates(node.globalX, node.globalY);
+        const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
+            node.globalX,
+            node.globalY,
+        );
         relations.forEach(([relX, relY]) => {
             const relativeArrow = getRelativeArrow(
                 chunk,
@@ -207,7 +191,7 @@ export class Graph {
         }
         if (node.blockedLink !== blockedLink) {
             node.blockedLink = blockedLink;
-            this.engine.updateNodeState(node, false);
+            this.engine.updateNodeState(node);
         }
 
         if (node.detectedLink !== detectorLink) {
@@ -260,6 +244,10 @@ export class Graph {
         arrow.astIndex = nodeIdx;
         this.engine.updateNodeState(node);
 
+        this.listeners.forEach((listener) => {
+            listener.onNodeAdded(this, node);
+        });
+
         return node;
     }
 
@@ -267,9 +255,10 @@ export class Graph {
         globalX: number,
         globalY: number,
     ): GraphNode {
-        const chunk = (
-            this.gameMap as any as PrivateGameMap
-        ).getOrCreateChunkByArrowCoordinates(globalX, globalY);
+        const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
+            globalX,
+            globalY,
+        );
         const arrow: Arrow = chunk.getArrow(
             globalX - chunk.x * CHUNK_SIZE,
             globalY - chunk.y * CHUNK_SIZE,
@@ -280,6 +269,9 @@ export class Graph {
     }
 
     public clear() {
+        EnableBreakpointSetting.onChange.remove(this.handleBreakpointChange);
+        EnableSnapshotsSetting.onChange.remove(this.handleSnapshotsChange);
+
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
@@ -342,6 +334,9 @@ export class Graph {
     ) {
         const oldType = node.type;
 
+        if (node.arrowType !== type) {
+            this.engine.resetNodeSignal(node);
+        }
         node.setType(type);
         node.setRotation(rotation);
         node.setFlipped(flipped);
@@ -365,6 +360,7 @@ export class Graph {
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
+        this.engine.resetNodeSignal(node);
         node.setType(type);
         this.updateNodeRelations(node);
         this.listeners.forEach((listener) => {
@@ -373,7 +369,7 @@ export class Graph {
         node.backLinks.forEach((backLinkedNode) => {
             this.engine.updateNodeState(backLinkedNode);
         });
-        this.engine.updateNodeState(node, true);
+        this.engine.updateNodeState(node);
         if (
             node.type === NodeType.DIRECTIONAL_BUTTON ||
             node.type === NodeType.BUTTON ||

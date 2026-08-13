@@ -1,10 +1,18 @@
+import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Game } from '@logic-arrows/player/game';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { UISpeedController } from '@logic-arrows/ui/components/ui-speed-controller';
 import { PLATFORM } from '@logic-arrows/utils/platform';
 import type { GraphDLC } from 'src/core/GraphDLC';
+import { DebugNodeSignal } from 'src/core/graph/engines/core/NodeSignal';
+import { RawEngine } from 'src/core/graph/engines/raw/RawEngine';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import { DeveloperModeSetting } from 'src/core/settings/instances/developer/DeveloperModeSetting';
 import type { IPatcher } from '../Patcher';
+
+interface PrivatePlayerControls {
+    getArrowByMousePosition(): Arrow | undefined;
+}
 
 interface PrivatePlayerUI {
     fpsDisplay: HTMLDivElement | null;
@@ -20,6 +28,9 @@ export const PatchPlayerUI: IPatcher = (
             'UISpeedController',
         );
 
+    const PlayerControls =
+        patchLoader.getInstance<PrivatePlayerControls>('PlayerControls');
+
     patchLoader.addDefinitionPatch('PlayerUI', (_module: typeof PlayerUI) => {
         return class PlayerUI extends _module {
             public startTickFrom: number = 0;
@@ -28,7 +39,7 @@ export const PatchPlayerUI: IPatcher = (
                 const hasPause = PLATFORM === 'mobile';
                 this.speedController = new _UISpeedController.val(
                     document.body,
-                    10,
+                    11,
                     hasPause,
                     (e: number) => {
                         if (hasPause) {
@@ -45,6 +56,7 @@ export const PatchPlayerUI: IPatcher = (
                             '6000',
                             '30000',
                             '120000',
+                            '600000',
                             'MAX',
                         ];
                         return `${TPS_LIMITS[e]} TPS`;
@@ -88,6 +100,41 @@ export const PatchPlayerUI: IPatcher = (
                     _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: ${tick}`;
                 } else {
                     _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: +${tickCounter}`;
+                }
+                if (DeveloperModeSetting.value) {
+                    const graph = _this.game.gameMap.graph;
+                    const engine = graph.engine;
+                    const debugLines: string[] = [];
+                    if (engine instanceof RawEngine) {
+                        const arrow =
+                            PlayerControls.val?.getArrowByMousePosition();
+                        if (!arrow) {
+                            debugLines.push('arrow null');
+                        } else if (
+                            arrow.astIndex === null ||
+                            arrow.astIndex === undefined
+                        ) {
+                            debugLines.push('ast index null');
+                        } else {
+                            const nodeIdx = arrow.astIndex;
+                            const nodeState = engine.state.getNode(nodeIdx);
+                            debugLines.push(
+                                `signal: ${DebugNodeSignal[nodeState.signal]}`,
+                            );
+                            debugLines.push(
+                                `signalsCount: ${nodeState.signalsCount}`,
+                            );
+                            debugLines.push(
+                                `blockedCount: ${nodeState.blockedCount}`,
+                            );
+                            debugLines.push(
+                                `isChanged: ${nodeState.isChanged}`,
+                            );
+                        }
+                    } else {
+                        debugLines.push('non raw engine');
+                    }
+                    _this.fpsDisplay.innerText += `\n${debugLines.join('\n')}`;
                 }
             }
         };

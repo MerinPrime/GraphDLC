@@ -4,7 +4,7 @@ export class CustomTPSComponent {
     public isRemoved: boolean;
     public tps: number;
 
-    constructor(parent: HTMLElement, hasPause: boolean) {
+    public constructor(parent: HTMLElement, hasPause: boolean) {
         this.parent = parent;
         this.isRemoved = false;
         this.tps = 0;
@@ -16,48 +16,59 @@ export class CustomTPSComponent {
         this.field.value = '1';
         this.field.classList.add('custom-tps-input');
 
+        this.field.inputMode = 'numeric';
+
         if (hasPause) {
             this.field.classList.add('has-pause');
         }
 
         this.field.addEventListener('change', () => {
-            const parsedValue = parseInt(this.field.value);
+            const parsedValue = parseInt(this.field.value, 10);
             const value = Number.isNaN(parsedValue) ? 1 : parsedValue;
             this.tps = Math.max(1, Math.min(value, 10000000));
             this.field.value = this.tps.toString(10);
+        });
+
+        this.field.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            this.focus();
+        });
+        this.field.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.focus();
+        });
+        this.field.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.focus();
         });
 
         this.parent.appendChild(this.field);
         this.setVisibility(false);
     }
 
-    getTicksPerFrame(): number {
+    public getTicksPerFrame(): number {
         return Math.max(1, Math.round(this.tps / 60.0));
     }
 
-    isFocused(): boolean {
+    public isFocused(): boolean {
         if (this.isRemoved) return false;
         return this.field === document.activeElement;
     }
 
-    focus() {
+    public focus() {
         this.field.focus();
     }
 
-    blur() {
+    public blur() {
         this.field.blur();
     }
 
-    setVisibility(visibility: boolean): void {
+    public setVisibility(visibility: boolean): void {
         if (this.isRemoved) return;
-        const beHidden = this.field.hidden;
         this.field.hidden = !visibility;
-        if (beHidden && visibility) {
-            this.focus();
-        }
     }
 
-    remove() {
+    public remove() {
         this.isRemoved = true;
         this.field.remove();
     }

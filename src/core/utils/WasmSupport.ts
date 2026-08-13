@@ -1,4 +1,4 @@
-export function isWasmSupported(): boolean {
+function checkWASM(): boolean {
     try {
         if (
             typeof WebAssembly === 'object' &&
@@ -16,3 +16,5 @@ export function isWasmSupported(): boolean {
 
     return false;
 }
+
+export const IS_WASM_SUPPORTED = checkWASM();

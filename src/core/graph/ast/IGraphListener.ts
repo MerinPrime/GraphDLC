@@ -1,5 +1,5 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from './CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
 import type { Graph } from './Graph';
 import type { GraphNode } from './GraphNode';
 

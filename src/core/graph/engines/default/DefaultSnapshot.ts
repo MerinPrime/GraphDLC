@@ -1,4 +1,4 @@
-import type { ISnapshot } from '../core/types';
+import type { ISnapshot } from '../core/types/ISnapshot';
 
 export class ChunkSnapshot {
     public x: number = 0;

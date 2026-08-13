@@ -35,6 +35,16 @@ pub extern "C" fn clear(rng_state: u64) {
 }
 
 #[no_mangle]
+pub extern "C" fn reset_node_signal(node_idx: u32) {
+    let state = get_state();
+    state.ensure_node_capacity((node_idx + 1) as usize);
+
+    let node = &mut state.nodes[node_idx as usize];
+    node.signal = NODE_SIGNAL_NONE;
+    node.last_signal = NODE_SIGNAL_NONE;
+}
+
+#[no_mangle]
 pub extern "C" fn update_node_state(
     node_idx: u32,
     node_type: u8,
@@ -49,7 +59,6 @@ pub extern "C" fn update_node_state(
     detectors_count: u32,
     detected_link: i32,
     blocked_link: i32,
-    reset_signal: i32,
 ) {
     let state = get_state();
     state.ensure_node_capacity((node_idx + 1) as usize);
@@ -121,11 +130,6 @@ pub extern "C" fn update_node_state(
     node.links_count = safe_links_count as u8;
     node.detectors = detectors;
     node.detectors_count = safe_detectors_count as u8;
-
-    if reset_signal != 0 {
-        node.signal = NODE_SIGNAL_NONE;
-        node.last_signal = NODE_SIGNAL_NONE;
-    }
 
     node.flags = flags;
 
@@ -228,6 +232,14 @@ pub extern "C" fn make_dirty_chunk_export(chunk_idx: u32) {
 }
 
 #[no_mangle]
+pub extern "C" fn mark_all_chunks_dirty() {
+    let state = get_state();
+    state.chunks.iter_mut().for_each(|chunk| {
+        chunk.flags |= CHUNK_FLAG_IS_DIRTY;
+    });
+}
+
+#[no_mangle]
 pub extern "C" fn make_undirty_chunk_export(chunk_idx: u32) {
     get_state().make_undirty_chunk(chunk_idx);
 }
@@ -270,12 +282,34 @@ pub extern "C" fn copy_dirty_chunks(out_ptr: *mut u32, mark_undirty: i32) -> u32
 #[no_mangle]
 pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     let state = get_state();
-    let node = &mut state.nodes[node_idx as usize];
-    node.signal = signal;
-    let chunk_idx = node.chunk_idx;
 
-    state.mark_node_as_changed(node_idx);
-    state.mark_node_as_changed_non_temp(node_idx);
+    let (is_in_cycle, head_type, cycle_idx, cycle_offset, chunk_idx) = {
+        let node = &state.nodes[node_idx as usize];
+        (
+            (node.flags & FLAG_IS_IN_CYCLE) != 0,
+            node.head_type(),
+            node.cycle_idx,
+            node.cycle_offset,
+            node.chunk_idx,
+        )
+    };
+
+    if is_in_cycle && head_type == CYCLE_HEAD_TYPE_NONE {
+        let tick = state.tick;
+        let Some(ref mut cycle_state) = state.cycles[cycle_idx as usize] else {
+            return;
+        };
+        if signal == NODE_SIGNAL_NONE {
+            cycle_state.clear_bit(tick, cycle_offset);
+        } else {
+            cycle_state.write_bit(tick, cycle_offset);
+        }
+    } else {
+        state.nodes[node_idx as usize].signal = signal;
+        state.mark_node_as_changed_non_temp(node_idx);
+        state.mark_node_as_changed(node_idx);
+    }
+
     state.make_dirty_chunk(chunk_idx);
 }
 

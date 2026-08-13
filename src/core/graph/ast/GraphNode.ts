@@ -1,7 +1,9 @@
+import {
+    CycleHeadType,
+    type GraphCycle,
+} from 'src/core/graph/ast/cycle/CycleTypes';
 import { ArrowType } from 'src/core/utils/ArrowType';
-import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import { NodeType, NodeTypes } from '../engines/core/NodeType';
-import { CycleHeadType, type GraphCycle } from './CycleTypes';
 
 export class GraphNode {
     public readonly nodeIdx: number;
@@ -18,7 +20,11 @@ export class GraphNode {
     public readonly localY: number;
 
     public links: GraphNode[] = [];
+    public linkCounts: number[] = [];
+
     public backLinks: GraphNode[] = [];
+    public backLinkCounts: number[] = [];
+
     public detectedLink: GraphNode | null = null;
     public blockedLink: GraphNode | null = null;
 
@@ -28,7 +34,6 @@ export class GraphNode {
     public cycleRef: GraphCycle | null = null;
     public headType: CycleHeadType = CycleHeadType.NONE;
     public cycleOffset: number = 0;
-    public origCycleOffset: number = 0;
 
     public constructor(
         nodeIdx: number,
@@ -64,15 +69,51 @@ export class GraphNode {
     }
 
     public addLink(node: GraphNode) {
-        this.links.push(node);
-        node.backLinks.push(this);
+        const idx = this.links.indexOf(node);
+        if (idx !== -1) {
+            this.linkCounts[idx]++;
+        } else {
+            this.links.push(node);
+            this.linkCounts.push(1);
+        }
+
+        const bIdx = node.backLinks.indexOf(this);
+        if (bIdx !== -1) {
+            node.backLinkCounts[bIdx]++;
+        } else {
+            node.backLinks.push(this);
+            node.backLinkCounts.push(1);
+        }
+
         this.onUpdate();
         node.onUpdate();
     }
 
     public removeLink(node: GraphNode) {
-        removeWithSwap(this.links, node);
-        removeWithSwap(node.backLinks, this);
+        const idx = this.links.indexOf(node);
+        if (idx !== -1) {
+            this.linkCounts[idx]--;
+            if (this.linkCounts[idx] === 0) {
+                const last = this.links.length - 1;
+                this.links[idx] = this.links[last];
+                this.linkCounts[idx] = this.linkCounts[last];
+                this.links.pop();
+                this.linkCounts.pop();
+            }
+        }
+
+        const bIdx = node.backLinks.indexOf(this);
+        if (bIdx !== -1) {
+            node.backLinkCounts[bIdx]--;
+            if (node.backLinkCounts[bIdx] === 0) {
+                const last = node.backLinks.length - 1;
+                node.backLinks[bIdx] = node.backLinks[last];
+                node.backLinkCounts[bIdx] = node.backLinkCounts[last];
+                node.backLinks.pop();
+                node.backLinkCounts.pop();
+            }
+        }
+
         this.onUpdate();
         node.onUpdate();
     }

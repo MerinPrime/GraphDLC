@@ -1,5 +1,8 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import { CycleHeadType, type GraphCycle } from '../../ast/CycleTypes';
+import {
+    CycleHeadType,
+    type GraphCycle,
+} from 'src/core/graph/ast/cycle/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
@@ -15,8 +18,8 @@ export class RawNodeState {
     public links: RawNodeState[] = [];
     public detectorLinks: RawNodeState[] = [];
 
-    public signal: number = 0;
-    public lastSignal: number = 0;
+    public signal: NodeSignal = 0;
+    public lastSignal: NodeSignal = 0;
     public signalsCount: number = 0;
     public blockedCount: number = 0;
 
@@ -75,7 +78,13 @@ export class RawGraphState {
         return this.nodes[nodeIdx];
     }
 
-    public updateNodeState(node: GraphNode, resetSignal: boolean = false) {
+    public resetNodeSignal(node: GraphNode) {
+        const nodeState = this.nodes[node.nodeIdx];
+        nodeState.lastSignal = 0;
+        nodeState.signal = 0;
+    }
+
+    public updateNodeState(node: GraphNode) {
         if (this.nodes[node.nodeIdx] === undefined) {
             this.nodes[node.nodeIdx] = new RawNodeState(
                 node,
@@ -115,10 +124,6 @@ export class RawGraphState {
             nodeState.cycleIdx = null;
             nodeState.headType = CycleHeadType.NONE;
             nodeState.cycleOffset = 0;
-        }
-        if (resetSignal) {
-            nodeState.lastSignal = 0;
-            nodeState.signal = 0;
         }
 
         nodeState.cycleOffset = node.cycleOffset;
@@ -180,7 +185,7 @@ export class RawGraphState {
         this.chunks[chunkIdx].isDirty = false;
     }
 
-    public makeAllChunksDirty() {
+    public markAllChunksDirty() {
         this.chunks.forEach((chunk) => {
             chunk.isDirty = true;
         });
@@ -335,5 +340,25 @@ export class RawGraphState {
     public markNodeTempChanged(nodeState: RawNodeState) {
         nodeState.isChanged = true;
         this.tempChangedNodes.push(nodeState);
+    }
+
+    public setNodeSignal(nodeIdx: number, signal: NodeSignal) {
+        const nodeState = this.getNode(nodeIdx);
+
+        const cycleIdx = nodeState.cycleIdx;
+        if (cycleIdx !== null && nodeState.headType === CycleHeadType.NONE) {
+            const cycleState = this.cycles[cycleIdx];
+            if (!cycleState) return;
+            if (signal === NodeSignal.NONE) {
+                cycleState.clearBit(this.tick, nodeState.cycleOffset);
+            } else {
+                cycleState.writeBit(this.tick, nodeState.cycleOffset);
+            }
+        } else {
+            nodeState.signal = signal;
+            this.markNodeChanged(nodeState);
+            if (!nodeState.isChanged) this.markNodeTempChanged(nodeState);
+        }
+        this.makeDirtyChunk(nodeState.chunkIdx);
     }
 }
