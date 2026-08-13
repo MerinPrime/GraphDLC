@@ -65,6 +65,7 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             class PatchedPlayerControls extends _module {
                 private pathData: PathData | null = null;
+                private processedArrows: Set<number> = new Set();
 
                 public constructor(
                     cnv: HTMLCanvasElement,
@@ -129,21 +130,6 @@ export const PatchPlayerControls: IPatcher = (
                                 _this.playerUI.speedController?.customTPSField?.blur();
                             }
                             return;
-                        }
-                        if (code === 'KeyP') {
-                            const arrow = _this.getArrowByMousePosition();
-                            if (
-                                arrow?.astIndex === undefined ||
-                                arrow.astIndex == null
-                            )
-                                return;
-                            const node = _this.game.gameMap.graph.getNode(
-                                arrow.astIndex,
-                            );
-                            this.trySetNodeSignal(
-                                node,
-                                _this.keyboardHandler.getShiftPressed(),
-                            );
                         }
                         if (
                             _this.keyboardHandler.getShiftPressed() &&
@@ -211,8 +197,31 @@ export const PatchPlayerControls: IPatcher = (
                     _this.game.customTPS =
                         _this.playerUI.speedController?.customTPSField.tps || 1;
 
-                    const taskKey = 'player-drag-path';
+                    if (_this.keyboardHandler.getKeyPressed('KeyP')) {
+                        const arrow = _this.getArrowByMousePosition();
+                        const nodeIdx = arrow?.astIndex;
 
+                        if (nodeIdx === undefined || nodeIdx == null) return;
+
+                        if (this.processedArrows.has(nodeIdx)) {
+                            const engine = _this.game.gameMap.graph.engine;
+                            const signal = engine.getNodeSignal(nodeIdx);
+                            if (signal !== NodeSignal.NONE) {
+                                return;
+                            }
+                        } else {
+                            this.processedArrows.add(nodeIdx);
+                        }
+
+                        const node = _this.game.gameMap.graph.getNode(nodeIdx);
+                        const doClear = _this.keyboardHandler.getShiftPressed();
+                        this.trySetNodeSignal(node, doClear);
+                        return;
+                    } else {
+                        this.processedArrows.clear();
+                    }
+
+                    const taskKey = 'player-drag-path';
                     if (isRightMouseDown) {
                         const [x, y] = _this.getPositionByMousePosition();
 
