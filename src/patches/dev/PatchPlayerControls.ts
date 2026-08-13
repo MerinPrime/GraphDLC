@@ -8,10 +8,11 @@ import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actio
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
+import type { GraphNode } from 'src/core/graph/ast/GraphNode';
 import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
+import { NodeType } from 'src/core/graph/engines/core/NodeType';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
-import { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../Patcher';
 
 interface PrivatePlayerControls {
@@ -136,36 +137,13 @@ export const PatchPlayerControls: IPatcher = (
                                 arrow.astIndex == null
                             )
                                 return;
-                            const engine = _this.game.gameMap.graph.engine;
                             const node = _this.game.gameMap.graph.getNode(
                                 arrow.astIndex,
                             );
-                            if (!node.isCycle) {
-                                const signal = engine.getNodeSignal(
-                                    arrow.astIndex,
-                                );
-                                const hasPendingPhase =
-                                    arrow.type === ArrowType.DELAY ||
-                                    arrow.type === ArrowType.IMPULSE;
-                                let newSignal =
-                                    arrow.type === ArrowType.DELAY
-                                        ? NodeSignal.PENDING
-                                        : NodeSignal.ACTIVE;
-                                if (
-                                    hasPendingPhase &&
-                                    signal === NodeSignal.PENDING
-                                )
-                                    newSignal = NodeSignal.ACTIVE;
-                                if (
-                                    hasPendingPhase &&
-                                    signal === NodeSignal.ACTIVE
-                                )
-                                    newSignal = NodeSignal.PENDING;
-                                if (_this.keyboardHandler.getShiftPressed())
-                                    newSignal = NodeSignal.NONE;
-                                engine.setNodeSignal(arrow.astIndex, newSignal);
-                                return;
-                            }
+                            this.trySetNodeSignal(
+                                node,
+                                _this.keyboardHandler.getShiftPressed(),
+                            );
                         }
                         if (
                             _this.keyboardHandler.getShiftPressed() &&
@@ -188,6 +166,41 @@ export const PatchPlayerControls: IPatcher = (
                         }
                         if (oldKeyUpCallback) oldKeyUpCallback(code);
                     };
+                }
+
+                public trySetNodeSignal(node: GraphNode, doClear: boolean) {
+                    if (node.type === NodeType.EMPTY) return;
+                    if (node.isCycle) return;
+
+                    const engine = (this as any as PrivatePlayerControls).game
+                        .gameMap.graph.engine;
+
+                    if (doClear) {
+                        engine.setNodeSignal(node.nodeIdx, NodeSignal.NONE);
+                        return;
+                    }
+
+                    const signal = engine.getNodeSignal(node.nodeIdx);
+                    let newSignal = NodeSignal.ACTIVE;
+
+                    if (
+                        node.type === NodeType.DELAY ||
+                        node.type === NodeType.IMPULSE
+                    ) {
+                        if (signal === NodeSignal.ACTIVE) {
+                            newSignal = NodeSignal.PENDING;
+                        } else if (signal === NodeSignal.PENDING) {
+                            newSignal = NodeSignal.ACTIVE;
+                        } else {
+                            newSignal =
+                                node.type === NodeType.DELAY
+                                    ? NodeSignal.PENDING
+                                    : NodeSignal.ACTIVE;
+                        }
+                    }
+
+                    engine.setNodeSignal(node.nodeIdx, newSignal);
+                    return;
                 }
 
                 public update(): void {
