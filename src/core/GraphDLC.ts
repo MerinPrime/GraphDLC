@@ -11,6 +11,7 @@ import { PatchGameMap } from 'src/patches/graph/PatchGameMap';
 import { PatchLoad } from 'src/patches/graph/PatchLoad';
 import { PatchSave } from 'src/patches/graph/PatchSave';
 import { PatchBackend } from 'src/patches/map_protection/PatchBackend';
+import { OptimizeSelectionPlugin } from 'src/patches/opt_selection';
 import { ApplyPatches } from 'src/patches/Patcher';
 import { PatchGameRender } from 'src/patches/render/PatchGameRender';
 import { PatchLoadShader } from 'src/patches/render/PatchLoadShader';
@@ -80,5 +81,7 @@ export class GraphDLC {
             Save_PatchUIMenu,
             Save_PatchPlayerControls,
         ]);
+
+        ApplyPatches(this.patchLoader, this, OptimizeSelectionPlugin);
     }
 }
