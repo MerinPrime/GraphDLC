@@ -11,6 +11,7 @@ import { PatchGameMap } from 'src/patches/graph/PatchGameMap';
 import { PatchLoad } from 'src/patches/graph/PatchLoad';
 import { PatchSave } from 'src/patches/graph/PatchSave';
 import { PatchBackend } from 'src/patches/map_protection/PatchBackend';
+import { MoveSelectionPlugin } from 'src/patches/move_selection';
 import { OptimizeSelectionPlugin } from 'src/patches/opt_selection';
 import { ApplyPatches } from 'src/patches/Patcher';
 import { PatchGameRender } from 'src/patches/render/PatchGameRender';
@@ -83,5 +84,6 @@ export class GraphDLC {
         ]);
 
         ApplyPatches(this.patchLoader, this, OptimizeSelectionPlugin);
+        ApplyPatches(this.patchLoader, this, MoveSelectionPlugin);
     }
 }
