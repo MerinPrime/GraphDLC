@@ -5,7 +5,7 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../Patcher';
 
-export const Save_PatchBackend: IPatcher = (
+export const PatchBackend: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {

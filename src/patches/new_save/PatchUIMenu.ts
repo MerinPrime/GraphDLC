@@ -9,7 +9,7 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import { UnsavedWarnSetting } from 'src/core/settings/instances/tools/UnsavedWarnSetting';
 import type { IPatcher } from '../Patcher';
 
-export const Save_PatchUIMenu: IPatcher = (
+export const PatchUIMenu: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {

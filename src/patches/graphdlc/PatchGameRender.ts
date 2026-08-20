@@ -1,17 +1,13 @@
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Render } from '@logic-arrows/render-engine/render';
-import type { RenderTexture } from '@logic-arrows/render-engine/render-texture';
 import type { Shader } from '@logic-arrows/render-engine/shader';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import { DarkThemeSetting } from 'src/core/settings/instances/redesign/DarkThemeSetting';
 import type { IPatcher } from '../Patcher';
 
 interface PrivateGameRender {
     readonly render: Render;
     solidColorShader: Shader | null;
-    mainRenderTexture: RenderTexture | null;
-    gridRenderTexture: RenderTexture | null;
 }
 
 export const PatchGameRender: IPatcher = (
@@ -21,18 +17,6 @@ export const PatchGameRender: IPatcher = (
     patchLoader.addDefinitionPatch(
         'GameRender',
         (_module: typeof GameRender) => {
-            if (DarkThemeSetting.value) {
-                _module = class DarkGameRender extends _module {
-                    public clearRenderTextures(): void {
-                        const _this = this as any as PrivateGameRender;
-                        _this.render.setRenderTarget(_this.mainRenderTexture);
-                        _this.render.clear(0.12, 0.13, 0.19, 1);
-                        _this.render.setRenderTarget(_this.gridRenderTexture);
-                        _this.render.clear(0.12, 0.13, 0.19, 1);
-                        _this.render.setRenderTarget(null);
-                    }
-                };
-            }
             return class GameRender extends _module {
                 public setShowBorder(show: boolean): void {
                     const _this = this as any as PrivateGameRender;

@@ -23,6 +23,7 @@ declare module '@logic-arrows/player/game' {
 
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
+        setDarkTheme(show: boolean): void;
         setShowBorder(show: boolean): void;
         setSides(sides: boolean[]): void;
         setFixedBorder(state: boolean): void;

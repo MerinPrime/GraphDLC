@@ -46,12 +46,14 @@ export const PatchPlayerArrowActions: IPatcher = (
                     const _this = this as any as PrivatePlayerArrowActions;
                     const selectedArrows =
                         _this.game.selectedMap.getSelectedArrows();
+
                     if (selectedArrows.length === 0)
                         return {
                             sizeX: 0,
                             sizeY: 0,
                             count: 0,
                         };
+
                     const [minX, minY, maxX, maxY] = selectedArrows.reduce(
                         ([minX, minY, maxX, maxY], s) => {
                             const [x, y] = s.split(',').map(Number);
@@ -64,6 +66,7 @@ export const PatchPlayerArrowActions: IPatcher = (
                         },
                         [Infinity, Infinity, -Infinity, -Infinity],
                     );
+
                     const sizeX = maxX - minX + 1;
                     const sizeY = maxY - minY + 1;
                     const count = selectedArrows.length;

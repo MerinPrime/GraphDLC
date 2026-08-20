@@ -12,7 +12,7 @@ interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
 }
 
-export const Save_PatchGameMap: IPatcher = (
+export const PatchGameMap: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {

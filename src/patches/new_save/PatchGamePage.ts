@@ -6,7 +6,7 @@ import { UnsavedWarnSetting } from 'src/core/settings/instances/tools/UnsavedWar
 import type { IPatcher } from '../Patcher';
 import { SaveTitleHook } from './SaveTitleHook';
 
-export const Save_PatchGamePage: IPatcher = (
+export const PatchGamePage: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {
