@@ -1,8 +1,5 @@
 import { Configuration } from './Configuration';
-import { CycleBudgetSetting } from './instances/developer/CycleBudgetSetting';
-import { CycleOptimizationSetting } from './instances/developer/CycleOptimizationSetting';
 import { DeveloperModeSetting } from './instances/developer/DeveloperModeSetting';
-import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
 import { SettingsRegistry } from './Registry';
 import { BaseSetting } from './types/BaseSetting';
 import type { SettingGroup } from './types/SettingGroup';
@@ -26,10 +23,11 @@ export class SettingsManager {
             DeveloperModeSetting.value = true;
         }
         if (!DeveloperModeSetting.value) {
-            GraphDLCDesignSetting.value = true;
-            CycleBudgetSetting.value = 16;
-            CycleOptimizationSetting.value = true;
         }
+    }
+
+    public registerSettings(extraSettings: Record<string, BaseSetting<any>>) {
+        this.config.registerSettings(extraSettings);
     }
 
     public get data(): {

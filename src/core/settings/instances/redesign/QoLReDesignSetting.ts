@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
+import { ReDesignSettingGroup } from '../../groups/ReDesignGroup';
 import { BoolSetting } from '../../types/BoolSetting';
-import { ReDesignSettingGroup } from './ReDesignGroup';
 
 const NameLocale = new I18nText(
     'QoL Redesign',

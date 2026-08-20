@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
+import { DeveloperSettingGroup } from '../../groups/DeveloperGroup';
 import { BoolSetting } from '../../types/BoolSetting';
-import { DeveloperSettingGroup } from './DeveloperGroup';
 
 const NameLocale = new I18nText(
     'Developer Mode',

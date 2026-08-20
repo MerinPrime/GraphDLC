@@ -1,45 +1,13 @@
-import { CycleBudgetSetting } from './instances/developer/CycleBudgetSetting';
-import { CycleOptimizationSetting } from './instances/developer/CycleOptimizationSetting';
 import { DeveloperModeSetting } from './instances/developer/DeveloperModeSetting';
-import { EnableSnapshotsSetting } from './instances/performance/EnableSnapshotsSetting';
-import { GraphEngineSetting } from './instances/performance/GraphEngineSetting';
-import { TargetFPSSetting } from './instances/performance/TargetFPSSetting';
-import { TPSOverloadSetting } from './instances/performance/TPSOverloadSetting';
-import { DarkThemeSetting } from './instances/redesign/DarkThemeSetting';
-import { GraphDLCDesignSetting } from './instances/redesign/GraphDLCDesignSetting';
 import { QoLReDesignSetting } from './instances/redesign/QoLReDesignSetting';
-import { DebugModeSetting } from './instances/tools/DebugModeSetting';
-import { EnableArrowRelationsSetting } from './instances/tools/EnableArrowRelationsSetting';
-import { EnableBreakpointSetting } from './instances/tools/EnableBreakpointSetting';
-import { MapProtectionSetting } from './instances/tools/MapProtectionSetting';
-import { ShowArrowConnectionsSetting } from './instances/tools/ShowArrowConnectionsSetting';
-import { UnsavedWarnSetting } from './instances/tools/UnsavedWarnSetting';
 import type { BaseSetting } from './types/BaseSetting';
 
 const settings: BaseSetting<any>[] = [
-    // Performance
-    GraphEngineSetting,
-    TargetFPSSetting,
-    EnableSnapshotsSetting,
-    TPSOverloadSetting,
-
-    // Tools
-    EnableArrowRelationsSetting,
-    ShowArrowConnectionsSetting,
-    MapProtectionSetting,
-    DebugModeSetting,
-    EnableBreakpointSetting,
-    UnsavedWarnSetting,
-
     // Developer
     DeveloperModeSetting,
-    CycleOptimizationSetting,
-    CycleBudgetSetting,
 
     // Visuals
-    GraphDLCDesignSetting,
     QoLReDesignSetting,
-    DarkThemeSetting,
 ];
 
 export const SettingsRegistry = settings.reduce<
