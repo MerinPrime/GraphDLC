@@ -1,12 +1,10 @@
 import type { MapInfo } from '@logic-arrows/game-logic/map-info';
 import type { Game } from '@logic-arrows/player/game';
 import type { UIMenu } from '@logic-arrows/ui/components/ui-menu';
-import { PLATFORM } from '@logic-arrows/utils/platform';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import type { SortedSettingGroup } from 'src/core/settings/Manager';
-import { TextColor } from 'src/core/utils/TextColor';
 import type { IPatcher } from '../Patcher';
+import { SettingsUIBuilder } from './SettingsUIBuilder';
 
 interface PrivateUIMenu {
     messagePanelDiv: HTMLDivElement;
@@ -20,8 +18,6 @@ export const PatchUIMenu: IPatcher = (
 
     patchLoader.addDefinitionPatch('UIMenu', (_module: typeof UIMenu) => {
         return class UIMenu extends _module {
-            private mapSettingsContainer: HTMLDivElement;
-
             public constructor(
                 parent: HTMLElement,
                 mapInfo: MapInfo,
@@ -29,85 +25,19 @@ export const PatchUIMenu: IPatcher = (
             ) {
                 super(parent, mapInfo, game);
 
-                this.mapSettingsContainer = document.createElement('table');
-                this.mapSettingsContainer.className = 'ui-map-settings';
+                const mapSettingsContainer = document.createElement('table');
+                mapSettingsContainer.className = 'ui-map-settings';
                 (this as any as PrivateUIMenu).messagePanelDiv.appendChild(
-                    this.mapSettingsContainer,
+                    mapSettingsContainer,
                 );
 
+                const builder =
+                    SettingsUIBuilder.forContainer(mapSettingsContainer);
                 const settingGroups =
                     settingsManager.getSortedSettings('map-settings');
-                settingGroups.forEach((group) => {
-                    this.addGroup(group);
-                });
-            }
 
-            private addGroup(group: SortedSettingGroup) {
-                this.addSpace(2);
-                this.addText(group.group.text.get(), group.group.color);
-                group.settings.forEach((setting) => {
-                    this.addSpace(0.5);
-                    this.addSetting(
-                        setting.meta.name.get(),
-                        () => setting.buildUIComponent(),
-                        setting.meta.description?.get(),
-                        setting.meta.nameColor,
-                        setting.meta.descriptionColor,
-                    );
-                });
-            }
-
-            private addText(
-                label: string,
-                labelColor: TextColor = TextColor.PRIMARY,
-            ) {
-                const labelText = document.createElement('div');
-                labelText.innerText = label;
-                labelText.classList.add(labelColor);
-                this.mapSettingsContainer.appendChild(labelText);
-            }
-
-            private addSpace(size: number = 1) {
-                const space = document.createElement('div');
-                space.style.height = `${size}vh`;
-                this.mapSettingsContainer.appendChild(space);
-            }
-
-            private addSetting(
-                label: string,
-                controlFactory: () => HTMLElement,
-                description: string | null = null,
-                labelColor: TextColor = TextColor.PRIMARY,
-                descriptionColor: TextColor = TextColor.MUTED,
-            ): void {
-                const row = document.createElement('tr');
-                this.mapSettingsContainer.appendChild(row);
-
-                const nameCell = document.createElement('td');
-                nameCell.classList.add('setting-name');
-
-                const labelText = document.createElement('div');
-                labelText.innerText = `${label}:`;
-                labelText.classList.add(labelColor);
-                nameCell.appendChild(labelText);
-
-                if (description && PLATFORM !== 'mobile') {
-                    const descText = document.createElement('div');
-                    descText.classList.add('setting-description');
-                    descText.innerText = description;
-                    descText.classList.add(descriptionColor);
-                    nameCell.appendChild(descText);
-                }
-
-                row.appendChild(nameCell);
-
-                const valueCell = document.createElement('td');
-                valueCell.classList.add('setting-value');
-                valueCell.appendChild(controlFactory());
-                row.appendChild(valueCell);
+                builder.addGroups(settingGroups, true);
             }
         };
     });
 };
-
-// TODO: maybe extract settings utils?
