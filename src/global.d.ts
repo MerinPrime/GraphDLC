@@ -24,6 +24,8 @@ declare module '@logic-arrows/player/game' {
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
         setShowBorder(show: boolean): void;
+        setSides(sides: boolean[]): void;
+        setFixedBorder(state: boolean): void;
     }
 }
 
@@ -38,6 +40,22 @@ declare module '@logic-arrows/game-logic/chunk' {
 declare module '@logic-arrows/game-logic/arrow' {
     export interface Arrow {
         astIndex?: number | null;
+    }
+}
+
+interface SelectedArrow {
+    x: number;
+    y: number;
+
+    left_side: boolean;
+    top_side: boolean;
+    right_side: boolean;
+    bottom_side: boolean;
+}
+
+declare module '@logic-arrows/game-logic/selected-map' {
+    export interface SelectedMap {
+        getSelectionForRender(): SelectedArrow[];
     }
 }
 

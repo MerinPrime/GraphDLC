@@ -22,6 +22,7 @@ import { Save_PatchGamePage } from 'src/patches/save/PatchGamePage';
 import { Save_PatchPlayerControls } from 'src/patches/save/PatchPlayerControls';
 import { Save_PatchUIMenu } from 'src/patches/save/PatchUIMenu';
 import { PatchUIMenu } from 'src/patches/settings/PatchUIMenu';
+import { VisualSelectionPlugin } from 'src/patches/visual_selection';
 import { DesignManager } from 'src/redesign/DesignManager';
 import { PatchSettingsPage } from '../patches/settings/PatchSettingsPage';
 import { UpdateManager } from './credentials/UpdateManager';
@@ -85,5 +86,6 @@ export class GraphDLC {
 
         ApplyPatches(this.patchLoader, this, OptimizeSelectionPlugin);
         ApplyPatches(this.patchLoader, this, MoveSelectionPlugin);
+        ApplyPatches(this.patchLoader, this, VisualSelectionPlugin);
     }
 }
