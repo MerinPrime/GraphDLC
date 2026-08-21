@@ -1,13 +1,16 @@
 import type { ArrowData } from '@logic-arrows/game-logic/arrow-data';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
+import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actions';
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { PathStep } from 'src/core/path_finder/types';
+import type { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../../Patcher';
 
 interface PrivatePlayerControls {
+    readonly arrowActions: PlayerArrowActions;
     readonly game: Game;
     readonly history: GameHistory | null;
 
@@ -20,6 +23,7 @@ interface PathData {
     endPathX: number;
     endPathY: number;
     path: PathStep[];
+    arrowType: ArrowType;
 }
 
 export const PatchPlayerControls: IPatcher = (
@@ -62,6 +66,9 @@ export const PatchPlayerControls: IPatcher = (
                     if (isRightMouseDown) {
                         const [x, y] = _this.getPositionByMousePosition();
 
+                        const selectedArrow =
+                            _this.arrowActions.getActiveArrowType();
+
                         if (this.pathData === null) {
                             this.pathData = {
                                 startPathX: x,
@@ -69,32 +76,56 @@ export const PatchPlayerControls: IPatcher = (
                                 endPathX: x,
                                 endPathY: y,
                                 path: [],
+                                arrowType: selectedArrow,
                             };
                         }
 
                         if (
                             this.pathData &&
                             (this.pathData.endPathX !== x ||
-                                this.pathData.endPathY !== y)
+                                this.pathData.endPathY !== y ||
+                                this.pathData.arrowType !== selectedArrow)
                         ) {
                             this.pathData.endPathX = x;
                             this.pathData.endPathY = y;
+                            this.pathData.arrowType = selectedArrow;
 
                             graphDLC.pathFinder.cancelPathSearch(taskKey);
-                            graphDLC.pathFinder.findPathAsync(
-                                taskKey,
-                                _this.game.gameMap,
-                                this.pathData.startPathX,
-                                this.pathData.startPathY,
-                                this.pathData.endPathX,
-                                this.pathData.endPathY,
-                                (newPath) => {
-                                    if (this.pathData) {
-                                        this.pathData.path = newPath ?? [];
-                                        _this.game.path = this.pathData.path;
-                                    }
-                                },
-                            );
+
+                            if (selectedArrow === -1) {
+                                graphDLC.pathFinder.findPathAsync(
+                                    taskKey,
+                                    _this.game.gameMap,
+                                    this.pathData.startPathX,
+                                    this.pathData.startPathY,
+                                    this.pathData.endPathX,
+                                    this.pathData.endPathY,
+                                    (newPath) => {
+                                        if (this.pathData) {
+                                            this.pathData.path = newPath ?? [];
+                                            _this.game.path =
+                                                this.pathData.path;
+                                        }
+                                    },
+                                );
+                            } else {
+                                graphDLC.pathFinder.findLinearPathAsync(
+                                    taskKey,
+                                    _this.game.gameMap,
+                                    this.pathData.startPathX,
+                                    this.pathData.startPathY,
+                                    this.pathData.endPathX,
+                                    this.pathData.endPathY,
+                                    selectedArrow,
+                                    (newPath) => {
+                                        if (this.pathData) {
+                                            this.pathData.path = newPath ?? [];
+                                            _this.game.path =
+                                                this.pathData.path;
+                                        }
+                                    },
+                                );
+                            }
                         }
                     } else {
                         if (this.pathData) {
@@ -130,6 +161,7 @@ export const PatchPlayerControls: IPatcher = (
                                         x,
                                         y,
                                     );
+                                    chunk.markRenderDirty();
                                 },
                             );
                         }
