@@ -14,9 +14,7 @@ import { PatchSave } from './patches/PatchSave';
 import { EnableSnapshotsSetting } from './settings/performance/EnableSnapshotsSetting';
 import { GraphEngineSetting } from './settings/performance/GraphEngineSetting';
 import { DebugModeSetting } from './settings/tools/DebugModeSetting';
-import { EnableArrowRelationsSetting } from './settings/tools/EnableArrowRelationsSetting';
 import { EnableBreakpointSetting } from './settings/tools/EnableBreakpointSetting';
-import { ShowArrowConnectionsSetting } from './settings/tools/ShowArrowConnectionsSetting';
 
 const Patches = [
     PatchArrow,
@@ -37,9 +35,7 @@ const Settings = [
     EnableSnapshotsSetting,
 
     DebugModeSetting,
-    EnableArrowRelationsSetting,
     EnableBreakpointSetting,
-    ShowArrowConnectionsSetting,
 ];
 
 export const CorePlugin = new Plugin(

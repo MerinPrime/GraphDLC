@@ -15,12 +15,6 @@ declare global {
     }
 }
 
-declare module '@logic-arrows/player/game' {
-    export interface Game {
-        path: PathStep[] | null;
-    }
-}
-
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
         setDarkTheme(show: boolean): void;
@@ -79,8 +73,10 @@ declare module '@logic-arrows/game-logic/game-map' {
 declare module '@logic-arrows/player/game' {
     export interface Game {
         customTPS: number;
+        path: PathStep[] | null;
 
         getArrowAtCursor(): Arrow | undefined;
+        getDrawOffsets(): { offsetX: number; offsetY: number };
     }
 }
 

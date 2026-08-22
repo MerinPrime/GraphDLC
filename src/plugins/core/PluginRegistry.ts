@@ -1,3 +1,4 @@
+import { ConnectionsPlugin } from '../connections';
 import { DarkThemePlugin } from '../dark_theme';
 import { DeveloperPlugin } from '../developer';
 import { CorePlugin } from '../graphdlc';
@@ -17,6 +18,7 @@ import type { Plugin } from './Plugin';
 export const PluginRegistry: Plugin[] = [
     CorePlugin,
     PluginsPlugin,
+    ConnectionsPlugin,
     PathPlugin,
     PowerPlugin,
     DarkThemePlugin,
