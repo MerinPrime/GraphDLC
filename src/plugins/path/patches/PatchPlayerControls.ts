@@ -5,9 +5,8 @@ import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actio
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import type { PathStep } from 'src/core/path_finder/types';
-import type { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../../Patcher';
+import type { PathData } from './types';
 
 interface PrivatePlayerControls {
     readonly arrowActions: PlayerArrowActions;
@@ -15,15 +14,6 @@ interface PrivatePlayerControls {
     readonly history: GameHistory | null;
 
     getPositionByMousePosition(): [x: number, y: number];
-}
-
-interface PathData {
-    startPathX: number;
-    startPathY: number;
-    endPathX: number;
-    endPathY: number;
-    path: PathStep[];
-    arrowType: ArrowType;
 }
 
 export const PatchPlayerControls: IPatcher = (
@@ -68,6 +58,10 @@ export const PatchPlayerControls: IPatcher = (
 
                         const selectedArrow =
                             _this.arrowActions.getActiveArrowType();
+                        const rotationState =
+                            _this.game.selectedMap.getRotationState();
+                        // @ts-expect-error
+                        const flipState = _this.game.selectedMap.flipState;
 
                         if (this.pathData === null) {
                             this.pathData = {
@@ -77,8 +71,13 @@ export const PatchPlayerControls: IPatcher = (
                                 endPathY: y,
                                 path: [],
                                 arrowType: selectedArrow,
+                                rotation: rotationState,
+                                flip: flipState,
                             };
                         }
+
+                        this.pathData.rotation = rotationState;
+                        this.pathData.flip = flipState;
 
                         if (
                             this.pathData &&
@@ -120,8 +119,7 @@ export const PatchPlayerControls: IPatcher = (
                                     (newPath) => {
                                         if (this.pathData) {
                                             this.pathData.path = newPath ?? [];
-                                            _this.game.path =
-                                                this.pathData.path;
+                                            _this.game.pathData = this.pathData;
                                         }
                                     },
                                 );
@@ -166,7 +164,7 @@ export const PatchPlayerControls: IPatcher = (
                             );
                         }
                         this.pathData = null;
-                        _this.game.path = null;
+                        _this.game.pathData = null;
                     }
                 }
             };

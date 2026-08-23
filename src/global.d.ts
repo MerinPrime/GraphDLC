@@ -2,6 +2,7 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphDLC } from './core/GraphDLC';
 import type { Graph } from './core/graph/ast/Graph';
+import { PathData } from './plugins/path/patches/types';
 
 declare global {
     declare const __CURRENT_VERSION__: string;
@@ -73,7 +74,7 @@ declare module '@logic-arrows/game-logic/game-map' {
 declare module '@logic-arrows/player/game' {
     export interface Game {
         customTPS: number;
-        path: PathStep[] | null;
+        pathData: PathData | null;
 
         getArrowAtCursor(): Arrow | undefined;
         getDrawOffsets(): { offsetX: number; offsetY: number };

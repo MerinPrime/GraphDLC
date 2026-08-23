@@ -1,11 +1,11 @@
-import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import type { PathStep } from 'src/core/path_finder/types';
+import type { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../../Patcher';
+import type { PathData } from './types';
 
 interface PrivateGame {
     gameMap: GameMap;
@@ -23,29 +23,18 @@ export const PatchGame: IPatcher = (
 ) => {
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
-            public path: PathStep[] | null = null;
-
-            private getDrawOffsets(): { offsetX: number; offsetY: number } {
-                const alignCorrection = 0.025 * this.scale;
-                return {
-                    offsetX:
-                        (this.offset[0] * this.scale) / CELL_SIZE +
-                        alignCorrection,
-                    offsetY:
-                        (this.offset[1] * this.scale) / CELL_SIZE +
-                        alignCorrection,
-                };
-            }
+            public pathData: PathData | null = null;
 
             private drawPath(
                 render: GameRender,
                 offsetX: number,
                 offsetY: number,
             ) {
-                if (!this.path) return;
+                const pathData = this.pathData;
+                if (!pathData) return;
 
                 render.setSolidColor(0.2, 0.2, 0.8, 0.25);
-                this.path.forEach(({ x, y }) => {
+                pathData.path.forEach(({ x, y }) => {
                     render.drawSolidColorRect(
                         x * this.scale + offsetX,
                         y * this.scale + offsetY,
@@ -58,15 +47,28 @@ export const PatchGame: IPatcher = (
                 render.setArrowSize(this.scale);
                 render.setArrowAlpha(0.5);
 
-                this.path.forEach(({ x, y, type, rotation, flipped }) => {
-                    render.drawArrow(
-                        x * this.scale + offsetX,
-                        y * this.scale + offsetY,
-                        type,
-                        0,
-                        rotation,
-                        flipped,
-                    );
+                const isLinearPath = pathData.arrowType !== (-1 as ArrowType);
+
+                pathData.path.forEach(({ x, y, type, rotation, flipped }) => {
+                    if (isLinearPath) {
+                        render.drawArrow(
+                            x * this.scale + offsetX,
+                            y * this.scale + offsetY,
+                            type,
+                            0,
+                            pathData.rotation,
+                            pathData.flip,
+                        );
+                    } else {
+                        render.drawArrow(
+                            x * this.scale + offsetX,
+                            y * this.scale + offsetY,
+                            type,
+                            0,
+                            rotation,
+                            flipped,
+                        );
+                    }
                 });
             }
 
