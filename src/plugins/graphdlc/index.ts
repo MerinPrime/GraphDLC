@@ -1,4 +1,5 @@
-import { Plugin, PluginPriority } from '../core/Plugin';
+import { I18nText } from '@logic-arrows/lang/i18n-text';
+import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { PatchArrow } from './patches/PatchArrow';
 import { PatchChunk } from './patches/PatchChunk';
 import { PatchChunkUpdates } from './patches/PatchChunkUpdates';
@@ -41,6 +42,22 @@ const Settings = [
     EnableBreakpointSetting,
 ];
 
+export const TickRewindLocale = new I18nText(
+    'tick rewind',
+    'откат тика',
+    'відкат тику',
+    'адкат тыку',
+    'retour du tick',
+);
+
+const KeyBindHints: KeyBindHint[] = [
+    {
+        keys: ['Shift', 'Enter'],
+        showOn: ['free'],
+        description: TickRewindLocale,
+    },
+];
+
 export const CorePlugin = new Plugin(
     'graphdlc-core',
     {
@@ -53,5 +70,6 @@ export const CorePlugin = new Plugin(
     {
         patches: Patches,
         settings: Settings,
+        keyBindHints: KeyBindHints,
     },
 );
