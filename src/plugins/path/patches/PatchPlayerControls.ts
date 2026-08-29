@@ -102,8 +102,7 @@ export const PatchPlayerControls: IPatcher = (
                                     (newPath) => {
                                         if (this.pathData) {
                                             this.pathData.path = newPath ?? [];
-                                            _this.game.path =
-                                                this.pathData.path;
+                                            _this.game.pathData = this.pathData;
                                         }
                                     },
                                 );
