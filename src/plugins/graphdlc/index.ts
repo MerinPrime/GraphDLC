@@ -45,8 +45,10 @@ export const CorePlugin = new Plugin(
         priority: PluginPriority.MEDIUM,
         dependencies: [],
         disabled: true,
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    Settings,
+    {
+        patches: Patches,
+        settings: Settings,
+    },
 );

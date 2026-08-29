@@ -1,9 +1,7 @@
-import type { GraphDLC } from 'src/core/GraphDLC';
-import type { PatchLoader } from 'src/core/PatchLoader';
 import type { BaseSetting } from 'src/core/settings/types/BaseSetting';
 import type { BoolSetting } from 'src/core/settings/types/BoolSetting';
 import { ReactiveValue } from 'src/core/utils/ReactiveValue';
-import { ApplyPatches, type IPatcher } from '../Patcher';
+import type { IPatcher } from '../Patcher';
 
 export const enum PluginPriority {
     LOW,
@@ -18,34 +16,30 @@ export interface PluginMeta {
     readonly dependencies?: Plugin[];
     readonly version?: string;
     readonly disabled?: boolean;
+    readonly defaultEnabled?: boolean;
+}
+
+export interface PluginFeatures {
+    readonly patches?: IPatcher[];
+    readonly settings?: BaseSetting<any>[];
+    readonly enableSetting?: BoolSetting | null;
 }
 
 export class Plugin {
     public readonly id: string;
     public readonly meta: PluginMeta;
-    public readonly defaultEnabled: boolean;
-    public readonly patches: IPatcher[];
-    public readonly settings: BaseSetting<any>[];
-    public readonly toggleSetting: BoolSetting | null;
+    public readonly features: PluginFeatures;
 
     public readonly enabled: ReactiveValue<boolean>;
 
-    public constructor(
-        id: string,
-        meta: PluginMeta,
-        defaultEnabled: boolean = false,
-        patches: IPatcher[] = [],
-        settings: BaseSetting<any>[] = [],
-        toggleSetting: BoolSetting | null = null,
-    ) {
+    public constructor(id: string, meta: PluginMeta, features: PluginFeatures) {
         this.id = id;
         this.meta = meta;
-        this.defaultEnabled = defaultEnabled;
-        this.patches = patches;
-        this.settings = settings;
-        this.toggleSetting = toggleSetting;
+        this.features = features;
 
-        this.enabled = new ReactiveValue<boolean>(defaultEnabled);
+        this.enabled = new ReactiveValue<boolean>(
+            this.meta.defaultEnabled ?? false,
+        );
     }
 
     public get isEnabled(): boolean {
@@ -54,9 +48,5 @@ export class Plugin {
 
     public set isEnabled(value: boolean) {
         this.enabled.value = value;
-    }
-
-    public inject(graphDLC: GraphDLC, patchLoader: PatchLoader): void {
-        ApplyPatches(patchLoader, graphDLC, this.patches);
     }
 }

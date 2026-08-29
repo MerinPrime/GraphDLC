@@ -3,6 +3,7 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import { STORAGE_KEYS } from 'src/core/StorageKeys';
 import { DeveloperModeSetting } from 'src/core/settings/instances/developer/DeveloperModeSetting';
 import type { BaseSetting } from 'src/core/settings/types/BaseSetting';
+import { ApplyPatches } from '../Patcher';
 import { PluginsPlugin } from '../plugins';
 import type { Plugin } from './Plugin';
 import { PluginRegistry } from './PluginRegistry';
@@ -38,8 +39,12 @@ export class PluginManager {
 
     public injectPlugins(graphDLC: GraphDLC, patchLoader: PatchLoader) {
         for (const plugin of this.getAllPlugins()) {
-            if (plugin.isEnabled && (plugin.toggleSetting?.value ?? true)) {
-                plugin.inject(graphDLC, patchLoader);
+            if (
+                plugin.isEnabled &&
+                (plugin.features.enableSetting?.value ?? true) &&
+                plugin.features.patches
+            ) {
+                ApplyPatches(patchLoader, graphDLC, plugin.features.patches);
             }
         }
     }
@@ -153,8 +158,10 @@ export class PluginManager {
 
         for (const plugin of this.getAllPlugins()) {
             if (plugin.isEnabled) {
-                gathered.push(...plugin.settings);
-                if (plugin.toggleSetting) gathered.push(plugin.toggleSetting);
+                if (plugin.features.settings)
+                    gathered.push(...plugin.features.settings);
+                if (plugin.features.enableSetting)
+                    gathered.push(plugin.features.enableSetting);
             }
         }
 

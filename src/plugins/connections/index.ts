@@ -15,8 +15,10 @@ export const ConnectionsPlugin = new Plugin(
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin],
         disabled: false,
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    Settings,
+    {
+        patches: Patches,
+        settings: Settings,
+    },
 );

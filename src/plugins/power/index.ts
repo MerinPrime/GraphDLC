@@ -10,7 +10,9 @@ export const PowerPlugin = new Plugin(
         name: 'GraphDLC Power',
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

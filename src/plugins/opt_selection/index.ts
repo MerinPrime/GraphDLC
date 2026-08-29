@@ -9,7 +9,9 @@ export const OptimizeSelectionPlugin = new Plugin(
         name: 'GraphDLC Optimize Selection',
         priority: PluginPriority.MEDIUM,
         dependencies: [],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

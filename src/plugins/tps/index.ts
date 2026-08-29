@@ -21,8 +21,10 @@ export const TPSPlugin = new Plugin(
         name: 'GraphDLC TPS',
         priority: PluginPriority.LOW,
         dependencies: [CorePlugin],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    Settings,
+    {
+        patches: Patches,
+        settings: Settings,
+    },
 );

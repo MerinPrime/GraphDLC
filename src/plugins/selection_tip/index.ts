@@ -10,7 +10,9 @@ export const SelectionTipPlugin = new Plugin(
         name: 'GraphDLC Selection Tip',
         priority: PluginPriority.MEDIUM,
         dependencies: [],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

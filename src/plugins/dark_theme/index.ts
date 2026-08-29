@@ -14,8 +14,10 @@ export const DarkThemePlugin = new Plugin(
         name: 'GraphDLC Dark Theme',
         priority: PluginPriority.MEDIUM,
         dependencies: [],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    Settings,
+    {
+        patches: Patches,
+        settings: Settings,
+    },
 );

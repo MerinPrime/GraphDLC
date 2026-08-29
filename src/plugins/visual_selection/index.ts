@@ -14,9 +14,10 @@ export const VisualSelectionPlugin = new Plugin(
         name: 'GraphDLC Visual Selection',
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin], // TODO: make core plugin instead core & graph
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    [],
-    VisualSelectionSetting,
+    {
+        patches: Patches,
+        enableSetting: VisualSelectionSetting,
+    },
 );

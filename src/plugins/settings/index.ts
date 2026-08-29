@@ -10,7 +10,9 @@ export const SettingsPlugin = new Plugin(
         name: 'GraphDLC Settings',
         priority: PluginPriority.MEDIUM,
         dependencies: [],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

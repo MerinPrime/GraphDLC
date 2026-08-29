@@ -10,7 +10,9 @@ export const MoveSelectionPlugin = new Plugin(
         name: 'GraphDLC Move Selection',
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin], // TODO: make core plugin instead core & graph
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

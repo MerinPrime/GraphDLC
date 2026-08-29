@@ -11,8 +11,10 @@ export const MapProtectionPlugin = new Plugin(
         name: 'GraphDLC Map Protection',
         priority: PluginPriority.MEDIUM,
         dependencies: [],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    Settings,
+    {
+        patches: Patches,
+        settings: Settings,
+    },
 );

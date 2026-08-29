@@ -10,7 +10,9 @@ export const DeveloperPlugin = new Plugin(
         name: 'GraphDLC Developer',
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

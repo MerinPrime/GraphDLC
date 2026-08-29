@@ -22,8 +22,10 @@ export const NewSavePlugin = new Plugin(
         name: 'GraphDLC New Save',
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
-    Settings,
+    {
+        patches: Patches,
+        settings: Settings,
+    },
 );

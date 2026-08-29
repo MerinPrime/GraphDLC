@@ -11,7 +11,9 @@ export const PathPlugin = new Plugin(
         name: 'GraphDLC Path',
         priority: PluginPriority.MEDIUM,
         dependencies: [CorePlugin],
+        defaultEnabled: true,
     },
-    true,
-    Patches,
+    {
+        patches: Patches,
+    },
 );

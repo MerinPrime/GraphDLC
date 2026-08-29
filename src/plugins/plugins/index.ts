@@ -11,7 +11,9 @@ export const PluginsPlugin = new Plugin(
         priority: PluginPriority.MEDIUM,
         dependencies: [],
         disabled: true,
+        defaultEnabled: true,
     },
-    false,
-    Patches,
+    {
+        patches: Patches,
+    },
 );
