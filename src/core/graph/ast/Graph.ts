@@ -60,7 +60,9 @@ export class Graph {
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
         EnableBreakpointSetting.onChange.add(this.handleBreakpointChange);
+        this.handleBreakpointChange(EnableBreakpointSetting.value);
         EnableSnapshotsSetting.onChange.add(this.handleSnapshotsChange);
+        this.handleSnapshotsChange(EnableSnapshotsSetting.value);
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
