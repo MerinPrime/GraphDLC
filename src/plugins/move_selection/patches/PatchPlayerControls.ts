@@ -218,8 +218,9 @@ export const PatchPlayerControls: IPatcher = (
                     const _this = this as any as PrivatePlayerControls;
 
                     const gameMap = _this.game.gameMap;
-                    const selectedMap = _this.game
-                        .selectedMap as unknown as SelectedMapPrivate;
+                    const selectedMap = _this.game.selectedMap;
+                    const _selectedMap =
+                        selectedMap as unknown as SelectedMapPrivate;
 
                     const newState = new _PlayerMapAction.val();
 
@@ -261,10 +262,11 @@ export const PatchPlayerControls: IPatcher = (
                         newState.addChangedArrow(posX, posY, oldData, newData);
                     }
 
+                    selectedMap.updateSelectionFromCurrentSelection();
                     (newState as any).oldSelection = oldSelection;
                     (newState as any).newSelection = new Set([
-                        ...selectedMap.selectedArrows,
-                        ...selectedMap.currentSelectedArrows,
+                        ..._selectedMap.selectedArrows,
+                        ..._selectedMap.currentSelectedArrows,
                     ]);
                     _this.history?.pushState(newState);
                     // @ts-expect-error
