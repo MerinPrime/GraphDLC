@@ -1,6 +1,7 @@
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { BaseSetting } from 'src/core/settings/types/BaseSetting';
+import type { BoolSetting } from 'src/core/settings/types/BoolSetting';
 import { ReactiveValue } from 'src/core/utils/ReactiveValue';
 import { ApplyPatches, type IPatcher } from '../Patcher';
 
@@ -25,6 +26,7 @@ export class Plugin {
     public readonly defaultEnabled: boolean;
     public readonly patches: IPatcher[];
     public readonly settings: BaseSetting<any>[];
+    public readonly toggleSetting: BoolSetting | null;
 
     public readonly enabled: ReactiveValue<boolean>;
 
@@ -34,12 +36,14 @@ export class Plugin {
         defaultEnabled: boolean = false,
         patches: IPatcher[] = [],
         settings: BaseSetting<any>[] = [],
+        toggleSetting: BoolSetting | null = null,
     ) {
         this.id = id;
         this.meta = meta;
         this.defaultEnabled = defaultEnabled;
         this.patches = patches;
         this.settings = settings;
+        this.toggleSetting = toggleSetting;
 
         this.enabled = new ReactiveValue<boolean>(defaultEnabled);
     }

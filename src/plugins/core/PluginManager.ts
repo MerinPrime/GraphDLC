@@ -38,7 +38,7 @@ export class PluginManager {
 
     public injectPlugins(graphDLC: GraphDLC, patchLoader: PatchLoader) {
         for (const plugin of this.getAllPlugins()) {
-            if (plugin.isEnabled) {
+            if (plugin.isEnabled && (plugin.toggleSetting?.value ?? true)) {
                 plugin.inject(graphDLC, patchLoader);
             }
         }
@@ -154,6 +154,7 @@ export class PluginManager {
         for (const plugin of this.getAllPlugins()) {
             if (plugin.isEnabled) {
                 gathered.push(...plugin.settings);
+                if (plugin.toggleSetting) gathered.push(plugin.toggleSetting);
             }
         }
 
