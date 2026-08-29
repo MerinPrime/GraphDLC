@@ -1,3 +1,4 @@
+import type { I18nText } from '@logic-arrows/lang/i18n-text';
 import type { BaseSetting } from 'src/core/settings/types/BaseSetting';
 import type { BoolSetting } from 'src/core/settings/types/BoolSetting';
 import { ReactiveValue } from 'src/core/utils/ReactiveValue';
@@ -19,10 +20,19 @@ export interface PluginMeta {
     readonly defaultEnabled?: boolean;
 }
 
+export type ControlsState = 'free' | 'arrow' | 'selected';
+
+export interface KeyBindHint {
+    keys: (string | I18nText)[];
+    showOn: ControlsState[];
+    description: I18nText;
+}
+
 export interface PluginFeatures {
     readonly patches?: IPatcher[];
     readonly settings?: BaseSetting<any>[];
     readonly enableSetting?: BoolSetting | null;
+    readonly keyBindHints?: KeyBindHint[];
 }
 
 export class Plugin {

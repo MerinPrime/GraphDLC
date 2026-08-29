@@ -5,7 +5,7 @@ import { DeveloperModeSetting } from 'src/core/settings/instances/developer/Deve
 import type { BaseSetting } from 'src/core/settings/types/BaseSetting';
 import { ApplyPatches } from '../Patcher';
 import { PluginsPlugin } from '../plugins';
-import type { Plugin } from './Plugin';
+import type { KeyBindHint, Plugin } from './Plugin';
 import { PluginRegistry } from './PluginRegistry';
 
 export class PluginManager {
@@ -37,13 +37,18 @@ export class PluginManager {
         });
     }
 
-    public injectPlugins(graphDLC: GraphDLC, patchLoader: PatchLoader) {
-        for (const plugin of this.getAllPlugins()) {
-            if (
+    public getEnabledPlugins(ignoreEnableSetting: boolean = false): Plugin[] {
+        return this.getAllPlugins().filter(
+            (plugin) =>
                 plugin.isEnabled &&
-                (plugin.features.enableSetting?.value ?? true) &&
-                plugin.features.patches
-            ) {
+                ((plugin.features.enableSetting?.value ?? true) ||
+                    ignoreEnableSetting),
+        );
+    }
+
+    public injectPlugins(graphDLC: GraphDLC, patchLoader: PatchLoader) {
+        for (const plugin of this.getEnabledPlugins()) {
+            if (plugin.features.patches) {
                 ApplyPatches(patchLoader, graphDLC, plugin.features.patches);
             }
         }
@@ -156,13 +161,11 @@ export class PluginManager {
     public gatherSettings(): Record<string, BaseSetting<any>> {
         const gathered: BaseSetting<any>[] = [];
 
-        for (const plugin of this.getAllPlugins()) {
-            if (plugin.isEnabled) {
-                if (plugin.features.settings)
-                    gathered.push(...plugin.features.settings);
-                if (plugin.features.enableSetting)
-                    gathered.push(plugin.features.enableSetting);
-            }
+        for (const plugin of this.getEnabledPlugins(true)) {
+            if (plugin.features.settings)
+                gathered.push(...plugin.features.settings);
+            if (plugin.features.enableSetting)
+                gathered.push(plugin.features.enableSetting);
         }
 
         return gathered.reduce<Record<string, BaseSetting<any>>>(
@@ -175,5 +178,16 @@ export class PluginManager {
             },
             {},
         );
+    }
+
+    public gatherKeybindHints(): KeyBindHint[] {
+        const gathered: KeyBindHint[] = [];
+
+        for (const plugin of this.getEnabledPlugins()) {
+            if (plugin.features.keyBindHints)
+                gathered.push(...plugin.features.keyBindHints);
+        }
+
+        return gathered;
     }
 }

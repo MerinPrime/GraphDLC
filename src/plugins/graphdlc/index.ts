@@ -11,6 +11,7 @@ import { PatchLoadShader } from './patches/PatchLoadShader';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
 import { PatchPlayerUI } from './patches/PatchPlayerUI';
 import { PatchSave } from './patches/PatchSave';
+import { PatchUIControlsHint } from './patches/PatchUIControlsHint';
 import { EnableSnapshotsSetting } from './settings/performance/EnableSnapshotsSetting';
 import { GraphEngineSetting } from './settings/performance/GraphEngineSetting';
 import { DebugModeSetting } from './settings/tools/DebugModeSetting';
@@ -29,7 +30,9 @@ const Patches = [
     PatchPlayerControls,
     PatchPlayerUI,
     PatchSave,
+    PatchUIControlsHint,
 ];
+
 const Settings = [
     GraphEngineSetting,
     EnableSnapshotsSetting,
