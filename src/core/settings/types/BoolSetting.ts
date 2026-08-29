@@ -17,10 +17,19 @@ export class BoolSetting extends BaseSetting<boolean> {
         checkbox.checked = this.value;
         checkbox.disabled = this.disabled;
 
-        checkbox.addEventListener('change', () => {
+        checkbox.addEventListener('change', (e) => {
+            e.stopPropagation();
             this.value = checkbox.checked;
             if (this.meta.reloadOnChange) window.location.reload();
         });
+
+        ['pointerdown', 'touchstart', 'mousedown', 'touchend'].forEach(
+            (evt) => {
+                checkbox.addEventListener(evt, (e) => e.stopPropagation(), {
+                    passive: false,
+                });
+            },
+        );
 
         return checkbox;
     }
