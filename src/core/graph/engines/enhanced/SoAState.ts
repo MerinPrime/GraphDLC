@@ -297,7 +297,7 @@ export class SoAGraphState {
             SoALayout.Node.Flags.IsInCycle,
         );
 
-        if (isInCycle !== null && headType === CycleHeadType.NONE) {
+        if (isInCycle === true && headType === CycleHeadType.NONE) {
             const cycleIdx =
                 this.storage.extra32NodeData[
                     extra32Offset + SoALayout.Extra32Node.CYCLE_IDX
