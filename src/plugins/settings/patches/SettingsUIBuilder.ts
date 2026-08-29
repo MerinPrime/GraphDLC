@@ -1,4 +1,5 @@
 import { PLATFORM } from '@logic-arrows/utils/platform';
+import { DeveloperModeSetting } from 'src/core/settings/instances/developer/DeveloperModeSetting';
 import type { SortedSettingGroup } from 'src/core/settings/Manager';
 import { TextColor } from 'src/core/utils/TextColor';
 
@@ -109,11 +110,20 @@ export class SettingsUIBuilder {
         hideDescriptionOnMobile = false,
     ): void {
         this.addSpace(2);
-        this.addText(group.group.text.get(), group.group.color);
+
+        const name = group.group.text.get();
+        const label = DeveloperModeSetting.value
+            ? `${group.group.order}. ${name}`
+            : name;
+        this.addText(label, group.group.color);
         group.settings.forEach((setting) => {
+            const name = setting.meta.name.get();
+            const label = DeveloperModeSetting.value
+                ? `${setting.meta.order}. ${name}`
+                : name;
             this.addSpace(0.5);
             this.addSetting({
-                label: setting.meta.name.get(),
+                label,
                 controlFactory: () => setting.buildUIComponent(),
                 description: setting.meta.description?.get(),
                 labelColor: setting.meta.nameColor,
