@@ -138,6 +138,7 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
 
     public reset() {
         this.lastSavedTime = 0;
+        this.lastSavedTick = -this.baseTickInterval - 1;
         this.initTiers();
     }
 }
