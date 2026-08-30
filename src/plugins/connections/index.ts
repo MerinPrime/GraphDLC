@@ -1,10 +1,11 @@
 import { Plugin, PluginPriority } from '../core/Plugin';
 import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
+import { PatchPlayerControls } from './patches/PatchPlayerControls';
 import { EnableArrowRelationsSetting } from './settings/EnableArrowRelationsSetting';
 import { ShowArrowConnectionsSetting } from './settings/ShowArrowConnectionsSetting';
 
-const Patches = [PatchGame];
+const Patches = [PatchGame, PatchPlayerControls];
 
 const Settings = [EnableArrowRelationsSetting, ShowArrowConnectionsSetting];
 
