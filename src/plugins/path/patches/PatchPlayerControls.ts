@@ -1,3 +1,4 @@
+import type { MouseHandler } from '@logic-arrows/controls/mouse-handler';
 import type { ArrowData } from '@logic-arrows/game-logic/arrow-data';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
@@ -9,6 +10,7 @@ import type { IPatcher } from '../../Patcher';
 import type { PathData } from './types';
 
 interface PrivatePlayerControls {
+    readonly mouseHandler: MouseHandler;
     readonly arrowActions: PlayerArrowActions;
     readonly game: Game;
     readonly history: GameHistory | null;
@@ -22,8 +24,13 @@ export const PatchPlayerControls: IPatcher = (
 ) => {
     const _ArrowData = patchLoader.getDefinition<typeof ArrowData>('ArrowData');
     let isRightMouseDown = false;
+    let isLeftMouseDown = false;
 
     document.addEventListener('mousedown', (e: MouseEvent) => {
+        if (e.button === 0) {
+            e.preventDefault();
+            isLeftMouseDown = true;
+        }
         if (e.button === 2) {
             e.preventDefault();
             isRightMouseDown = true;
@@ -31,6 +38,10 @@ export const PatchPlayerControls: IPatcher = (
     });
 
     document.addEventListener('mouseup', (e: MouseEvent) => {
+        if (e.button === 0) {
+            e.preventDefault();
+            isLeftMouseDown = false;
+        }
         if (e.button === 2) {
             e.preventDefault();
             isRightMouseDown = false;
@@ -46,14 +57,23 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             return class PlayerControls extends _module {
                 private pathData: PathData | null = null;
+                private isPathCancelled: boolean = false;
 
                 public update(): void {
-                    super.update();
-
                     const _this = this as any as PrivatePlayerControls;
 
                     const taskKey = 'player-drag-path';
-                    if (isRightMouseDown) {
+
+                    this.isPathCancelled =
+                        this.isPathCancelled ||
+                        (isRightMouseDown && isLeftMouseDown);
+                    if (isRightMouseDown && this.isPathCancelled) {
+                        _this.mouseHandler.setUiInteraction(true);
+                        this.pathData = null;
+                        _this.game.pathData = null;
+                    } else if (isRightMouseDown) {
+                        _this.mouseHandler.setUiInteraction(true);
+                        this.isPathCancelled = false;
                         const [x, y] = _this.getPositionByMousePosition();
 
                         const selectedArrow =
@@ -164,7 +184,11 @@ export const PatchPlayerControls: IPatcher = (
                         }
                         this.pathData = null;
                         _this.game.pathData = null;
+                        this.isPathCancelled = false;
+                        _this.mouseHandler.setUiInteraction(false);
                     }
+
+                    super.update();
                 }
             };
         },
