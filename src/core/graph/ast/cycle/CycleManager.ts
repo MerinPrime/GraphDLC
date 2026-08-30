@@ -3,7 +3,6 @@ import {
     CycleHeadType,
     type GraphCycle,
 } from 'src/core/graph/ast/cycle/CycleTypes';
-import { CycleBudgetSetting } from 'src/core/settings/instances/developer/CycleBudgetSetting';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { NodeType, NodeTypes } from '../../engines/core/NodeType';
 import type { Graph } from '../Graph';
@@ -19,9 +18,7 @@ export class CycleManager implements IGraphListener {
     private readonly removalQueue: GraphNode[] = [];
     private readonly removalVisited = new Set<GraphNode>();
 
-    private readonly scheduler = new AsyncScheduler(
-        () => CycleBudgetSetting.value,
-    );
+    private readonly scheduler = new AsyncScheduler(() => 16);
 
     public resetHead(head: GraphNode): void {
         head.cycleRef = null;
@@ -128,11 +125,11 @@ export class CycleManager implements IGraphListener {
             return;
         }
 
-        if (CycleBudgetSetting.value === 0) {
-            const cyclePath = this.findCyclePathSync(startNode, startNode);
-            this.tryAddCycle(graph, cyclePath);
-            return;
-        }
+        // if (CycleBudgetSetting.value === 0) {
+        //     const cyclePath = this.findCyclePathSync(startNode, startNode);
+        //     this.tryAddCycle(graph, cyclePath);
+        //     return;
+        // }
 
         const task = new CycleSearchTask(startNode, startNode);
         this.scheduler.schedule(
@@ -400,25 +397,25 @@ export class CycleManager implements IGraphListener {
 
     public onLinkAdded(graph: Graph, node: GraphNode, target: GraphNode): void {
         if (canBeInCycle(node) && canBeInCycle(target)) {
-            if (CycleBudgetSetting.value === 0) {
-                const cyclePath = this.findCyclePathSync(target, node);
-                if (this.tryAddCycle(graph, cyclePath)) return;
-            } else {
-                const task = new CycleSearchTask(target, node);
-                this.scheduler.schedule(
-                    task,
-                    (path) => {
-                        if (
-                            this.tryAddCycle(graph, path) &&
-                            node.cycleRef !== null
-                        ) {
-                            this.refreshCycleIO(node.cycleRef);
-                        }
-                    },
-                    target,
-                );
-                return;
-            }
+            // if (CycleBudgetSetting.value === 0) {
+            //     const cyclePath = this.findCyclePathSync(target, node);
+            //     if (this.tryAddCycle(graph, cyclePath)) return;
+            // } else {
+            const task = new CycleSearchTask(target, node);
+            this.scheduler.schedule(
+                task,
+                (path) => {
+                    if (
+                        this.tryAddCycle(graph, path) &&
+                        node.cycleRef !== null
+                    ) {
+                        this.refreshCycleIO(node.cycleRef);
+                    }
+                },
+                target,
+            );
+            return;
+            // }
         }
 
         const nodeCycleRef = node.cycleRef;

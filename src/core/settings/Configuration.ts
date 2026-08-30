@@ -9,9 +9,10 @@ export type ConfigurationData<R extends SettingsRegistry> = {
 
 export class Configuration<R extends SettingsRegistry> {
     public readonly registry: R;
+    private unmanagedData: Record<string, any> = {};
 
     public constructor(registry: R) {
-        this.registry = registry;
+        this.registry = { ...registry };
     }
 
     public setup() {
@@ -19,6 +20,13 @@ export class Configuration<R extends SettingsRegistry> {
 
         for (const key in this.registry) {
             this.registry[key].onChange.add(() => this.save());
+        }
+    }
+
+    public registerSettings(extraSettings: Record<string, BaseSetting<any>>) {
+        for (const key in extraSettings) {
+            const setting = extraSettings[key];
+            (this.registry as Record<string, BaseSetting<any>>)[key] = setting;
         }
     }
 
@@ -37,11 +45,11 @@ export class Configuration<R extends SettingsRegistry> {
                 return;
             }
 
-            const parsed = JSON.parse(rawData) as Record<string, any>;
+            this.unmanagedData = JSON.parse(rawData) as Record<string, any>;
 
             for (const key in this.registry) {
-                if (key in parsed) {
-                    this.registry[key].value = parsed[key];
+                if (key in this.unmanagedData) {
+                    this.registry[key].value = this.unmanagedData[key];
                 }
             }
         } catch (error) {
@@ -54,9 +62,11 @@ export class Configuration<R extends SettingsRegistry> {
 
     public save(): void {
         try {
-            const dataToSave = {} as Record<string, any>;
+            const dataToSave: Record<string, any> = { ...this.unmanagedData };
             for (const key in this.registry) {
-                dataToSave[key] = this.registry[key].value;
+                const val = this.registry[key].value;
+                dataToSave[key] = val;
+                this.unmanagedData[key] = val;
             }
 
             localStorage.setItem(

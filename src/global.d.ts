@@ -1,6 +1,8 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
+import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphDLC } from './core/GraphDLC';
 import type { Graph } from './core/graph/ast/Graph';
+import { PathData } from './plugins/path/patches/types';
 
 declare global {
     declare const __CURRENT_VERSION__: string;
@@ -14,15 +16,12 @@ declare global {
     }
 }
 
-declare module '@logic-arrows/player/game' {
-    export interface Game {
-        path: PathStep[] | null;
-    }
-}
-
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
+        setDarkTheme(show: boolean): void;
         setShowBorder(show: boolean): void;
+        setSides(sides: boolean[]): void;
+        setFixedBorder(state: boolean): void;
     }
 }
 
@@ -37,6 +36,22 @@ declare module '@logic-arrows/game-logic/chunk' {
 declare module '@logic-arrows/game-logic/arrow' {
     export interface Arrow {
         astIndex?: number | null;
+    }
+}
+
+interface SelectedArrow {
+    x: number;
+    y: number;
+
+    left_side: boolean;
+    top_side: boolean;
+    right_side: boolean;
+    bottom_side: boolean;
+}
+
+declare module '@logic-arrows/game-logic/selected-map' {
+    export interface SelectedMap {
+        getSelectionForRender(): SelectedArrow[];
     }
 }
 
@@ -59,8 +74,10 @@ declare module '@logic-arrows/game-logic/game-map' {
 declare module '@logic-arrows/player/game' {
     export interface Game {
         customTPS: number;
+        pathData: PathData | null;
 
         getArrowAtCursor(): Arrow | undefined;
+        getDrawOffsets(): { offsetX: number; offsetY: number };
     }
 }
 

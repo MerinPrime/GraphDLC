@@ -54,6 +54,14 @@ export class SelectSetting<T extends string | number> extends BaseSetting<T> {
             if (this.meta.reloadOnChange) window.location.reload();
         });
 
+        ['pointerdown', 'touchstart', 'mousedown', 'touchend'].forEach(
+            (evt) => {
+                select.addEventListener(evt, (e) => e.stopPropagation(), {
+                    passive: false,
+                });
+            },
+        );
+
         return select;
     }
 }

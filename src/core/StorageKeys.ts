@@ -4,4 +4,5 @@ export const enum STORAGE_KEYS {
     UpdatePref = 'graphdlc:update-preferences',
     Settings = 'graphdlcv3-settings',
     LatestVersion = 'graphdlc:latest-version',
+    Plugins = 'graphdlcv3-plugins',
 }

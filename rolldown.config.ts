@@ -310,6 +310,11 @@ const baseInputConfig = {
             __DEBUG__: JSON.stringify(!isProduction),
         },
     },
+    moduleTypes: {
+        '.png': 'dataurl',
+        '.jpg': 'dataurl',
+        '.svg': 'dataurl',
+    },
 };
 
 const terserUserscriptPlugin = terser({

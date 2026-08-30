@@ -3,16 +3,15 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
-import { CycleOptimizationSetting } from 'src/core/settings/instances/developer/CycleOptimizationSetting';
-import { EnableSnapshotsSetting } from 'src/core/settings/instances/performance/EnableSnapshotsSetting';
-import {
-    BreakpointMode,
-    EnableBreakpointSetting,
-} from 'src/core/settings/instances/tools/EnableBreakpointSetting';
 import type { ArrowType } from 'src/core/utils/ArrowType';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
+import { EnableSnapshotsSetting } from 'src/plugins/graphdlc/settings/performance/EnableSnapshotsSetting';
+import {
+    BreakpointMode,
+    EnableBreakpointSetting,
+} from 'src/plugins/graphdlc/settings/tools/EnableBreakpointSetting';
 import { GraphDebugger } from '../debugger/GraphDebugger';
 import { NodeType } from '../engines/core/NodeType';
 import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
@@ -55,15 +54,15 @@ export class Graph {
         this.privateGameMap = gameMap as any as PrivateGameMap;
 
         this.listeners.push(this.debugger);
-        if (CycleOptimizationSetting.value) {
-            this.listeners.push(this.cycleManager);
-        }
+        this.listeners.push(this.cycleManager);
 
         this.engine = EngineFactory.create(this, this.gameMap);
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
         EnableBreakpointSetting.onChange.add(this.handleBreakpointChange);
+        this.handleBreakpointChange(EnableBreakpointSetting.value);
         EnableSnapshotsSetting.onChange.add(this.handleSnapshotsChange);
+        this.handleSnapshotsChange(EnableSnapshotsSetting.value);
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
