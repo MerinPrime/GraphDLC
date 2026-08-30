@@ -120,9 +120,9 @@ export class GraphNode {
 
     private onUpdate() {
         if (this.type === NodeType.BLOCKER) {
-            const isBreakpoint = this.links.some(
-                (linkedNode) => linkedNode.type === NodeType.BLOCKER,
-            );
+            const isBreakpoint =
+                this.blockedLink?.type === NodeType.BLOCKER &&
+                this.blockedLink?.blockedLink === this;
             this.isBreakpoint = isBreakpoint;
         } else {
             this.isBreakpoint = false;
