@@ -106,16 +106,20 @@ export class Graph {
         const oldLinks = node.links.slice();
 
         const oldTargets: GraphNode[] = [];
-        for (const n of node.links) {
-            if (n.detectedLink !== node) oldTargets.push(n);
+        for (let i = 0; i < node.links.length; i++) {
+            const n = node.links[i];
+            if (n.detectedLink !== node || node.linkCounts[i] > 1) {
+                oldTargets.push(n);
+            }
         }
-
         const newTargets: GraphNode[] = [];
+
         const relations = getArrowRelations(node.arrowType);
         const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
             node.globalX,
             node.globalY,
         );
+
         relations.forEach(([relX, relY]) => {
             const relativeArrow = getRelativeArrow(
                 chunk,
@@ -146,28 +150,15 @@ export class Graph {
             newTargets.push(relNode);
         });
 
-        const oldTargetCounts = new Map<GraphNode, number>();
-        for (const n of oldTargets)
-            oldTargetCounts.set(n, (oldTargetCounts.get(n) || 0) + 1);
-
-        const newTargetCounts = new Map<GraphNode, number>();
-        for (const n of newTargets)
-            newTargetCounts.set(n, (newTargetCounts.get(n) || 0) + 1);
-
-        for (const [n, oldCount] of oldTargetCounts) {
-            const newCount = newTargetCounts.get(n) || 0;
-            if (oldCount > newCount) {
-                for (let i = 0; i < oldCount - newCount; i++) {
-                    this.removeNodeLink(node, n);
-                }
+        for (const oldTarget of oldTargets) {
+            if (!newTargets.includes(oldTarget)) {
+                this.removeNodeLink(node, oldTarget);
             }
         }
-        for (const [n, newCount] of newTargetCounts) {
-            const oldCount = oldTargetCounts.get(n) || 0;
-            if (newCount > oldCount) {
-                for (let i = 0; i < newCount - oldCount; i++) {
-                    this.addNodeLink(node, n);
-                }
+
+        for (const newTarget of newTargets) {
+            if (!oldTargets.includes(newTarget)) {
+                this.addNodeLink(node, newTarget);
             }
         }
 
@@ -196,6 +187,7 @@ export class Graph {
             );
             blockedLink = this.getOrCreateNodeByCoords(backX, backY);
         }
+
         if (node.blockedLink !== blockedLink) {
             node.blockedLink = blockedLink;
             this.engine.updateNodeState(node);
@@ -209,6 +201,15 @@ export class Graph {
             if (detectorLink) {
                 node.detectedLink = detectorLink;
                 this.addNodeLink(detectorLink, node);
+            }
+        }
+
+        for (const backNode of node.backLinks) {
+            if (
+                backNode.type === NodeType.DETECTOR &&
+                backNode.detectedLink === node
+            ) {
+                this.engine.updateNodeState(backNode);
             }
         }
 
