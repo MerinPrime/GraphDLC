@@ -90,6 +90,14 @@ export class Graph {
         return this.nodes[nodeIdx];
     }
 
+    public getNodeByArrow(arrow: Arrow): GraphNode | null {
+        const astIndex = arrow.astIndex;
+        if (astIndex === null || astIndex === undefined) {
+            return null;
+        }
+        return this.getNode(astIndex);
+    }
+
     public getArrow(nodeIdx: number): Arrow {
         return this.arrows[nodeIdx];
     }
