@@ -6,8 +6,8 @@ import type { save } from '@logic-arrows/utils/save';
 import type { Utils } from '@logic-arrows/utils/utils';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import { UnsavedWarnSetting } from 'src/plugins/new_save/settings/UnsavedWarnSetting';
 import type { IPatcher } from '../../Patcher';
+import { SaveMode, SaveModeSetting } from '../settings/SaveModeSetting';
 
 export const PatchUIMenu: IPatcher = (
     patchLoader: PatchLoader,
@@ -37,7 +37,7 @@ export const PatchUIMenu: IPatcher = (
             }
 
             public async saveMap(mapInfo: MapInfo, game: Game): Promise<void> {
-                if (UnsavedWarnSetting.value) return;
+                if (SaveModeSetting.value !== SaveMode.NORMAL) return;
                 // @ts-expect-error
                 await super.saveMap(mapInfo, game);
             }

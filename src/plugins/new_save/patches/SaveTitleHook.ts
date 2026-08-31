@@ -1,7 +1,8 @@
 export namespace SaveTitleHook {
     let isHooked: boolean = false;
-    let originalTitle: string = '';
+    let originalTitle: string | null = null;
     let _isMapChanged: boolean = false;
+    let state: boolean = false;
 
     export function isMapChanged(): boolean {
         return _isMapChanged;
@@ -9,7 +10,7 @@ export namespace SaveTitleHook {
 
     export function setIsMapChanged(state: boolean): void {
         _isMapChanged = state;
-        if (isHooked) {
+        if (isHooked && originalTitle) {
             document.title = originalTitle;
         }
     }
@@ -27,7 +28,7 @@ export namespace SaveTitleHook {
                 },
                 set(val) {
                     originalTitle = val;
-                    if (_isMapChanged) val = `* ${val}`;
+                    if (state && _isMapChanged) val = `* ${val}`;
                     descriptor.set?.call(this, val);
                 },
                 configurable: true,
@@ -41,5 +42,10 @@ export namespace SaveTitleHook {
         if (isHooked) {
             delete (document as any).title;
         }
+    }
+
+    export function setHookState(newState: boolean) {
+        state = newState;
+        if (originalTitle) document.title = originalTitle;
     }
 }

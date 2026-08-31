@@ -1,6 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
-import { ToolsSettingGroup } from '../../../core/settings/groups/ToolsGroup';
-import { BoolSetting } from '../../../core/settings/types/BoolSetting';
+import { ToolsSettingGroup } from '../groups/ToolsGroup';
+import { BoolSetting } from '../types/BoolSetting';
 
 const NameLocale = new I18nText(
     'Warn on Unsaved Changes',
