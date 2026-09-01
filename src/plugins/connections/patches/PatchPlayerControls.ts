@@ -78,7 +78,8 @@ export const PatchPlayerControls: IPatcher = (
                     const isPathType = (n: GraphNode): boolean =>
                         n.type === NodeType.PATH ||
                         n.type === NodeType.DELAY ||
-                        n.type === NodeType.DETECTOR;
+                        n.type === NodeType.DETECTOR ||
+                        n.type === NodeType.DIRECTIONAL_BUTTON;
 
                     const getNodeDelay = (n: GraphNode): number =>
                         n.type === NodeType.DELAY ? 2 : 1;
