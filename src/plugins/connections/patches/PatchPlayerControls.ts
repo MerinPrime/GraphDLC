@@ -71,70 +71,136 @@ export const PatchPlayerControls: IPatcher = (
                 }
 
                 public updatePathData(node: GraphNode) {
+                    const isPathType = (n: GraphNode): boolean =>
+                        n.type === NodeType.PATH ||
+                        n.type === NodeType.DELAY ||
+                        n.type === NodeType.DETECTOR;
+
+                    const getNodeDelay = (n: GraphNode): number =>
+                        n.type === NodeType.DELAY ? 2 : 1;
+
                     if (this.highlightPathData === null) {
                         this.highlightPathData = {
                             node,
                             path: [],
                             input: [],
                             output: [],
+                            sameNodes: [],
                         };
                     }
 
                     this.highlightPathData.node = node;
 
-                    const fullPath = new Set<GraphNode>();
-                    const forwardQueue = [node];
-                    const backwardQueue = [node];
+                    const fullPath = new Set<GraphNode>([node]);
+                    const queue: GraphNode[] = [node];
 
-                    while (backwardQueue.length > 0) {
-                        const node = backwardQueue.pop();
-                        if (!node) break;
-                        const x = node.backLinks.filter(
-                            (x) =>
-                                (x.type === NodeType.PATH ||
-                                    x.type === NodeType.DETECTOR) &&
-                                !fullPath.has(x),
-                        );
-                        x.forEach((y) => {
-                            fullPath.add(y);
-                        });
-                        forwardQueue.push(...x);
-                        backwardQueue.push(...x);
+                    while (queue.length > 0) {
+                        const curr = queue.pop();
+                        if (!curr) continue;
+
+                        for (let i = 0; i < curr.backLinks.length; i++) {
+                            const prev = curr.backLinks[i];
+                            if (isPathType(prev) && !fullPath.has(prev)) {
+                                fullPath.add(prev);
+                                queue.push(prev);
+                            }
+                        }
+                        for (let i = 0; i < curr.links.length; i++) {
+                            const next = curr.links[i];
+                            if (isPathType(next) && !fullPath.has(next)) {
+                                fullPath.add(next);
+                                queue.push(next);
+                            }
+                        }
                     }
-                    while (forwardQueue.length > 0) {
-                        const node = forwardQueue.pop();
-                        if (!node) break;
-                        const x = node.links.filter(
-                            (x) =>
-                                (x.type === NodeType.PATH ||
-                                    x.type === NodeType.DETECTOR) &&
-                                !fullPath.has(x),
-                        );
-                        x.forEach((y) => {
-                            fullPath.add(y);
-                        });
-                        forwardQueue.push(...x);
-                    }
-                    fullPath.add(node);
 
                     const input = new Set<GraphNode>();
                     const output = new Set<GraphNode>();
+                    const roots: GraphNode[] = [];
 
-                    fullPath.forEach((node) => {
-                        node.backLinks.forEach((link) => {
-                            if (!fullPath.has(link)) input.add(link);
-                        });
-                        node.links.forEach((link) => {
-                            if (input.has(link)) {
-                                input.delete(link);
-                                fullPath.add(link);
-                            } else if (!fullPath.has(link)) output.add(link);
-                        });
+                    fullPath.forEach((currNode) => {
+                        let hasInternalBacklink = false;
+
+                        for (const link of currNode.backLinks) {
+                            if (!fullPath.has(link)) {
+                                input.add(link);
+                            } else {
+                                hasInternalBacklink = true;
+                            }
+                        }
+
+                        for (const link of currNode.links) {
+                            if (!fullPath.has(link)) {
+                                output.add(link);
+                            }
+                        }
+
+                        if (!hasInternalBacklink) {
+                            roots.push(currNode);
+                        }
                     });
 
-                    this.highlightPathData.path = [...fullPath];
-                    this.highlightPathData.input = [...input];
-                    this.highlightPathData.output = [...output];
+                    const timings = new Map<GraphNode, number>();
+                    const timingQueue: GraphNode[] = [];
+
+                    const startNodes = roots.length > 0 ? roots : [node];
+
+                    for (const root of startNodes) {
+                        timings.set(root, 1);
+                        timingQueue.push(root);
+                    }
+
+                    let head = 0;
+                    while (head < timingQueue.length) {
+                        const curr = timingQueue[head++];
+                        const currTiming = timings.get(curr) ?? 1;
+                        const delay = getNodeDelay(curr);
+
+                        for (const next of curr.links) {
+                            if (fullPath.has(next)) {
+                                const nextTiming = currTiming + delay;
+                                if (
+                                    !timings.has(next) ||
+                                    (timings.get(next) ?? 0) > nextTiming
+                                ) {
+                                    timings.set(next, nextTiming);
+                                    timingQueue.push(next);
+                                }
+                            }
+                        }
+                    }
+
+                    const targetStartTiming = timings.get(node) ?? 1;
+                    const targetDelay = getNodeDelay(node);
+                    const targetTicks = new Set<number>();
+                    for (let t = 0; t < targetDelay; t++) {
+                        targetTicks.add(targetStartTiming + t);
+                    }
+
+                    const sameTimingNodes: GraphNode[] = [];
+
+                    fullPath.forEach((n) => {
+                        const nStartTiming = timings.get(n) ?? 1;
+                        const nDelay = getNodeDelay(n);
+
+                        let hasOverlap = false;
+                        for (let t = 0; t < nDelay; t++) {
+                            if (targetTicks.has(nStartTiming + t)) {
+                                hasOverlap = true;
+                                break;
+                            }
+                        }
+
+                        if (hasOverlap) {
+                            sameTimingNodes.push(n);
+                            fullPath.delete(n);
+                        }
+                    });
+
+                    this.highlightPathData.path = Array.from(fullPath);
+                    this.highlightPathData.input = Array.from(input);
+                    this.highlightPathData.output = Array.from(output);
+                    this.highlightPathData.sameNodes = sameTimingNodes;
 
                     const _this = this as any as PrivatePlayerControls;
                     _this.game.highlightPathData = this.highlightPathData;

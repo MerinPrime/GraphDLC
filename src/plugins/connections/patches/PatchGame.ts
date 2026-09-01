@@ -150,6 +150,16 @@ export const PatchGame: IPatcher = (
                     );
                 });
 
+                render.setSolidColor(0.2, 0.2, 0.8, 0.5);
+                this.highlightPathData.sameNodes.forEach((node) => {
+                    render.drawSolidColorRect(
+                        node.globalX * this.scale + offsetX,
+                        node.globalY * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
+
                 render.setSolidColor(0.2, 0.8, 0.2, 0.5);
                 this.highlightPathData.output.forEach((node) => {
                     render.drawSolidColorRect(

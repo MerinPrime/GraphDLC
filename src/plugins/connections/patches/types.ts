@@ -5,4 +5,5 @@ export interface HighlightPathData {
     path: GraphNode[];
     input: GraphNode[];
     output: GraphNode[];
+    sameNodes: GraphNode[];
 }
