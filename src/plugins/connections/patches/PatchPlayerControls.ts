@@ -58,7 +58,11 @@ export const PatchPlayerControls: IPatcher = (
                         if (this.highlightPathData?.node === node) {
                             return;
                         }
-                        this.updatePathData(node);
+                        if (node.type === NodeType.EMPTY) {
+                            this.resetPathData();
+                        } else {
+                            this.updatePathData(node);
+                        }
                     } else {
                         this.resetPathData();
                     }
