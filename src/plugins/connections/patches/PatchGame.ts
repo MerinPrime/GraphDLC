@@ -195,20 +195,20 @@ export const PatchGame: IPatcher = (
                     offsetY,
                 );
 
-                const arrowAtCursor = this.getArrowAtCursor();
-                if (arrowAtCursor) {
-                    this.drawArrowConnections(
-                        render,
-                        gameMap,
-                        arrowAtCursor,
-                        offsetX,
-                        offsetY,
-                        hasPastedArrow,
-                    );
-                }
-
                 if (this.highlightPathData !== null) {
                     this.drawArrowPath(render, offsetX, offsetY);
+                } else {
+                    const arrowAtCursor = this.getArrowAtCursor();
+                    if (arrowAtCursor) {
+                        this.drawArrowConnections(
+                            render,
+                            gameMap,
+                            arrowAtCursor,
+                            offsetX,
+                            offsetY,
+                            hasPastedArrow,
+                        );
+                    }
                 }
 
                 render.setShowBorder(true);
