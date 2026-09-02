@@ -346,8 +346,14 @@ export class Graph {
         rotation: number,
         flipped: boolean,
     ) {
-        const oldType = node.type;
+        if (
+            node.arrowType === type &&
+            node.rotation === rotation &&
+            node.flipped === flipped
+        )
+            return;
 
+        const oldType = node.type;
         if (node.arrowType !== type) {
             this.engine.resetNodeSignal(node);
         }
