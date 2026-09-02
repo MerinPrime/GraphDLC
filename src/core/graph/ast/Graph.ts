@@ -41,6 +41,8 @@ export class Graph {
 
     public engine: BaseEngine<EngineTypes>;
 
+    private _lastUpdate: number = 0;
+
     private readonly handleBreakpointChange = (newState: BreakpointMode) => {
         this.engine.setBreakpointState(newState !== BreakpointMode.OFF);
     };
@@ -63,6 +65,10 @@ export class Graph {
         this.handleBreakpointChange(EnableBreakpointSetting.value);
         EnableSnapshotsSetting.onChange.add(this.handleSnapshotsChange);
         this.handleSnapshotsChange(EnableSnapshotsSetting.value);
+    }
+
+    public get lastUpdate(): number {
+        return this._lastUpdate;
     }
 
     public getChunkByIdx(chunkIdx: number): Chunk {
@@ -365,6 +371,7 @@ export class Graph {
         )
             this.extraRewindNodes.add(node.nodeIdx);
         else this.extraRewindNodes.delete(node.nodeIdx);
+        this._lastUpdate = Date.now();
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
@@ -385,18 +392,21 @@ export class Graph {
         )
             this.extraRewindNodes.add(node.nodeIdx);
         else this.extraRewindNodes.delete(node.nodeIdx);
+        this._lastUpdate = Date.now();
     }
 
     private setNodeRotation(node: GraphNode, rotation: number) {
         node.setRotation(rotation);
         this.updateNodeRelations(node);
         this.engine.updateNodeState(node);
+        this._lastUpdate = Date.now();
     }
 
     private setNodeFlipped(node: GraphNode, flipped: boolean) {
         node.setFlipped(flipped);
         this.updateNodeRelations(node);
         this.engine.updateNodeState(node);
+        this._lastUpdate = Date.now();
     }
 
     private addNodeLink(fromNode: GraphNode, toNode: GraphNode) {
@@ -406,6 +416,7 @@ export class Graph {
         });
         this.engine.updateNodeState(fromNode);
         this.engine.updateNodeState(toNode);
+        this._lastUpdate = Date.now();
     }
 
     private removeNodeLink(fromNode: GraphNode, toNode: GraphNode) {
@@ -415,6 +426,7 @@ export class Graph {
         });
         this.engine.updateNodeState(fromNode);
         this.engine.updateNodeState(toNode);
+        this._lastUpdate = Date.now();
     }
 
     public addCycle(nodes: GraphNode[]): GraphCycle {
