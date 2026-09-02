@@ -111,24 +111,32 @@ export const PatchPlayerControls: IPatcher = (
                     this.highlightPathData.lastGraphUpdate = graph.lastUpdate;
 
                     const fullPath = new Set<GraphNode>([node]);
-                    const queue: GraphNode[] = [node];
 
-                    while (queue.length > 0) {
-                        const curr = queue.pop();
+                    const forwardQueue = [node];
+                    const backwardQueue = [node];
+
+                    while (backwardQueue.length > 0) {
+                        const curr = backwardQueue.pop();
                         if (!curr) continue;
 
                         for (let i = 0; i < curr.backLinks.length; i++) {
                             const prev = curr.backLinks[i];
                             if (isPathType(prev) && !fullPath.has(prev)) {
                                 fullPath.add(prev);
-                                queue.push(prev);
+                                forwardQueue.push(prev);
+                                backwardQueue.push(prev);
                             }
                         }
+                    }
+                    while (forwardQueue.length > 0) {
+                        const curr = forwardQueue.pop();
+                        if (!curr) continue;
+
                         for (let i = 0; i < curr.links.length; i++) {
                             const next = curr.links[i];
                             if (isPathType(next) && !fullPath.has(next)) {
                                 fullPath.add(next);
-                                queue.push(next);
+                                forwardQueue.push(next);
                             }
                         }
                     }
