@@ -149,6 +149,7 @@ export const PatchPlayerControls: IPatcher = (
                         let hasInternalBacklink = false;
 
                         for (const link of currNode.backLinks) {
+                            if (link.type === NodeType.EMPTY) continue;
                             if (!fullPath.has(link)) {
                                 input.add(link);
                             } else {
@@ -157,6 +158,7 @@ export const PatchPlayerControls: IPatcher = (
                         }
 
                         for (const link of currNode.links) {
+                            if (link.type === NodeType.EMPTY) continue;
                             if (!fullPath.has(link)) {
                                 output.add(link);
                             }
