@@ -28,7 +28,6 @@ export const PatchPlayerControls: IPatcher = (
 
     document.addEventListener('mousedown', (e: MouseEvent) => {
         if (e.button === 0) {
-            e.preventDefault();
             isLeftMouseDown = true;
         }
         if (e.button === 2) {
@@ -39,7 +38,6 @@ export const PatchPlayerControls: IPatcher = (
 
     document.addEventListener('mouseup', (e: MouseEvent) => {
         if (e.button === 0) {
-            e.preventDefault();
             isLeftMouseDown = false;
         }
         if (e.button === 2) {
