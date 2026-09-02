@@ -89,6 +89,7 @@ export const PatchPlayerControls: IPatcher = (
                                 startPathY: y,
                                 endPathX: x,
                                 endPathY: y,
+                                lastGraphUpdate: 0,
                                 path: [],
                                 arrowType: selectedArrow,
                                 rotation: rotationState,
@@ -99,15 +100,21 @@ export const PatchPlayerControls: IPatcher = (
                         this.pathData.rotation = rotationState;
                         this.pathData.flip = flipState;
 
+                        const gameMap = _this.game.gameMap;
+                        const lastGraphUpdate = gameMap.graph.lastUpdate;
+
                         if (
                             this.pathData &&
                             (this.pathData.endPathX !== x ||
                                 this.pathData.endPathY !== y ||
-                                this.pathData.arrowType !== selectedArrow)
+                                this.pathData.arrowType !== selectedArrow ||
+                                this.pathData.lastGraphUpdate !==
+                                    lastGraphUpdate)
                         ) {
                             this.pathData.endPathX = x;
                             this.pathData.endPathY = y;
                             this.pathData.arrowType = selectedArrow;
+                            this.pathData.lastGraphUpdate = lastGraphUpdate;
 
                             graphDLC.pathFinder.cancelPathSearch(taskKey);
 
