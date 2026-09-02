@@ -55,10 +55,17 @@ export const PatchPlayerControls: IPatcher = (
                             return;
                         }
 
+                        const lastGraphUpdate = graph.lastUpdate;
+                        if (
+                            this.highlightPathData?.lastGraphUpdate !==
+                            lastGraphUpdate
+                        ) {
+                            this.resetPathData();
+                        }
+
                         if (this.highlightPathData?.node === node) {
                             return;
-                        }
-                        if (node.type === NodeType.EMPTY) {
+                        } else if (node.type === NodeType.EMPTY) {
                             this.resetPathData();
                         } else {
                             this.updatePathData(node);
@@ -86,6 +93,9 @@ export const PatchPlayerControls: IPatcher = (
                     const getNodeDelay = (n: GraphNode): number =>
                         n.type === NodeType.DELAY ? 2 : 1;
 
+                    const _this = this as any as PrivatePlayerControls;
+                    const graph = _this.game.gameMap.graph;
+
                     if (this.highlightPathData === null) {
                         this.highlightPathData = {
                             node,
@@ -93,10 +103,12 @@ export const PatchPlayerControls: IPatcher = (
                             input: [],
                             output: [],
                             sameNodes: [],
+                            lastGraphUpdate: graph.lastUpdate,
                         };
                     }
 
                     this.highlightPathData.node = node;
+                    this.highlightPathData.lastGraphUpdate = graph.lastUpdate;
 
                     const fullPath = new Set<GraphNode>([node]);
                     const queue: GraphNode[] = [node];
@@ -209,7 +221,6 @@ export const PatchPlayerControls: IPatcher = (
                     this.highlightPathData.output = Array.from(output);
                     this.highlightPathData.sameNodes = sameTimingNodes;
 
-                    const _this = this as any as PrivatePlayerControls;
                     _this.game.highlightPathData = this.highlightPathData;
                 }
             };
