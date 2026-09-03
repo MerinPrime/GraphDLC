@@ -10,34 +10,35 @@ export const PatchBackend: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {
-    patchLoader.addDefinitionPatch('Backend', (_module: typeof Backend) => {
-        const GamePage = patchLoader.getInstance<GamePage>('GamePage');
+    const GamePage = patchLoader.getInstance<GamePage>('GamePage');
 
-        const oldSaveMap = _module.saveMap;
-        _module.saveMap = async function PatchedSaveMap(
-            mapInfo: MapInfo,
-            newData: string,
-        ): Promise<number> {
-            if (SaveModeSetting.value === SaveMode.NEVER) {
-                return -1;
-            }
-            const status = await oldSaveMap(mapInfo, newData);
-            if (status === 200) GamePage.val?.updateIsMapChanged(false);
-            return status;
-        };
-
-        const oldSaveMapInfo = _module.saveMapInfo;
-        _module.saveMapInfo = async function PatchedSaveMap(
-            mapInfo: MapInfo,
-            callback: (responseStatus: number) => void,
-        ): Promise<void> {
-            if (SaveModeSetting.value === SaveMode.NEVER) {
-                return;
-            }
-            await oldSaveMapInfo(mapInfo, (status: number) => {
+    patchLoader.addObjectPatch<typeof Backend>(
+        'Backend',
+        (namespace, original) => {
+            namespace.saveMap = async (
+                mapInfo: MapInfo,
+                newData: string,
+            ): Promise<number> => {
+                if (SaveModeSetting.value === SaveMode.NEVER) {
+                    return -1;
+                }
+                const status = await original.saveMap(mapInfo, newData);
                 if (status === 200) GamePage.val?.updateIsMapChanged(false);
-                callback(status);
-            });
-        };
-    });
+                return status;
+            };
+
+            namespace.saveMapInfo = async (
+                mapInfo: MapInfo,
+                callback: (responseStatus: number) => void,
+            ): Promise<void> => {
+                if (SaveModeSetting.value === SaveMode.NEVER) {
+                    return;
+                }
+                await original.saveMapInfo(mapInfo, (status: number) => {
+                    if (status === 200) GamePage.val?.updateIsMapChanged(false);
+                    callback(status);
+                });
+            };
+        },
+    );
 };

@@ -11,34 +11,32 @@ export const PatchChunkUpdates: IPatcher = (
 ) => {
     const playerUI = patchLoader.getInstance<PlayerUI>('PlayerUI');
 
-    patchLoader.addDefinitionPatch(
+    patchLoader.addObjectPatch<typeof ChunkUpdates>(
         'ChunkUpdates',
-        (_module: typeof ChunkUpdates) => {
-            const oldUpdate = _module.update;
-            _module.oldUpdate = oldUpdate;
-            _module.update = function GraphUpdate(gameMap: GameMap) {
+        (namespace, original) => {
+            namespace.update = (gameMap: GameMap) => {
                 if (gameMap.isMain) {
                     const graph = gameMap.graph;
                     graph.engine.runTick();
                 } else {
-                    oldUpdate(gameMap);
+                    original.update(gameMap);
                 }
 
                 playerUI.val?.updateFpsDisplay();
             };
+            namespace.oldUpdate = original.update;
 
-            const oldClearSignals = _module.clearSignals;
-            _module.oldClearSignals = oldClearSignals;
-            _module.clearSignals = function clearSignals(gameMap: GameMap) {
+            namespace.clearSignals = (gameMap: GameMap) => {
                 if (gameMap.isMain) {
                     const graph = gameMap.graph;
                     graph.engine.reset();
                 } else {
-                    oldClearSignals(gameMap);
+                    original.clearSignals(gameMap);
                 }
 
                 playerUI.val?.updateFpsDisplay();
             };
+            namespace.oldClearSignals = original.clearSignals;
         },
     );
 };
