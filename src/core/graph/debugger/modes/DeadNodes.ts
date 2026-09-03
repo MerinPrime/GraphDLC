@@ -333,6 +333,12 @@ class GlobalUpdateTask implements ITask<void> {
         uniqueParentsCount: number,
         isReachableArr: Uint8Array,
     ): boolean {
+        if (node.type !== NodeType.SOURCE && node.type !== NodeType.IMPULSE) {
+            const isAllEmpty = node.links.every(
+                (link) => link.type === NodeType.EMPTY,
+            );
+            if (isAllEmpty && isReachableArr[node.nodeIdx]) return true;
+        }
         switch (node.type) {
             case NodeType.BLOCKER:
                 return (
