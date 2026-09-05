@@ -177,7 +177,7 @@ export const PatchPlayerControls: IPatcher = (
                                     arrow.type = type;
                                     arrow.rotation = rotation;
                                     arrow.flipped = flipped;
-                                    gameMap.graph.updateArrowState(
+                                    gameMap.updateArrowState(
                                         arrow,
                                         chunk,
                                         x,

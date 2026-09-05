@@ -37,8 +37,9 @@ pub extern "C" fn clear(rng_state: u64) {
 #[no_mangle]
 pub extern "C" fn reset_node_signal(node_idx: u32) {
     let state = get_state();
-    state.ensure_node_capacity((node_idx + 1) as usize);
-
+    if node_idx >= state.nodes.len() as u32 {
+        return;
+    }
     let node = &mut state.nodes[node_idx as usize];
     node.signal = NODE_SIGNAL_NONE;
     node.last_signal = NODE_SIGNAL_NONE;

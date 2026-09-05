@@ -19,6 +19,7 @@ import { EngineFactory } from '../engines/EngineFactory';
 import { CycleManager } from './cycle/CycleManager';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
+import { NodeStateUpdater } from './NodeStateUpdater';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -41,6 +42,8 @@ export class Graph {
 
     public engine: BaseEngine<EngineTypes>;
 
+    public updater: NodeStateUpdater;
+
     private _lastUpdate: number = 0;
 
     private readonly handleBreakpointChange = (newState: BreakpointMode) => {
@@ -61,6 +64,8 @@ export class Graph {
         this.engine = EngineFactory.create(this, this.gameMap);
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
+        this.updater = new NodeStateUpdater(this);
+
         EnableBreakpointSetting.onChange.add(this.handleBreakpointChange);
         this.handleBreakpointChange(EnableBreakpointSetting.value);
         EnableSnapshotsSetting.onChange.add(this.handleSnapshotsChange);
@@ -76,12 +81,18 @@ export class Graph {
     }
 
     public markCyclesChunksDirty() {
-        this.cycles.forEach((cycle) => {
-            if (cycle === null) return;
-            cycle.nodes.forEach((node) => {
-                this.engine.makeDirtyChunk(node.chunkIdx);
-            });
-        });
+        const cycles = this.cycles;
+
+        for (let i = 0; i < cycles.length; i++) {
+            const cycle = cycles[i];
+            if (cycle === null) continue;
+
+            const nodes = cycle.nodes;
+
+            for (let j = 0; j < nodes.length; j++) {
+                this.engine.makeDirtyChunk(nodes[j].chunkIdx);
+            }
+        }
     }
 
     public getNodes(): readonly GraphNode[] {
@@ -118,15 +129,17 @@ export class Graph {
                 oldTargets.push(n);
             }
         }
-        const newTargets: GraphNode[] = [];
 
         const relations = getArrowRelations(node.arrowType);
+        const newTargets = new Array<GraphNode>(relations.length);
         const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
             node.globalX,
             node.globalY,
         );
 
-        relations.forEach(([relX, relY]) => {
+        for (let i = 0; i < relations.length; i++) {
+            const [relX, relY] = relations[i];
+
             const relativeArrow = getRelativeArrow(
                 chunk,
                 node.localX,
@@ -153,18 +166,19 @@ export class Graph {
                           globalRelY,
                       )
                     : this.getOrCreateNodeByCoords(globalRelX, globalRelY);
-            newTargets.push(relNode);
-        });
+
+            newTargets[i] = relNode;
+        }
 
         for (const oldTarget of oldTargets) {
             if (!newTargets.includes(oldTarget)) {
-                this.removeNodeLink(node, oldTarget);
+                this.removeNodeLink(node, oldTarget, true);
             }
         }
 
         for (const newTarget of newTargets) {
             if (!oldTargets.includes(newTarget)) {
-                this.addNodeLink(node, newTarget);
+                this.addNodeLink(node, newTarget, true);
             }
         }
 
@@ -196,7 +210,7 @@ export class Graph {
 
         if (node.blockedLink !== blockedLink) {
             node.blockedLink = blockedLink;
-            this.engine.updateNodeState(node);
+            this.updater.update(node);
         }
 
         if (node.detectedLink !== detectorLink) {
@@ -215,7 +229,7 @@ export class Graph {
                 backNode.type === NodeType.DETECTOR &&
                 backNode.detectedLink === node
             ) {
-                this.engine.updateNodeState(backNode);
+                this.updater.update(backNode);
             }
         }
 
@@ -237,7 +251,7 @@ export class Graph {
             this.listeners.forEach((listener) => {
                 listener.onChunkAdded(this, chunk, chunkIdx);
             });
-            this.engine.updateChunk(chunk);
+            this.engine.onChunkCreate(chunk);
         }
 
         const chunkIdx = chunk.astIndex;
@@ -256,7 +270,7 @@ export class Graph {
         this.nodes.push(node);
         this.arrows.push(arrow);
         arrow.astIndex = nodeIdx;
-        this.engine.updateNodeState(node);
+        this.updater.update(node);
 
         this.listeners.forEach((listener) => {
             listener.onNodeAdded(this, node);
@@ -278,7 +292,6 @@ export class Graph {
             globalY - chunk.y * CHUNK_SIZE,
         );
 
-        if (arrow.astIndex != null) return this.getNode(arrow.astIndex);
         return this.getOrCreateNode(arrow, chunk, globalX, globalY);
     }
 
@@ -357,19 +370,17 @@ export class Graph {
         if (node.arrowType !== type) {
             this.engine.resetNodeSignal(node);
         }
-        node.setType(type);
-        node.setRotation(rotation);
-        node.setFlipped(flipped);
+        node.updateState(type, rotation, flipped);
         this.updateNodeRelations(node);
         if (oldType !== node.type) {
             this.listeners.forEach((listener) => {
                 listener.onNodeTypeChanged(this, node);
             });
             node.backLinks.forEach((backLinkedNode) => {
-                this.engine.updateNodeState(backLinkedNode);
+                this.updater.update(backLinkedNode);
             });
         }
-        this.engine.updateNodeState(node);
+        this.updater.update(node);
         if (
             node.type === NodeType.DIRECTIONAL_BUTTON ||
             node.type === NodeType.BUTTON ||
@@ -388,9 +399,9 @@ export class Graph {
             listener.onNodeTypeChanged(this, node);
         });
         node.backLinks.forEach((backLinkedNode) => {
-            this.engine.updateNodeState(backLinkedNode);
+            this.updater.update(backLinkedNode);
         });
-        this.engine.updateNodeState(node);
+        this.updater.update(node);
         if (
             node.type === NodeType.DIRECTIONAL_BUTTON ||
             node.type === NodeType.BUTTON ||
@@ -404,34 +415,46 @@ export class Graph {
     private setNodeRotation(node: GraphNode, rotation: number) {
         node.setRotation(rotation);
         this.updateNodeRelations(node);
-        this.engine.updateNodeState(node);
+        this.updater.update(node);
         this._lastUpdate = Date.now();
     }
 
     private setNodeFlipped(node: GraphNode, flipped: boolean) {
         node.setFlipped(flipped);
         this.updateNodeRelations(node);
-        this.engine.updateNodeState(node);
+        this.updater.update(node);
         this._lastUpdate = Date.now();
     }
 
-    private addNodeLink(fromNode: GraphNode, toNode: GraphNode) {
+    private addNodeLink(
+        fromNode: GraphNode,
+        toNode: GraphNode,
+        updateState = true,
+    ) {
         fromNode.addLink(toNode);
         this.listeners.forEach((listener) => {
             listener.onLinkAdded(this, fromNode, toNode);
         });
-        this.engine.updateNodeState(fromNode);
-        this.engine.updateNodeState(toNode);
+        if (updateState) {
+            this.updater.update(fromNode);
+            this.updater.update(toNode);
+        }
         this._lastUpdate = Date.now();
     }
 
-    private removeNodeLink(fromNode: GraphNode, toNode: GraphNode) {
+    private removeNodeLink(
+        fromNode: GraphNode,
+        toNode: GraphNode,
+        updateState = true,
+    ) {
         fromNode.removeLink(toNode);
         this.listeners.forEach((listener) => {
             listener.onLinkRemoved(this, fromNode, toNode);
         });
-        this.engine.updateNodeState(fromNode);
-        this.engine.updateNodeState(toNode);
+        if (updateState) {
+            this.updater.update(fromNode);
+            this.updater.update(toNode);
+        }
         this._lastUpdate = Date.now();
     }
 
@@ -489,10 +512,10 @@ export class Graph {
 
     private syncNodesAndHeadsState(nodes: GraphNode[], heads: GraphNode[]) {
         for (const node of nodes) {
-            this.engine.updateNodeState(node);
+            this.updater.update(node);
         }
         for (const head of heads) {
-            this.engine.updateNodeState(head);
+            this.updater.update(head);
         }
     }
 }

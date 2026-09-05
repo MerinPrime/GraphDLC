@@ -161,7 +161,9 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
         }
     }
 
-    public updateChunk(_chunk: Chunk): void {}
+    public ensureNodeCapacity(_nodesCount: number): void {}
+
+    public onChunkCreate(_chunk: Chunk): void {}
 
     public clear(): void {
         this.tick = 0;

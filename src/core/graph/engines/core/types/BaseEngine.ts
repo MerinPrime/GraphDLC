@@ -160,7 +160,9 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     ): void;
     public abstract resetNodeSignal(node: GraphNode): void;
     public abstract updateNodeState(node: GraphNode): void;
-    public abstract updateChunk(chunk: Chunk): void;
+
+    public abstract ensureNodeCapacity(nodesCount: number): void;
+    public abstract onChunkCreate(chunk: Chunk): void;
 
     public setBreakpointState(newState: boolean): void {
         this.useBreakPoints = newState;

@@ -102,8 +102,12 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
         this.state.updateNodeState(node);
     }
 
-    public updateChunk(chunk: Chunk): void {
-        this.state.updateChunk(chunk);
+    public ensureNodeCapacity(nodesCount: number): void {
+        this.state.ensureNodeCapacity(nodesCount);
+    }
+
+    public onChunkCreate(chunk: Chunk): void {
+        this.state.onChunkCreate(chunk);
     }
 
     public setBreakpointState(_: boolean): void {}

@@ -68,6 +68,14 @@ export class GraphNode {
         this.onUpdate();
     }
 
+    public updateState(type: ArrowType, rotation: number, flipped: boolean) {
+        this.arrowType = type;
+        this.type = NodeTypes.fromArrowType(type);
+        this.rotation = rotation;
+        this.flipped = flipped;
+        this.onUpdate();
+    }
+
     public addLink(node: GraphNode) {
         const idx = this.links.indexOf(node);
         if (idx !== -1) {

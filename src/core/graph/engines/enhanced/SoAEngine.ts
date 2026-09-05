@@ -102,7 +102,11 @@ export class SoAEngine extends BaseEngine<SoAEngineTypes> {
         this.state.updateNodeState(node);
     }
 
-    public updateChunk(chunk: Chunk): void {
+    public ensureNodeCapacity(nodesCount: number): void {
+        this.state.ensureNodeCapacity(nodesCount);
+    }
+
+    public onChunkCreate(chunk: Chunk): void {
         this.state.updateChunk(chunk);
     }
 

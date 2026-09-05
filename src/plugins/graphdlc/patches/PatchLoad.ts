@@ -14,6 +14,7 @@ export const PatchLoad: IPatcher = (
     patchLoader.addDefinitionPatch('load', (_module: typeof load) => {
         return function load(map: GameMap, buffer: number[]): void {
             if (buffer.length < 4) return;
+            map.graph.updater.beginLoading();
             let index: number = 0;
             let version: number = buffer[index++];
             version |= buffer[index++] << 8;
@@ -53,6 +54,7 @@ export const PatchLoad: IPatcher = (
                     }
                 }
             }
+            map.graph.updater.endLoading();
         };
     });
 };

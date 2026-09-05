@@ -10,8 +10,8 @@ import { RawCycleState } from './RawCycleState';
 import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
 export class RawNodeState {
-    public readonly nodeIdx;
-    public readonly chunkIdx;
+    public readonly nodeIdx: number;
+    public chunkIdx: number = 0;
 
     public type: NodeType = NodeType.EMPTY;
 
@@ -34,14 +34,10 @@ export class RawNodeState {
     public isUpdated: boolean = false;
     public isChanged: boolean = false;
     public isTempChanged: boolean = false;
+    public blockedIdx: number | null = null;
 
-    public constructor(
-        public node: GraphNode,
-        nodeIdx: number,
-        chunkIdx: number,
-    ) {
+    public constructor(nodeIdx: number) {
         this.nodeIdx = nodeIdx;
-        this.chunkIdx = chunkIdx;
     }
 }
 
@@ -79,21 +75,26 @@ export class RawGraphState {
     }
 
     public resetNodeSignal(node: GraphNode) {
+        if (node.nodeIdx >= this.nodes.length) return;
         const nodeState = this.nodes[node.nodeIdx];
         nodeState.lastSignal = 0;
         nodeState.signal = 0;
     }
 
-    public updateNodeState(node: GraphNode) {
-        if (this.nodes[node.nodeIdx] === undefined) {
-            this.nodes[node.nodeIdx] = new RawNodeState(
-                node,
-                node.nodeIdx,
-                node.chunkIdx,
-            );
+    public ensureNodeCapacity(nodesCount: number) {
+        if (this.nodes.length >= nodesCount) return;
+
+        for (let i = 0; i < nodesCount; i++) {
+            if (this.nodes[i] === undefined) {
+                this.nodes[i] = new RawNodeState(i);
+            }
         }
+    }
+
+    public updateNodeState(node: GraphNode) {
         const nodeState = this.nodes[node.nodeIdx];
 
+        nodeState.chunkIdx = node.chunkIdx;
         nodeState.type = node.type;
         nodeState.links = node.links
             .filter(
@@ -107,7 +108,7 @@ export class RawGraphState {
             .filter(
                 (linkedNode) =>
                     linkedNode.type === NodeType.DETECTOR &&
-                    linkedNode.detectedLink === nodeState.node,
+                    linkedNode.detectedLink?.nodeIdx === nodeState.nodeIdx,
             )
             .map((node) => this.getNode(node.nodeIdx));
 
@@ -126,12 +127,14 @@ export class RawGraphState {
             nodeState.cycleOffset = 0;
         }
 
-        nodeState.cycleOffset = node.cycleOffset;
+        nodeState.blockedIdx = node.blockedLink
+            ? node.blockedLink.nodeIdx
+            : null;
 
         this.changedNodes.push(nodeState);
     }
 
-    public updateChunk(chunk: Chunk) {
+    public onChunkCreate(chunk: Chunk) {
         if (chunk.astIndex === undefined || chunk.astIndex === null) return;
         if (this.chunks[chunk.astIndex] === undefined) {
             this.chunks[chunk.astIndex] = new RawChunkState(chunk.astIndex);

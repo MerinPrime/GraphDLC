@@ -112,7 +112,11 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
         this.exports.make_undirty_chunk_export(chunkIdx);
     }
 
-    public updateChunk(chunk: Chunk): void {
+    public ensureNodeCapacity(nodesCount: number): void {
+        this.exports.ensure_node_capacity_export(nodesCount);
+    }
+
+    public onChunkCreate(chunk: Chunk): void {
         if (chunk.astIndex != null) {
             this.exports.ensure_chunk_capacity_export(chunk.astIndex + 1);
         }
@@ -175,7 +179,6 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
 
     public updateNodeState(node: GraphNode): void {
         const nodeIdx = node.nodeIdx;
-        this.exports.ensure_node_capacity_export(nodeIdx + 1);
 
         const linkIndices: number[] = [];
         const detectorIndices: number[] = [];

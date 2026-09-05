@@ -112,7 +112,6 @@ export class SoAGraphState {
 
     public updateNodeState(node: GraphNode): void {
         const nodeIdx = node.nodeIdx;
-        this.ensureNodeCapacity(nodeIdx + 1);
 
         const nodeOffset = this.storage.inlineNodeOffset(nodeIdx);
         const linksOffset = this.storage.inlineLinksOffset(nodeIdx);
@@ -336,6 +335,7 @@ export class SoAGraphState {
     }
 
     public resetNodeSignal(node: GraphNode): void {
+        if (node.nodeIdx >= this.storage.capacity) return;
         const nodeOffset = this.storage.inlineNodeOffset(node.nodeIdx);
         this.storage.nodeData[nodeOffset + SoALayout.Node.SIGNAL] = 0;
         this.storage.nodeData[nodeOffset + SoALayout.Node.LAST_SIGNAL] = 0;

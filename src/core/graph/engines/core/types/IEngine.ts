@@ -28,7 +28,7 @@ export interface IEngine {
 
     resetNodeSignal(node: GraphNode): void;
     updateNodeState(node: GraphNode): void;
-    updateChunk(chunk: Chunk): void;
+    onChunkCreate(chunk: Chunk): void;
 
     setBreakpointState(newState: boolean): void;
     setSnapshotsState(newState: boolean): void;

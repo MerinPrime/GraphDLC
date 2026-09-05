@@ -108,7 +108,7 @@ export class RawGraphUpdater {
 
                         if (
                             isBlocker &&
-                            nodeState.node.blockedLink === edgeState.node
+                            nodeState.blockedIdx === edgeState.nodeIdx
                         ) {
                             edgeState.blockedCount += delta;
                             this.markNodeAsChanged(state, edgeState);
