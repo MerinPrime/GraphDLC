@@ -59,7 +59,9 @@ export const PatchLoad: IPatcher = (
 
         return function safe_load(map: GameMap, buffer: number[]): void {
             try {
+                const start = performance.now();
                 _load(map, buffer);
+                console.log('Map loaded in', performance.now() - start);
             } catch (error) {
                 console.error('Map loading crashed:', error);
                 alert(
