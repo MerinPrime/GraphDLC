@@ -100,6 +100,7 @@ export const PatchPlayerControls: IPatcher = (
                         this.highlightPathData = {
                             node,
                             path: [],
+                            branches: [],
                             input: [],
                             output: [],
                             sameNodes: [],
@@ -111,6 +112,7 @@ export const PatchPlayerControls: IPatcher = (
                     this.highlightPathData.lastGraphUpdate = graph.lastUpdate;
 
                     const fullPath = new Set<GraphNode>([node]);
+                    const secondaryBranches = new Set<GraphNode>();
 
                     const forwardQueue = [node];
                     const backwardQueue = [node];
@@ -128,6 +130,15 @@ export const PatchPlayerControls: IPatcher = (
                             }
                         }
                     }
+
+                    for (const pathNode of fullPath) {
+                        if (pathNode === node) continue;
+                        pathNode.links.forEach((link) => {
+                            if (fullPath.has(link)) return;
+                            secondaryBranches.add(link);
+                        });
+                    }
+
                     while (forwardQueue.length > 0) {
                         const curr = forwardQueue.pop();
                         if (!curr) continue;
@@ -137,6 +148,9 @@ export const PatchPlayerControls: IPatcher = (
                             if (isPathType(next) && !fullPath.has(next)) {
                                 fullPath.add(next);
                                 forwardQueue.push(next);
+                                if (secondaryBranches.has(curr)) {
+                                    secondaryBranches.add(next);
+                                }
                             }
                         }
                     }
@@ -224,9 +238,15 @@ export const PatchPlayerControls: IPatcher = (
                             sameTimingNodes.push(n);
                             fullPath.delete(n);
                         }
+
+                        if (secondaryBranches.has(n)) {
+                            fullPath.delete(n);
+                        }
                     });
 
                     this.highlightPathData.path = Array.from(fullPath);
+                    this.highlightPathData.branches =
+                        Array.from(secondaryBranches);
                     this.highlightPathData.input = Array.from(input);
                     this.highlightPathData.output = Array.from(output);
                     this.highlightPathData.sameNodes = sameTimingNodes;
