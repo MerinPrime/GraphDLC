@@ -698,19 +698,4 @@ impl GraphState {
 
         self.remove_cycle(cycle_idx);
     }
-
-    pub fn update_node_change(&mut self, node_idx: u32, old_links: &[u32], new_links: &[u32]) {
-        let mut all_nodes = HashSet::new();
-        for &idx in old_links {
-            all_nodes.insert(idx);
-        }
-        for &idx in new_links {
-            all_nodes.insert(idx);
-        }
-
-        self.full_node_state_calculate(node_idx);
-        for idx in all_nodes {
-            self.full_node_state_calculate(idx);
-        }
-    }
 }

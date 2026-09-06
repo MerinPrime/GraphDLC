@@ -1,11 +1,11 @@
-import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import {
     CycleHeadType,
     type GraphCycle,
 } from 'src/core/graph/ast/cycle/CycleTypes';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
-import { NodeType, NodeTypes } from '../core/NodeType';
+import { NodeType } from '../core/NodeType';
+import type { IState } from '../core/types/IState';
 import { RawCycleState } from './RawCycleState';
 import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
@@ -34,7 +34,9 @@ export class RawNodeState {
     public isUpdated: boolean = false;
     public isChanged: boolean = false;
     public isTempChanged: boolean = false;
+
     public blockedIdx: number | null = null;
+    public detectedIdx: number | null = null;
 
     public constructor(nodeIdx: number) {
         this.nodeIdx = nodeIdx;
@@ -47,7 +49,7 @@ export class RawChunkState {
     public constructor(public readonly chunkIdx: number) {}
 }
 
-export class RawGraphState {
+export class RawGraphState implements IState<RawSnapshot> {
     public changedNodes: RawNodeState[] = [];
     public tempChangedNodes: RawNodeState[] = [];
 
@@ -68,6 +70,10 @@ export class RawGraphState {
         this.cycles.length = 0;
         this.tick = 0;
         this.breakPoint = false;
+    }
+
+    public getTick(): number {
+        return this.tick;
     }
 
     public getNode(nodeIdx: number): RawNodeState {
@@ -91,53 +97,13 @@ export class RawGraphState {
         }
     }
 
-    public updateNodeState(node: GraphNode) {
-        const nodeState = this.nodes[node.nodeIdx];
+    public ensureChunkCapacity(chunksCount: number) {
+        if (this.chunks.length >= chunksCount) return;
 
-        nodeState.chunkIdx = node.chunkIdx;
-        nodeState.type = node.type;
-        nodeState.links = node.links
-            .filter(
-                (linkedNode) =>
-                    linkedNode.type !== NodeType.DETECTOR ||
-                    node.type === NodeType.BLOCKER,
-            )
-            .map((linkedNode) => this.getNode(linkedNode.nodeIdx));
-
-        nodeState.detectorLinks = node.links
-            .filter(
-                (linkedNode) =>
-                    linkedNode.type === NodeType.DETECTOR &&
-                    linkedNode.detectedLink?.nodeIdx === nodeState.nodeIdx,
-            )
-            .map((node) => this.getNode(node.nodeIdx));
-
-        nodeState.isEntryPoint = NodeTypes.isEntryPoint(nodeState.type);
-        nodeState.isAdditionalUpdate = NodeTypes.isAdditionalUpdate(
-            nodeState.type,
-        );
-        nodeState.isBreakpoint = node.isBreakpoint;
-        if (node.cycleRef) {
-            nodeState.cycleIdx = node.cycleRef.index;
-            nodeState.headType = node.headType;
-            nodeState.cycleOffset = node.cycleOffset;
-        } else {
-            nodeState.cycleIdx = null;
-            nodeState.headType = CycleHeadType.NONE;
-            nodeState.cycleOffset = 0;
-        }
-
-        nodeState.blockedIdx = node.blockedLink
-            ? node.blockedLink.nodeIdx
-            : null;
-
-        this.changedNodes.push(nodeState);
-    }
-
-    public onChunkCreate(chunk: Chunk) {
-        if (chunk.astIndex === undefined || chunk.astIndex === null) return;
-        if (this.chunks[chunk.astIndex] === undefined) {
-            this.chunks[chunk.astIndex] = new RawChunkState(chunk.astIndex);
+        for (let i = 0; i < chunksCount; i++) {
+            if (this.chunks[i] === undefined) {
+                this.chunks[i] = new RawChunkState(i);
+            }
         }
     }
 
@@ -165,33 +131,6 @@ export class RawGraphState {
             if (cycle) cycle.clear();
         });
         this.tick = 0;
-    }
-
-    public makeDirtyChunk(chunkIdx: number) {
-        this.chunks[chunkIdx].isDirty = true;
-    }
-
-    public getDirtyChunks(
-        markUndirty: boolean = false,
-    ): [...chunkIdx: number[]] {
-        const dirtyChunks: number[] = [];
-        this.chunks.forEach((chunk) => {
-            if (chunk.isDirty) {
-                if (markUndirty) chunk.isDirty = false;
-                dirtyChunks.push(chunk.chunkIdx);
-            }
-        });
-        return dirtyChunks;
-    }
-
-    public makeUndirtyChunk(chunkIdx: number) {
-        this.chunks[chunkIdx].isDirty = false;
-    }
-
-    public markAllChunksDirty() {
-        this.chunks.forEach((chunk) => {
-            chunk.isDirty = true;
-        });
     }
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
@@ -363,5 +302,44 @@ export class RawGraphState {
             if (!nodeState.isChanged) this.markNodeTempChanged(nodeState);
         }
         this.makeDirtyChunk(nodeState.chunkIdx);
+    }
+
+    public getBreakpoint(doReset: boolean = false): number | false {
+        if (this.breakPoint) {
+            this.breakPoint = !doReset;
+            return this.breakPointNode;
+        }
+        return false;
+    }
+
+    public isChanged(): boolean {
+        return this.changedNodes.length !== 0;
+    }
+
+    public makeDirtyChunk(chunkIdx: number) {
+        this.chunks[chunkIdx].isDirty = true;
+    }
+
+    public getDirtyChunks(
+        markUndirty: boolean = false,
+    ): [...chunkIdx: number[]] {
+        const dirtyChunks: number[] = [];
+        this.chunks.forEach((chunk) => {
+            if (chunk.isDirty) {
+                if (markUndirty) chunk.isDirty = false;
+                dirtyChunks.push(chunk.chunkIdx);
+            }
+        });
+        return dirtyChunks;
+    }
+
+    public makeUndirtyChunk(chunkIdx: number) {
+        this.chunks[chunkIdx].isDirty = false;
+    }
+
+    public markAllChunksDirty() {
+        this.chunks.forEach((chunk) => {
+            chunk.isDirty = true;
+        });
     }
 }

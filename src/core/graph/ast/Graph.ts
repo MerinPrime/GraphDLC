@@ -13,6 +13,7 @@ import {
     EnableBreakpointSetting,
 } from 'src/plugins/graphdlc/settings/tools/EnableBreakpointSetting';
 import { GraphDebugger } from '../debugger/GraphDebugger';
+import { NodeSignal } from '../engines/core/NodeSignal';
 import { NodeType } from '../engines/core/NodeType';
 import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
 import { EngineFactory } from '../engines/EngineFactory';
@@ -232,8 +233,6 @@ export class Graph {
                 this.updater.update(backNode);
             }
         }
-
-        this.engine.updateNodeChange(node, oldLinks);
     }
 
     public getOrCreateNode(
@@ -251,7 +250,7 @@ export class Graph {
             this.listeners.forEach((listener) => {
                 listener.onChunkAdded(this, chunk, chunkIdx);
             });
-            this.engine.onChunkCreate(chunk);
+            this.engine.ensureChunkCapacity(chunkIdx + 1);
         }
 
         const chunkIdx = chunk.astIndex;
@@ -367,8 +366,8 @@ export class Graph {
             return;
 
         const oldType = node.type;
-        if (node.arrowType !== type) {
-            this.engine.resetNodeSignal(node);
+        if (node.arrowType !== type && !this.updater.isLoading) {
+            this.engine.setNodeSignal(node.nodeIdx, NodeSignal.NONE);
         }
         node.updateState(type, rotation, flipped);
         this.updateNodeRelations(node);
@@ -392,7 +391,9 @@ export class Graph {
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
-        this.engine.resetNodeSignal(node);
+        if (!this.updater.isLoading) {
+            this.engine.setNodeSignal(node.nodeIdx, NodeSignal.NONE);
+        }
         node.setType(type);
         this.updateNodeRelations(node);
         this.listeners.forEach((listener) => {
@@ -472,7 +473,7 @@ export class Graph {
 
         this.syncNodesAndHeadsState(cycle.nodes, cycle.heads);
 
-        this.engine.onCycleBuild(cycle);
+        this.engine.addCycle(cycle);
 
         this.listeners.forEach((listener) => {
             listener.onCycleAdded(this, cycle);
@@ -482,7 +483,7 @@ export class Graph {
     }
 
     public removeCycle(cycle: GraphCycle) {
-        this.engine.onCycleDismantle(cycle);
+        this.engine.removeCycle(cycle);
 
         const affectedNodes = [...cycle.nodes];
         const affectedHeads = [...cycle.heads];

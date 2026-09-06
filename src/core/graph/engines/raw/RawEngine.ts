@@ -1,7 +1,6 @@
-import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
-import type { NodeSignal } from '../core/NodeSignal';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
 import type { RawSnapshot } from './RawSnapshot';
 import { RawGraphState } from './RawState';
@@ -10,10 +9,11 @@ import { RawGraphUpdater } from './RawUpdater';
 
 interface RawEngineTypes extends EngineTypes {
     Snapshot: RawSnapshot;
+    State: RawGraphState;
 }
 
 export class RawEngine extends BaseEngine<RawEngineTypes> {
-    public readonly state: RawGraphState = new RawGraphState();
+    public readonly state = new RawGraphState();
     private readonly updater: RawGraphUpdater = new RawGraphUpdater();
     private readonly synchronizer: RawStateSynchronizer =
         new RawStateSynchronizer(this.updater);
@@ -23,100 +23,15 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
         return this.state.breakPoint;
     }
 
-    protected makeSnapshot(): RawSnapshot {
-        return this.state.makeSnapshot();
-    }
-
-    protected loadSnapshot(snapshot: RawSnapshot): void {
-        this.state.loadSnapshot(snapshot);
-    }
-
-    protected markAllChunksDirty(): void {
-        this.state.markAllChunksDirty();
-    }
-
-    public setNodeSignalInternal(nodeIdx: number, signal: NodeSignal): void {
-        this.state.setNodeSignal(nodeIdx, signal);
-    }
-
-    public getTick(): number {
-        return this.state.tick;
-    }
-
-    public getBreakpoint(doReset: boolean = false): number | false {
-        if (this.state.breakPoint) {
-            this.state.breakPoint = !doReset;
-            return this.state.breakPointNode;
-        }
-        return false;
-    }
-
-    public isChanged(): boolean {
-        return this.state.changedNodes.length !== 0;
-    }
-
-    public getDirtyChunks(markUndirty: boolean): [...chunkIdx: number[]] {
-        return this.state.getDirtyChunks(markUndirty);
-    }
-
-    public makeDirtyChunk(chunkIdx: number): void {
-        this.state.makeDirtyChunk(chunkIdx);
-    }
-
-    public makeUndirtyChunk(chunkIdx: number): void {
-        this.state.makeUndirtyChunk(chunkIdx);
-    }
-
-    public getNodeSignal(nodeIdx: number): NodeSignal {
-        return this.state.getNodeSignal(nodeIdx);
-    }
-
-    public reset(): void {
-        this.state.reset();
-        this.rewinder.reset();
-        this.extraSignalsHistory.clear();
-    }
-
-    public onCycleBuild(cycle: GraphCycle): void {
+    public addCycle(cycle: GraphCycle): void {
         this.synchronizer.onCycleBuild(this.state, cycle);
     }
 
-    public onCycleDismantle(cycle: GraphCycle): void {
+    public removeCycle(cycle: GraphCycle): void {
         this.synchronizer.onCycleDismantle(this.state, cycle);
     }
 
-    public updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void {
-        this.synchronizer.updateNodeChange(
-            this.state,
-            node,
-            oldLinks,
-            node.links,
-        );
-    }
-
-    public resetNodeSignal(node: GraphNode): void {
-        this.state.resetNodeSignal(node);
-    }
-
-    public updateNodeState(node: GraphNode): void {
-        this.state.updateNodeState(node);
-    }
-
-    public ensureNodeCapacity(nodesCount: number): void {
-        this.state.ensureNodeCapacity(nodesCount);
-    }
-
-    public onChunkCreate(chunk: Chunk): void {
-        this.state.onChunkCreate(chunk);
-    }
-
-    public setBreakpointState(_: boolean): void {}
-
-    public setSnapshotsState(newState: boolean): void {
-        this.saveSnapshots = newState;
-    }
-
-    public clear(): void {
-        this.state.clear();
+    public updateNodeState(graph: Graph, node: GraphNode): void {
+        this.updater.updateNodeState(graph, this.state, node);
     }
 }

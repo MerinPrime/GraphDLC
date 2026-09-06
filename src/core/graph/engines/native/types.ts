@@ -1,4 +1,6 @@
 export interface RustEngineExports extends WebAssembly.Exports {
+    readonly memory: WebAssembly.Memory;
+
     get_staging_buffer_ptr(): number;
     init(rng_state: BigInt): void;
     clear(rng_state: BigInt): void;
@@ -33,7 +35,6 @@ export interface RustEngineExports extends WebAssembly.Exports {
     get_dirty_chunks_count(): number;
     copy_dirty_chunks(out_ptr: number, mark_undirty: number): number;
     set_node_signal_export(node_idx: number, signal: number): void;
-    do_press_button_export(node_idx: number, button_state: number): void;
     on_cycle_build_export(
         cycle_idx: number,
         cycle_length: number,

@@ -1,3 +1,5 @@
+import type { ISnapshot } from '../core/types/ISnapshot';
+
 export class RawNodeSnapshot {
     public nodeIdx: number = 0;
 
@@ -19,7 +21,7 @@ export class RawCycleSnapshot {
     }
 }
 
-export class RawSnapshot {
+export class RawSnapshot implements ISnapshot {
     public tick: number = 0;
     public breakPoint: boolean = false;
 

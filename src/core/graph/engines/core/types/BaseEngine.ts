@@ -1,26 +1,42 @@
-import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
 import { NodeSignal } from '../NodeSignal';
 import { StateRewinder } from '../StateRewinder';
 import type { IEngine } from './IEngine';
 import type { ISnapshot } from './ISnapshot';
+import type { IState } from './IState';
 
 export interface EngineTypes {
     Snapshot: ISnapshot;
+    State: IState<this['Snapshot']>;
 }
 
 const MAX_REWIND_STEPS = 1000000;
 
 export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
-    protected rewinder: StateRewinder<T['Snapshot']> = new StateRewinder();
+    protected readonly rewinder: StateRewinder<T['Snapshot']> =
+        new StateRewinder();
+    protected abstract readonly state: T['State'];
 
     protected extraRewindNodes: Set<number> = new Set();
-    protected extraSignalsHistory: Map<number, Map<number, NodeSignal>> =
-        new Map();
+    protected readonly extraSignalsHistory: Map<
+        number,
+        Map<number, NodeSignal>
+    > = new Map();
 
     protected saveSnapshots: boolean = false;
     protected useBreakPoints: boolean = false;
+
+    public reset(): void {
+        this.state.reset();
+        this.rewinder.reset();
+        this.extraSignalsHistory.clear();
+    }
+
+    public clear(): void {
+        this.state.clear();
+    }
 
     public runTick(): boolean {
         if (this.saveSnapshots) {
@@ -74,10 +90,17 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         return false;
     }
 
-    public abstract getTick(): number;
+    protected makeSnapshot(): T['Snapshot'] {
+        return this.state.makeSnapshot();
+    }
 
-    protected abstract makeSnapshot(): T['Snapshot'];
-    protected abstract loadSnapshot(snapshot: T['Snapshot']): void;
+    protected loadSnapshot(snapshot: T['Snapshot']): void {
+        this.state.loadSnapshot(snapshot);
+    }
+
+    public getTick(): number {
+        return this.state.getTick();
+    }
 
     public rewindToTick(targetTick: number): void {
         const closestSnapshot = this.rewinder.findClosestSnapshot(targetTick);
@@ -119,7 +142,9 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         }
     }
 
-    protected abstract markAllChunksDirty(): void;
+    protected markAllChunksDirty(): void {
+        this.state.markAllChunksDirty();
+    }
 
     public setNodeSignal(nodeIdx: number, signal: NodeSignal): void {
         if (this.saveSnapshots) {
@@ -133,36 +158,48 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
 
             recordedSignals.set(nodeIdx, signal);
         }
-        this.setNodeSignalInternal(nodeIdx, signal);
+        this.state.setNodeSignal(nodeIdx, signal);
     }
 
-    public abstract setNodeSignalInternal(
-        nodeIdx: number,
-        signal: NodeSignal,
-    ): void;
+    public getNodeSignal(nodeIdx: number): NodeSignal {
+        return this.state.getNodeSignal(nodeIdx);
+    }
 
-    public abstract getBreakpoint(doReset?: boolean): number | false;
-    public abstract isChanged(): boolean;
-    public abstract getDirtyChunks(markUndirty: boolean): ReadonlyArray<number>;
-    public abstract makeDirtyChunk(chunkIdx: number): void;
-    public abstract makeUndirtyChunk(chunkIdx: number): void;
-    public abstract getNodeSignal(nodeIdx: number): NodeSignal;
+    public getBreakpoint(doReset?: boolean): number | false {
+        return this.state.getBreakpoint(doReset);
+    }
+
+    public isChanged(): boolean {
+        return this.state.isChanged();
+    }
+
+    public getDirtyChunks(markUndirty: boolean): ReadonlyArray<number> {
+        return this.state.getDirtyChunks(markUndirty);
+    }
+
+    public makeDirtyChunk(chunkIdx: number): void {
+        this.state.makeDirtyChunk(chunkIdx);
+    }
+
+    public makeUndirtyChunk(chunkIdx: number): void {
+        this.state.makeUndirtyChunk(chunkIdx);
+    }
 
     public setExtraRewindNodes(_nodeIndices: Set<number>): void {
         this.extraRewindNodes = _nodeIndices;
     }
 
-    public abstract onCycleBuild(cycle: GraphCycle): void;
-    public abstract onCycleDismantle(cycle: GraphCycle): void;
-    public abstract updateNodeChange(
-        node: GraphNode,
-        oldLinks: GraphNode[],
-    ): void;
-    public abstract resetNodeSignal(node: GraphNode): void;
-    public abstract updateNodeState(node: GraphNode): void;
+    public abstract addCycle(cycle: GraphCycle): void;
+    public abstract removeCycle(cycle: GraphCycle): void;
+    public abstract updateNodeState(graph: Graph, node: GraphNode): void;
 
-    public abstract ensureNodeCapacity(nodesCount: number): void;
-    public abstract onChunkCreate(chunk: Chunk): void;
+    public ensureNodeCapacity(nodesCount: number): void {
+        this.state.ensureNodeCapacity(nodesCount);
+    }
+
+    public ensureChunkCapacity(chunksCount: number): void {
+        this.state.ensureChunkCapacity(chunksCount);
+    }
 
     public setBreakpointState(newState: boolean): void {
         this.useBreakPoints = newState;
@@ -171,7 +208,4 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     public setSnapshotsState(newState: boolean): void {
         this.saveSnapshots = newState;
     }
-
-    public abstract reset(): void;
-    public abstract clear(): void;
 }

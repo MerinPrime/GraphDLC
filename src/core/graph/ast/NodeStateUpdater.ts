@@ -9,6 +9,10 @@ export class NodeStateUpdater {
 
     public constructor(private readonly graph: Graph) {}
 
+    public get isLoading(): boolean {
+        return this.loading;
+    }
+
     public beginLoading(): void {
         this.loading = true;
 
@@ -24,7 +28,7 @@ export class NodeStateUpdater {
         }
 
         for (const node of this.pendingNodes) {
-            this.graph.engine.updateNodeState(node);
+            this.graph.engine.updateNodeState(this.graph, node);
         }
 
         this.pendingNodes.clear();
@@ -33,7 +37,8 @@ export class NodeStateUpdater {
 
     public update(node: GraphNode): void {
         if (!this.loading) {
-            this.graph.engine.updateNodeState(node);
+            this.graph.engine.ensureNodeCapacity(node.nodeIdx + 1);
+            this.graph.engine.updateNodeState(this.graph, node);
             return;
         }
 
