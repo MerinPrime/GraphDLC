@@ -82,13 +82,29 @@ export const PatchPlayerControls: IPatcher = (
                 }
 
                 public updatePathData(node: GraphNode) {
-                    const isPathType = (n: GraphNode): boolean =>
-                        n.type === NodeType.PATH ||
-                        n.type === NodeType.DELAY ||
-                        n.type === NodeType.DETECTOR ||
-                        n.type === NodeType.DIRECTIONAL_BUTTON ||
-                        (n.type === NodeType.LOGIC_XOR &&
-                            n.backLinks.length <= 1);
+                    const isPathType = (
+                        n: GraphNode,
+                        c: GraphNode,
+                        isBackward: boolean,
+                    ): boolean => {
+                        const validType =
+                            n.type === NodeType.PATH ||
+                            n.type === NodeType.DETECTOR ||
+                            n.type === NodeType.DELAY ||
+                            n.type === NodeType.DIRECTIONAL_BUTTON ||
+                            (n.type === NodeType.LOGIC_XOR &&
+                                n.backLinks.length <= 1);
+
+                        if (!validType) {
+                            return false;
+                        }
+
+                        return isBackward
+                            ? c.type !== NodeType.DETECTOR ||
+                                  c.detectedLink === n
+                            : n.type !== NodeType.DETECTOR ||
+                                  n.detectedLink === c;
+                    };
 
                     const getNodeDelay = (n: GraphNode): number =>
                         n.type === NodeType.DELAY ? 2 : 1;
@@ -114,8 +130,8 @@ export const PatchPlayerControls: IPatcher = (
                     const fullPath = new Set<GraphNode>([node]);
                     const secondaryBranches = new Set<GraphNode>();
 
-                    const forwardQueue = [node];
-                    const backwardQueue = [node];
+                    const forwardQueue: GraphNode[] = [node];
+                    const backwardQueue: GraphNode[] = [node];
 
                     while (backwardQueue.length > 0) {
                         const curr = backwardQueue.pop();
@@ -123,7 +139,10 @@ export const PatchPlayerControls: IPatcher = (
 
                         for (let i = 0; i < curr.backLinks.length; i++) {
                             const prev = curr.backLinks[i];
-                            if (isPathType(prev) && !fullPath.has(prev)) {
+                            if (
+                                isPathType(prev, curr, true) &&
+                                !fullPath.has(prev)
+                            ) {
                                 fullPath.add(prev);
                                 forwardQueue.push(prev);
                                 backwardQueue.push(prev);
@@ -145,7 +164,10 @@ export const PatchPlayerControls: IPatcher = (
 
                         for (let i = 0; i < curr.links.length; i++) {
                             const next = curr.links[i];
-                            if (isPathType(next) && !fullPath.has(next)) {
+                            if (
+                                isPathType(next, curr, false) &&
+                                !fullPath.has(next)
+                            ) {
                                 fullPath.add(next);
                                 forwardQueue.push(next);
                                 if (secondaryBranches.has(curr)) {
@@ -163,7 +185,12 @@ export const PatchPlayerControls: IPatcher = (
                         let hasInternalBacklink = false;
 
                         for (const link of currNode.backLinks) {
-                            if (link.type === NodeType.EMPTY) continue;
+                            if (
+                                link.type === NodeType.EMPTY ||
+                                (currNode.type === NodeType.DETECTOR &&
+                                    currNode.detectedLink !== link)
+                            )
+                                continue;
                             if (!fullPath.has(link)) {
                                 input.add(link);
                             } else {
@@ -172,7 +199,11 @@ export const PatchPlayerControls: IPatcher = (
                         }
 
                         for (const link of currNode.links) {
-                            if (link.type === NodeType.EMPTY) continue;
+                            if (
+                                link.type === NodeType.EMPTY ||
+                                link.type === NodeType.DETECTOR
+                            )
+                                continue;
                             if (!fullPath.has(link)) {
                                 output.add(link);
                             }
