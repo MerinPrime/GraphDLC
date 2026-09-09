@@ -128,52 +128,78 @@ export const PatchPlayerControls: IPatcher = (
                     this.highlightPathData.lastGraphUpdate = graph.lastUpdate;
 
                     const fullPath = new Set<GraphNode>([node]);
-                    const secondaryBranches = new Set<GraphNode>();
 
-                    const forwardQueue: GraphNode[] = [node];
+                    const backwardPath = new Set<GraphNode>([node]);
                     const backwardQueue: GraphNode[] = [node];
 
                     while (backwardQueue.length > 0) {
                         const curr = backwardQueue.pop();
                         if (!curr) continue;
 
-                        for (let i = 0; i < curr.backLinks.length; i++) {
-                            const prev = curr.backLinks[i];
+                        for (const prev of curr.backLinks) {
                             if (
                                 isPathType(prev, curr, true) &&
-                                !fullPath.has(prev)
+                                !backwardPath.has(prev)
                             ) {
+                                backwardPath.add(prev);
                                 fullPath.add(prev);
-                                forwardQueue.push(prev);
                                 backwardQueue.push(prev);
                             }
                         }
                     }
 
-                    for (const pathNode of fullPath) {
-                        if (pathNode === node) continue;
-                        pathNode.links.forEach((link) => {
-                            if (fullPath.has(link)) return;
-                            secondaryBranches.add(link);
-                        });
-                    }
+                    const originalPath = new Set<GraphNode>([node]);
+                    const originalForwardQueue: GraphNode[] = [node];
 
-                    while (forwardQueue.length > 0) {
-                        const curr = forwardQueue.pop();
+                    while (originalForwardQueue.length > 0) {
+                        const curr = originalForwardQueue.pop();
                         if (!curr) continue;
 
-                        for (let i = 0; i < curr.links.length; i++) {
-                            const next = curr.links[i];
+                        for (const next of curr.links) {
                             if (
                                 isPathType(next, curr, false) &&
-                                !fullPath.has(next)
+                                !originalPath.has(next)
                             ) {
+                                originalPath.add(next);
                                 fullPath.add(next);
-                                forwardQueue.push(next);
-                                if (secondaryBranches.has(curr)) {
-                                    secondaryBranches.add(next);
-                                }
+                                originalForwardQueue.push(next);
                             }
+                        }
+                    }
+
+                    const fullForwardQueue: GraphNode[] = [];
+
+                    for (const start of backwardPath) {
+                        fullForwardQueue.push(start);
+                    }
+
+                    const forwardVisited = new Set<GraphNode>(backwardPath);
+
+                    while (fullForwardQueue.length > 0) {
+                        const curr = fullForwardQueue.pop();
+                        if (!curr) continue;
+
+                        for (const next of curr.links) {
+                            if (
+                                isPathType(next, curr, false) &&
+                                !forwardVisited.has(next)
+                            ) {
+                                forwardVisited.add(next);
+                                fullPath.add(next);
+                                fullForwardQueue.push(next);
+                            }
+                        }
+                    }
+
+                    const branches = new Set<GraphNode>();
+
+                    for (const n of fullPath) {
+                        if (
+                            n !== node &&
+                            !backwardPath.has(n) &&
+                            !originalPath.has(n)
+                        ) {
+                            branches.add(n);
                         }
                     }
 
@@ -269,15 +295,10 @@ export const PatchPlayerControls: IPatcher = (
                             sameTimingNodes.push(n);
                             fullPath.delete(n);
                         }
-
-                        if (secondaryBranches.has(n)) {
-                            fullPath.delete(n);
-                        }
                     });
 
                     this.highlightPathData.path = Array.from(fullPath);
-                    this.highlightPathData.branches =
-                        Array.from(secondaryBranches);
+                    this.highlightPathData.branches = Array.from(branches);
                     this.highlightPathData.input = Array.from(input);
                     this.highlightPathData.output = Array.from(output);
                     this.highlightPathData.sameNodes = sameTimingNodes;
