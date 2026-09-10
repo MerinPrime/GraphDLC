@@ -121,8 +121,6 @@ export class Graph {
     }
 
     public updateNodeRelations(node: GraphNode) {
-        const oldLinks = node.links.slice();
-
         const oldTargets: GraphNode[] = [];
         for (let i = 0; i < node.links.length; i++) {
             const n = node.links[i];
