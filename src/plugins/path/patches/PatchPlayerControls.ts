@@ -7,6 +7,7 @@ import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
+import { PathBuildingTrigger } from '..';
 import type { PathData } from './types';
 
 interface PrivatePlayerControls {
@@ -66,9 +67,12 @@ export const PatchPlayerControls: IPatcher = (
                         this.isPathCancelled ||
                         (isRightMouseDown && isLeftMouseDown);
                     if (isRightMouseDown && this.isPathCancelled) {
-                        _this.mouseHandler.setUiInteraction(true);
-                        this.pathData = null;
-                        _this.game.pathData = null;
+                        if (this.pathData) {
+                            _this.mouseHandler.setUiInteraction(true);
+                            this.pathData = null;
+                            _this.game.pathData = null;
+                            PathBuildingTrigger.value = false;
+                        }
                     } else if (isRightMouseDown) {
                         _this.mouseHandler.setUiInteraction(true);
                         this.isPathCancelled = false;
@@ -93,6 +97,7 @@ export const PatchPlayerControls: IPatcher = (
                                 rotation: rotationState,
                                 flip: flipState,
                             };
+                            PathBuildingTrigger.value = true;
                         }
 
                         this.pathData.rotation = rotationState;
@@ -149,48 +154,44 @@ export const PatchPlayerControls: IPatcher = (
                                 );
                             }
                         }
-                    } else {
-                        if (this.pathData) {
-                            graphDLC.pathFinder.forceCompletePath(taskKey);
+                    } else if (this.pathData) {
+                        graphDLC.pathFinder.forceCompletePath(taskKey);
 
-                            const gameMap = _this.game.gameMap;
-                            this.pathData.path.forEach(
-                                ({ x, y, type, rotation, flipped }) => {
-                                    const arrowOld = _ArrowData.val.fromArrow(
-                                        gameMap.getArrow(x, y),
-                                    );
-                                    const arrowNew = _ArrowData.val.fromState(
-                                        type,
-                                        rotation,
-                                        flipped,
-                                    );
-                                    if (_this.history !== null) {
-                                        _this.history.addChange(
-                                            x,
-                                            y,
-                                            arrowOld,
-                                            arrowNew,
-                                        );
-                                    }
-                                    const [chunk, arrow] =
-                                        gameMap.getOrCreateArrow(x, y);
-                                    arrow.type = type;
-                                    arrow.rotation = rotation;
-                                    arrow.flipped = flipped;
-                                    gameMap.updateArrowState(
-                                        arrow,
-                                        chunk,
+                        const gameMap = _this.game.gameMap;
+                        this.pathData.path.forEach(
+                            ({ x, y, type, rotation, flipped }) => {
+                                const arrowOld = _ArrowData.val.fromArrow(
+                                    gameMap.getArrow(x, y),
+                                );
+                                const arrowNew = _ArrowData.val.fromState(
+                                    type,
+                                    rotation,
+                                    flipped,
+                                );
+                                if (_this.history !== null) {
+                                    _this.history.addChange(
                                         x,
                                         y,
+                                        arrowOld,
+                                        arrowNew,
                                     );
-                                    chunk.markRenderDirty();
-                                },
-                            );
-                        }
+                                }
+                                const [chunk, arrow] = gameMap.getOrCreateArrow(
+                                    x,
+                                    y,
+                                );
+                                arrow.type = type;
+                                arrow.rotation = rotation;
+                                arrow.flipped = flipped;
+                                gameMap.updateArrowState(arrow, chunk, x, y);
+                                chunk.markRenderDirty();
+                            },
+                        );
                         this.pathData = null;
                         _this.game.pathData = null;
                         this.isPathCancelled = false;
                         _this.mouseHandler.setUiInteraction(false);
+                        PathBuildingTrigger.value = false;
                     }
 
                     super.update();
