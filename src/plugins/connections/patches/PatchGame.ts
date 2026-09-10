@@ -10,6 +10,7 @@ import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { EnableArrowRelationsSetting } from '../../connections/settings/EnableArrowRelationsSetting';
 import { ShowArrowConnectionsSetting } from '../../connections/settings/ShowArrowConnectionsSetting';
 import type { IPatcher } from '../../Patcher';
+import type { HighlightPathData } from './types';
 
 interface PrivateGame {
     gameMap: GameMap;
@@ -22,6 +23,8 @@ export const PatchGame: IPatcher = (
 ) => {
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
+            public highlightPathData: HighlightPathData | null = null;
+
             private drawPastedArrowRelations(
                 render: GameRender,
                 offsetX: number,
@@ -130,6 +133,64 @@ export const PatchGame: IPatcher = (
                 }
             }
 
+            private drawArrowPath(
+                render: GameRender,
+                offsetX: number,
+                offsetY: number,
+            ) {
+                if (this.highlightPathData === null) return;
+
+                render.setSolidColor(0.8, 0.1, 0.7, 0.5);
+                this.highlightPathData.path.forEach((node) => {
+                    render.drawSolidColorRect(
+                        node.globalX * this.scale + offsetX,
+                        node.globalY * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
+
+                render.setSolidColor(0.5, 0.125, 0.2625, 0.5);
+                this.highlightPathData.branches.forEach((node) => {
+                    render.drawSolidColorRect(
+                        node.globalX * this.scale + offsetX,
+                        node.globalY * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
+
+                render.setSolidColor(0.2, 0.2, 0.8, 0.5);
+                this.highlightPathData.sameNodes.forEach((node) => {
+                    render.drawSolidColorRect(
+                        node.globalX * this.scale + offsetX,
+                        node.globalY * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
+
+                render.setSolidColor(0.2, 0.8, 0.2, 0.5);
+                this.highlightPathData.output.forEach((node) => {
+                    render.drawSolidColorRect(
+                        node.globalX * this.scale + offsetX,
+                        node.globalY * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
+
+                render.setSolidColor(0.8, 0.2, 0.2, 0.5);
+                this.highlightPathData.input.forEach((node) => {
+                    render.drawSolidColorRect(
+                        node.globalX * this.scale + offsetX,
+                        node.globalY * this.scale + offsetY,
+                        this.scale,
+                        this.scale,
+                    );
+                });
+            }
+
             public draw() {
                 super.draw();
 
@@ -144,17 +205,22 @@ export const PatchGame: IPatcher = (
                     offsetY,
                 );
 
-                const arrowAtCursor = this.getArrowAtCursor();
-                if (arrowAtCursor) {
-                    this.drawArrowConnections(
-                        render,
-                        gameMap,
-                        arrowAtCursor,
-                        offsetX,
-                        offsetY,
-                        hasPastedArrow,
-                    );
+                if (this.highlightPathData !== null) {
+                    this.drawArrowPath(render, offsetX, offsetY);
+                } else {
+                    const arrowAtCursor = this.getArrowAtCursor();
+                    if (arrowAtCursor) {
+                        this.drawArrowConnections(
+                            render,
+                            gameMap,
+                            arrowAtCursor,
+                            offsetX,
+                            offsetY,
+                            hasPastedArrow,
+                        );
+                    }
                 }
+
                 render.setShowBorder(true);
             }
         };

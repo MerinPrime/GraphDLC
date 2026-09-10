@@ -1,7 +1,8 @@
 import { CycleHeadType } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
-import { NodeType } from '../core/NodeType';
+import { NodeType, NodeTypes } from '../core/NodeType';
 import type { RawGraphState, RawNodeState } from './RawState';
 
 export class RawGraphUpdater {
@@ -108,7 +109,7 @@ export class RawGraphUpdater {
 
                         if (
                             isBlocker &&
-                            nodeState.node.blockedLink === edgeState.node
+                            nodeState.blockedIdx === edgeState.nodeIdx
                         ) {
                             edgeState.blockedCount += delta;
                             this.markNodeAsChanged(state, edgeState);
@@ -271,6 +272,59 @@ export class RawGraphUpdater {
                 return NodeSignal.NONE;
             default:
                 return NodeSignal.NONE;
+        }
+    }
+
+    public updateNodeState(
+        graph: Graph,
+        state: RawGraphState,
+        node: GraphNode,
+    ) {
+        const nodeState = state.getNode(node.nodeIdx);
+
+        nodeState.chunkIdx = node.chunkIdx;
+        nodeState.type = node.type;
+        nodeState.links = node.links
+            .filter(
+                (linkedNode) =>
+                    linkedNode.type !== NodeType.DETECTOR ||
+                    node.type === NodeType.BLOCKER,
+            )
+            .map((linkedNode) => state.getNode(linkedNode.nodeIdx));
+
+        nodeState.detectorLinks = node.links
+            .filter(
+                (linkedNode) =>
+                    linkedNode.type === NodeType.DETECTOR &&
+                    linkedNode.detectedLink?.nodeIdx === nodeState.nodeIdx,
+            )
+            .map((node) => state.getNode(node.nodeIdx));
+
+        nodeState.isEntryPoint = NodeTypes.isEntryPoint(nodeState.type);
+        nodeState.isAdditionalUpdate = NodeTypes.isAdditionalUpdate(
+            nodeState.type,
+        );
+        nodeState.isBreakpoint = node.isBreakpoint;
+        if (node.cycleRef) {
+            nodeState.cycleIdx = node.cycleRef.index;
+            nodeState.headType = node.headType;
+            nodeState.cycleOffset = node.cycleOffset;
+        } else {
+            nodeState.cycleIdx = null;
+            nodeState.headType = CycleHeadType.NONE;
+            nodeState.cycleOffset = 0;
+        }
+
+        nodeState.blockedIdx = node.blockedLink
+            ? node.blockedLink.nodeIdx
+            : null;
+
+        const allLinks = new Set<number>([node.nodeIdx]);
+        for (const link of node.links) allLinks.add(link.nodeIdx);
+        for (const link of nodeState.links) allLinks.add(link.nodeIdx);
+
+        for (const n of allLinks) {
+            this.fullNodeStateCalculate(state, graph.getNode(n));
         }
     }
 }

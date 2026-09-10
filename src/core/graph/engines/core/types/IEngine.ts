@@ -1,5 +1,5 @@
-import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
 import type { NodeSignal } from '../NodeSignal';
 
@@ -21,14 +21,13 @@ export interface IEngine {
 
     reset(): void;
 
-    onCycleBuild(cycle: GraphCycle): void;
-    onCycleDismantle(cycle: GraphCycle): void;
+    addCycle(cycle: GraphCycle): void;
+    removeCycle(cycle: GraphCycle): void;
 
-    updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void;
+    updateNodeState(graph: Graph, node: GraphNode): void;
 
-    resetNodeSignal(node: GraphNode): void;
-    updateNodeState(node: GraphNode): void;
-    updateChunk(chunk: Chunk): void;
+    ensureNodeCapacity(nodesCount: number): void;
+    ensureChunkCapacity(chunksCount: number): void;
 
     setBreakpointState(newState: boolean): void;
     setSnapshotsState(newState: boolean): void;

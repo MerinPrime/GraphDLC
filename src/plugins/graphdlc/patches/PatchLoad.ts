@@ -12,8 +12,9 @@ export const PatchLoad: IPatcher = (
     _graphDLC: GraphDLC,
 ) => {
     patchLoader.addDefinitionPatch('load', (_module: typeof load) => {
-        return function load(map: GameMap, buffer: number[]): void {
+        function _load(map: GameMap, buffer: number[]): void {
             if (buffer.length < 4) return;
+            map.graph.updater.beginLoading();
             let index: number = 0;
             let version: number = buffer[index++];
             version |= buffer[index++] << 8;
@@ -52,6 +53,21 @@ export const PatchLoad: IPatcher = (
                         );
                     }
                 }
+            }
+            map.graph.updater.endLoading();
+        }
+
+        return function safe_load(map: GameMap, buffer: number[]): void {
+            try {
+                const start = performance.now();
+                _load(map, buffer);
+                console.log('Map loaded in', performance.now() - start);
+            } catch (error) {
+                console.error('Map loading crashed:', error);
+                alert(
+                    'Failed to load the map.\nPlease report this issue in dc.',
+                );
+                window.location.href = '/maps';
             }
         };
     });

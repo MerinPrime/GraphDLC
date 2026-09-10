@@ -81,10 +81,10 @@ export const GraphEngineSetting = new SelectSetting<GraphEngine>(
             value: GraphEngine.STANDARD,
             label: StandardLocale,
         },
-        {
-            value: GraphEngine.ENHANCED,
-            label: EnhancedLocale,
-        },
+        // {
+        //     value: GraphEngine.ENHANCED,
+        //     label: EnhancedLocale,
+        // },
         {
             value: GraphEngine.NATIVE,
             label: NativeLocale,

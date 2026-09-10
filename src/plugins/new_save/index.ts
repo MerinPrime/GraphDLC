@@ -5,7 +5,7 @@ import { PatchGameMap } from './patches/PatchGameMap';
 import { PatchGamePage } from './patches/PatchGamePage';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
 import { PatchUIMenu } from './patches/PatchUIMenu';
-import { UnsavedWarnSetting } from './settings/UnsavedWarnSetting';
+import { SaveModeSetting } from './settings/SaveModeSetting';
 
 const Patches = [
     PatchBackend,
@@ -14,7 +14,7 @@ const Patches = [
     PatchPlayerControls,
     PatchUIMenu,
 ];
-const Settings = [UnsavedWarnSetting];
+const Settings = [SaveModeSetting];
 
 export const NewSavePlugin = new Plugin(
     'graphdlc-new-save',

@@ -68,6 +68,14 @@ export class GraphNode {
         this.onUpdate();
     }
 
+    public updateState(type: ArrowType, rotation: number, flipped: boolean) {
+        this.arrowType = type;
+        this.type = NodeTypes.fromArrowType(type);
+        this.rotation = rotation;
+        this.flipped = flipped;
+        this.onUpdate();
+    }
+
     public addLink(node: GraphNode) {
         const idx = this.links.indexOf(node);
         if (idx !== -1) {
@@ -120,9 +128,9 @@ export class GraphNode {
 
     private onUpdate() {
         if (this.type === NodeType.BLOCKER) {
-            const isBreakpoint = this.links.some(
-                (linkedNode) => linkedNode.type === NodeType.BLOCKER,
-            );
+            const isBreakpoint =
+                this.blockedLink?.type === NodeType.BLOCKER &&
+                this.blockedLink?.blockedLink === this;
             this.isBreakpoint = isBreakpoint;
         } else {
             this.isBreakpoint = false;

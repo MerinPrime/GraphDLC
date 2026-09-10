@@ -5,7 +5,6 @@ import {
 } from 'src/plugins/graphdlc/settings/performance/GraphEngineSetting';
 import type { Graph } from '../ast/Graph';
 import { DefaultEngine } from './default/DefaultEngine';
-import { SoAEngine } from './enhanced/SoAEngine';
 import { NativeEngine } from './native/NativeEngine';
 import { RawEngine } from './raw/RawEngine';
 
@@ -17,7 +16,7 @@ export namespace EngineFactory {
             case GraphEngine.STANDARD:
                 return new RawEngine();
             case GraphEngine.ENHANCED:
-                return new SoAEngine();
+                return new RawEngine();
             case GraphEngine.NATIVE:
                 return new NativeEngine();
         }

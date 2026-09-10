@@ -1,3 +1,4 @@
+import type { MouseHandler } from '@logic-arrows/controls/mouse-handler';
 import type { ArrowData } from '@logic-arrows/game-logic/arrow-data';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
@@ -6,9 +7,11 @@ import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
+import { PathBuildingTrigger } from '..';
 import type { PathData } from './types';
 
 interface PrivatePlayerControls {
+    readonly mouseHandler: MouseHandler;
     readonly arrowActions: PlayerArrowActions;
     readonly game: Game;
     readonly history: GameHistory | null;
@@ -22,8 +25,12 @@ export const PatchPlayerControls: IPatcher = (
 ) => {
     const _ArrowData = patchLoader.getDefinition<typeof ArrowData>('ArrowData');
     let isRightMouseDown = false;
+    let isLeftMouseDown = false;
 
     document.addEventListener('mousedown', (e: MouseEvent) => {
+        if (e.button === 0) {
+            isLeftMouseDown = true;
+        }
         if (e.button === 2) {
             e.preventDefault();
             isRightMouseDown = true;
@@ -31,6 +38,9 @@ export const PatchPlayerControls: IPatcher = (
     });
 
     document.addEventListener('mouseup', (e: MouseEvent) => {
+        if (e.button === 0) {
+            isLeftMouseDown = false;
+        }
         if (e.button === 2) {
             e.preventDefault();
             isRightMouseDown = false;
@@ -46,14 +56,26 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             return class PlayerControls extends _module {
                 private pathData: PathData | null = null;
+                private isPathCancelled: boolean = false;
 
                 public update(): void {
-                    super.update();
-
                     const _this = this as any as PrivatePlayerControls;
 
                     const taskKey = 'player-drag-path';
-                    if (isRightMouseDown) {
+
+                    this.isPathCancelled =
+                        this.isPathCancelled ||
+                        (isRightMouseDown && isLeftMouseDown);
+                    if (isRightMouseDown && this.isPathCancelled) {
+                        if (this.pathData) {
+                            _this.mouseHandler.setUiInteraction(true);
+                            this.pathData = null;
+                            _this.game.pathData = null;
+                            PathBuildingTrigger.value = false;
+                        }
+                    } else if (isRightMouseDown) {
+                        _this.mouseHandler.setUiInteraction(true);
+                        this.isPathCancelled = false;
                         const [x, y] = _this.getPositionByMousePosition();
 
                         const selectedArrow =
@@ -69,25 +91,33 @@ export const PatchPlayerControls: IPatcher = (
                                 startPathY: y,
                                 endPathX: x,
                                 endPathY: y,
+                                lastGraphUpdate: 0,
                                 path: [],
                                 arrowType: selectedArrow,
                                 rotation: rotationState,
                                 flip: flipState,
                             };
+                            PathBuildingTrigger.value = true;
                         }
 
                         this.pathData.rotation = rotationState;
                         this.pathData.flip = flipState;
 
+                        const gameMap = _this.game.gameMap;
+                        const lastGraphUpdate = gameMap.graph.lastUpdate;
+
                         if (
                             this.pathData &&
                             (this.pathData.endPathX !== x ||
                                 this.pathData.endPathY !== y ||
-                                this.pathData.arrowType !== selectedArrow)
+                                this.pathData.arrowType !== selectedArrow ||
+                                this.pathData.lastGraphUpdate !==
+                                    lastGraphUpdate)
                         ) {
                             this.pathData.endPathX = x;
                             this.pathData.endPathY = y;
                             this.pathData.arrowType = selectedArrow;
+                            this.pathData.lastGraphUpdate = lastGraphUpdate;
 
                             graphDLC.pathFinder.cancelPathSearch(taskKey);
 
@@ -124,47 +154,47 @@ export const PatchPlayerControls: IPatcher = (
                                 );
                             }
                         }
-                    } else {
-                        if (this.pathData) {
-                            graphDLC.pathFinder.forceCompletePath(taskKey);
+                    } else if (this.pathData) {
+                        graphDLC.pathFinder.forceCompletePath(taskKey);
 
-                            const gameMap = _this.game.gameMap;
-                            this.pathData.path.forEach(
-                                ({ x, y, type, rotation, flipped }) => {
-                                    const arrowOld = _ArrowData.val.fromArrow(
-                                        gameMap.getArrow(x, y),
-                                    );
-                                    const arrowNew = _ArrowData.val.fromState(
-                                        type,
-                                        rotation,
-                                        flipped,
-                                    );
-                                    if (_this.history !== null) {
-                                        _this.history.addChange(
-                                            x,
-                                            y,
-                                            arrowOld,
-                                            arrowNew,
-                                        );
-                                    }
-                                    const [chunk, arrow] =
-                                        gameMap.getOrCreateArrow(x, y);
-                                    arrow.type = type;
-                                    arrow.rotation = rotation;
-                                    arrow.flipped = flipped;
-                                    gameMap.graph.updateArrowState(
-                                        arrow,
-                                        chunk,
+                        const gameMap = _this.game.gameMap;
+                        this.pathData.path.forEach(
+                            ({ x, y, type, rotation, flipped }) => {
+                                const arrowOld = _ArrowData.val.fromArrow(
+                                    gameMap.getArrow(x, y),
+                                );
+                                const arrowNew = _ArrowData.val.fromState(
+                                    type,
+                                    rotation,
+                                    flipped,
+                                );
+                                if (_this.history !== null) {
+                                    _this.history.addChange(
                                         x,
                                         y,
+                                        arrowOld,
+                                        arrowNew,
                                     );
-                                    chunk.markRenderDirty();
-                                },
-                            );
-                        }
+                                }
+                                const [chunk, arrow] = gameMap.getOrCreateArrow(
+                                    x,
+                                    y,
+                                );
+                                arrow.type = type;
+                                arrow.rotation = rotation;
+                                arrow.flipped = flipped;
+                                gameMap.updateArrowState(arrow, chunk, x, y);
+                                chunk.markRenderDirty();
+                            },
+                        );
                         this.pathData = null;
                         _this.game.pathData = null;
+                        this.isPathCancelled = false;
+                        _this.mouseHandler.setUiInteraction(false);
+                        PathBuildingTrigger.value = false;
                     }
+
+                    super.update();
                 }
             };
         },

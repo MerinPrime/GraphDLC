@@ -1,5 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
-import { RmbLocale } from '../core/KeybindsLocales';
+import { ReactiveValue } from 'src/core/utils/ReactiveValue';
+import { LmbLocale, RmbLocale } from '../core/KeybindsLocales';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
@@ -23,6 +24,16 @@ const LinearPathLocale = new I18nText(
     'trajet linéaire',
 );
 
+const CancelPathLocale = new I18nText(
+    'cancel path',
+    'отмена пути',
+    'скасування шляху',
+    'адмена шляху',
+    'annulation du trajet',
+);
+
+export const PathBuildingTrigger = new ReactiveValue(false);
+
 const KeyBindHints: KeyBindHint[] = [
     {
         keys: [RmbLocale],
@@ -33,6 +44,12 @@ const KeyBindHints: KeyBindHint[] = [
         keys: [RmbLocale],
         showOn: ['arrow'],
         description: LinearPathLocale,
+    },
+    {
+        keys: [LmbLocale],
+        showOn: ['free', 'arrow'],
+        triggers: [PathBuildingTrigger],
+        description: CancelPathLocale,
     },
 ];
 

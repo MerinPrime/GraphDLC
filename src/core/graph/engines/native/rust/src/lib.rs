@@ -35,16 +35,6 @@ pub extern "C" fn clear(rng_state: u64) {
 }
 
 #[no_mangle]
-pub extern "C" fn reset_node_signal(node_idx: u32) {
-    let state = get_state();
-    state.ensure_node_capacity((node_idx + 1) as usize);
-
-    let node = &mut state.nodes[node_idx as usize];
-    node.signal = NODE_SIGNAL_NONE;
-    node.last_signal = NODE_SIGNAL_NONE;
-}
-
-#[no_mangle]
 pub extern "C" fn update_node_state(
     node_idx: u32,
     node_type: u8,
@@ -126,6 +116,11 @@ pub extern "C" fn update_node_state(
         u32::MAX
     };
 
+    let old_links = node.links;
+    let old_links_count = node.links_count.min(4) as usize;
+    let old_detectors = node.detectors;
+    let old_detectors_count = node.detectors_count.min(4) as usize;
+
     node.links = links;
     node.links_count = safe_links_count as u8;
     node.detectors = detectors;
@@ -134,6 +129,39 @@ pub extern "C" fn update_node_state(
     node.flags = flags;
 
     state.mark_node_as_changed_non_temp(node_idx);
+
+    let mut all_links = [u32::MAX; 17];
+    let mut count = 0;
+
+    let mut add = |idx: u32| {
+        for i in 0..count {
+            if all_links[i] == idx {
+                return;
+            }
+        }
+
+        all_links[count] = idx;
+        count += 1;
+    };
+
+    add(node_idx);
+
+    for &node in &links[..safe_links_count] {
+        add(node);
+    }
+    for &node in &detectors[..safe_detectors_count] {
+        add(node);
+    }
+    for &node in &old_links[..old_links_count] {
+        add(node);
+    }
+    for &node in &old_detectors[..old_detectors_count] {
+        add(node);
+    }
+
+    for &idx in &all_links[..count] {
+        state.full_node_state_calculate(idx);
+    }
 }
 
 #[no_mangle]
@@ -314,23 +342,6 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
 }
 
 #[no_mangle]
-pub extern "C" fn do_press_button_export(node_idx: u32, button_state: i32) {
-    let new_signal = if button_state != 0 {
-        NODE_SIGNAL_ACTIVE
-    } else {
-        NODE_SIGNAL_NONE
-    };
-    let state = get_state();
-    let node = &mut state.nodes[node_idx as usize];
-    node.signal = new_signal;
-    let chunk_idx = node.chunk_idx;
-
-    state.mark_node_as_changed(node_idx);
-    state.mark_node_as_changed_non_temp(node_idx);
-    state.make_dirty_chunk(chunk_idx);
-}
-
-#[no_mangle]
 pub extern "C" fn on_cycle_build_export(
     cycle_idx: u32,
     cycle_length: u32,
@@ -369,28 +380,6 @@ pub extern "C" fn on_cycle_dismantle_export(cycle_idx: u32, nodes_count: u32, he
     }
 
     get_state().on_cycle_dismantle(cycle_idx, &cycle_nodes, &cycle_heads);
-}
-
-#[no_mangle]
-pub extern "C" fn update_node_change_export(
-    node_idx: u32,
-    old_links_count: u32,
-    new_links_count: u32,
-) {
-    let mut old_links = Vec::new();
-    let mut new_links = Vec::new();
-
-    unsafe {
-        let ptr = STAGING_BUFFER.as_ptr();
-        for i in 0..old_links_count {
-            old_links.push(*ptr.add(i as usize));
-        }
-        for i in 0..new_links_count {
-            new_links.push(*ptr.add((old_links_count + i) as usize));
-        }
-    }
-
-    get_state().update_node_change(node_idx, &old_links, &new_links);
 }
 
 #[no_mangle]

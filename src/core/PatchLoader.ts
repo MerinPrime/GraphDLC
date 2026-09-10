@@ -168,6 +168,25 @@ export class PatchLoader {
             return true;
         });
     }
+
+    public addObjectPatch<T extends object = any>(
+        target: string,
+        patch: (object: T, original: Readonly<T>) => void,
+    ): void {
+        this.addManualPatch((name, definition) => {
+            if (name !== target) return false;
+
+            const object = definition as T;
+            const original = Object.create(
+                Object.getPrototypeOf(object),
+                Object.getOwnPropertyDescriptors(object),
+            ) as T;
+
+            patch(object, original);
+
+            return true;
+        });
+    }
 }
 
 const originalElementAppend = Element.prototype.appendChild;

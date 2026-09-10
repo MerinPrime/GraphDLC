@@ -7,6 +7,7 @@ import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerMapAction } from '@logic-arrows/player/player-map-action';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
+import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
 import type { MoveSelectionContext, MovingArrow } from './types';
@@ -341,13 +342,22 @@ export const PatchPlayerControls: IPatcher = (
                     const _this = this as any as PrivatePlayerControls;
 
                     const gameMap = _this.game.gameMap;
+                    const graph = gameMap.graph;
                     const [chunk, arrow] = gameMap.getOrCreateArrow(x, y);
 
                     arrow.type = data.type;
                     arrow.rotation = data.rotation;
                     arrow.flipped = data.flipped;
-
                     gameMap.updateArrowState(arrow, chunk, x, y);
+
+                    const node = graph.getNodeByArrow(arrow);
+                    if (node) {
+                        gameMap.graph.engine.setNodeSignal(
+                            node.nodeIdx,
+                            NodeSignal.NONE,
+                        );
+                    }
+
                     chunk.markRenderDirty();
                 }
 

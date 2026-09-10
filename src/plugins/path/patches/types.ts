@@ -6,6 +6,7 @@ export interface PathData {
     startPathY: number;
     endPathX: number;
     endPathY: number;
+    lastGraphUpdate: number;
     path: PathStep[];
     arrowType: ArrowType;
     rotation: number;

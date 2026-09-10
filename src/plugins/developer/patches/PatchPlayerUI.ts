@@ -63,6 +63,18 @@ export const PatchPlayerUI: IPatcher = (
                             debugLines.push(
                                 `IsChanged: ${nodeState.isChanged}`,
                             );
+                            debugLines.push(
+                                `IsBreakpoint: ${nodeState.isBreakpoint}`,
+                            );
+                            debugLines.push(
+                                `Links: ${node.linkCounts.reduce((sum, count) => sum + count, 0)}`,
+                            );
+                            debugLines.push(
+                                `Backlinks: ${node.backLinkCounts.reduce((sum, count) => sum + count, 0)}`,
+                            );
+                            debugLines.push(
+                                `HasDetector: ${node.detectedLink !== null}`,
+                            );
                         }
                     } else {
                         debugLines.push('Not Raw Engine');

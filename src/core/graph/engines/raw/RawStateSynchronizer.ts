@@ -131,18 +131,4 @@ export class RawStateSynchronizer {
         }
         state.removeCycle(cycle);
     }
-
-    public updateNodeChange(
-        state: RawGraphState,
-        node: GraphNode,
-        oldLinks: GraphNode[],
-        newLinks: GraphNode[],
-    ) {
-        const allNodes = new Set([...oldLinks, ...newLinks]);
-
-        this.updater.fullNodeStateCalculate(state, node);
-        for (const edgeNode of allNodes) {
-            this.updater.fullNodeStateCalculate(state, edgeNode);
-        }
-    }
 }
