@@ -20,6 +20,8 @@ export const PatchGamePage: IPatcher = (
                 SaveTitleHook.setHookState(true);
             };
 
+            private canSave: boolean = true;
+
             public constructor(mapInfo: MapInfo) {
                 super(mapInfo);
 
@@ -63,6 +65,8 @@ export const PatchGamePage: IPatcher = (
             }
 
             public async dispose(): Promise<void> {
+                if (SaveModeSetting.value !== SaveMode.NORMAL)
+                    this.canSave = false;
                 await super.dispose();
                 SaveTitleHook.tryUnhook();
                 SaveModeSetting.onChange.remove(this.settingHook);
@@ -80,6 +84,7 @@ export const PatchGamePage: IPatcher = (
             }
 
             public async saveMap(buffer: number[]): Promise<number> {
+                if (!this.canSave) return -1;
                 // @ts-expect-error
                 const status = await super.saveMap(buffer);
                 if (status === 200) this.updateIsMapChanged(false);
