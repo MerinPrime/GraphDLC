@@ -22,9 +22,12 @@ export interface PluginMeta {
 
 export type ControlsState = 'free' | 'arrow' | 'selected';
 
+export type KeyBindTrigger = ReactiveValue<boolean>;
+
 export interface KeyBindHint {
     keys: (string | I18nText)[];
     showOn: ControlsState[];
+    triggers?: KeyBindTrigger[];
     description: I18nText;
 }
 
