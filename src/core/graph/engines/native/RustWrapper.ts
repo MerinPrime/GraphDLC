@@ -179,11 +179,11 @@ export class RustWrapper {
     }
 
     public onCycleDismantle(cycle: GraphCycle): void {
-        this.writeNodesToStaging(cycle.nodes, cycle.heads);
+        this.writeNodesToStaging(cycle.nodes, cycle.extraNodes, cycle.heads);
 
         this.exports.on_cycle_dismantle_export(
             cycle.index,
-            cycle.nodes.length,
+            cycle.nodes.length + cycle.extraNodes.length,
             cycle.heads.length,
         );
     }

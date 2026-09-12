@@ -119,6 +119,9 @@ export abstract class DebuggerMode<TNodeDebugData extends INodeDebugData>
         cycle.nodes.forEach((node) => {
             this.performNodeUpdate(graph, node);
         });
+        cycle.extraNodes.forEach((node) => {
+            this.performNodeUpdate(graph, node);
+        });
     }
 
     public onCycleRemoved(graph: Graph, cycle: GraphCycle): void {
@@ -126,6 +129,9 @@ export abstract class DebuggerMode<TNodeDebugData extends INodeDebugData>
             this.performNodeUpdate(graph, head);
         });
         cycle.nodes.forEach((node) => {
+            this.performNodeUpdate(graph, node);
+        });
+        cycle.extraNodes.forEach((node) => {
             this.performNodeUpdate(graph, node);
         });
     }

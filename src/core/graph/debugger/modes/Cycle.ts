@@ -18,6 +18,7 @@ const HEAD_COLORS: Record<CycleHeadType, DebugColor> = {
 };
 
 const CYCLE_COLOR: DebugColor = [0.8, 0.2, 0.8, ALPHA];
+const EXTRA_COLOR: DebugColor = [0.5, 0.4, 0.7, ALPHA];
 
 class UpdateCycleTask implements ITask<void> {
     public isCanceled = false;
@@ -38,6 +39,8 @@ class UpdateCycleTask implements ITask<void> {
             color = HEAD_COLORS[this.node.headType];
         } else if (this.node.isCycle) {
             color = CYCLE_COLOR;
+        } else if (this.node.cycleRef?.extraNodes.includes(this.node)) {
+            color = EXTRA_COLOR;
         }
 
         this.debugChunk.setColor(this.node.localX, this.node.localY, color);

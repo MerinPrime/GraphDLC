@@ -464,12 +464,13 @@ export class Graph {
             index,
             nodes,
             heads: [],
+            extraNodes: [],
         };
         this.cycles[index] = cycle;
 
         this.cycleManager.attachNodesToCycle(cycle, nodes);
 
-        this.syncNodesAndHeadsState(cycle.nodes, cycle.heads);
+        this.syncNodesAndHeadsState(cycle.nodes, cycle.heads, cycle.extraNodes);
 
         this.engine.addCycle(cycle);
 
@@ -485,10 +486,15 @@ export class Graph {
 
         const affectedNodes = [...cycle.nodes];
         const affectedHeads = [...cycle.heads];
+        const affectedExtra = [...cycle.extraNodes];
 
         this.cycleManager.detachNodesFromCycle(cycle);
 
-        this.syncNodesAndHeadsState(affectedNodes, affectedHeads);
+        this.syncNodesAndHeadsState(
+            affectedNodes,
+            affectedHeads,
+            affectedExtra,
+        );
 
         this.reclaimCycleIndex(cycle.index);
 
@@ -509,12 +515,19 @@ export class Graph {
         }
     }
 
-    private syncNodesAndHeadsState(nodes: GraphNode[], heads: GraphNode[]) {
+    private syncNodesAndHeadsState(
+        nodes: GraphNode[],
+        heads: GraphNode[],
+        extraNodes: GraphNode[],
+    ) {
         for (const node of nodes) {
             this.updater.update(node);
         }
         for (const head of heads) {
             this.updater.update(head);
+        }
+        for (const extra of extraNodes) {
+            this.updater.update(extra);
         }
     }
 }

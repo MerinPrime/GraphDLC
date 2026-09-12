@@ -2,6 +2,7 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import {
     CycleHeadType,
     type GraphCycle,
+    type ReadHead,
 } from 'src/core/graph/ast/cycle/CycleTypes';
 import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { NodeType, NodeTypes } from '../../engines/core/NodeType';
@@ -10,11 +11,6 @@ import type { GraphNode } from '../GraphNode';
 import type { IGraphListener } from '../IGraphListener';
 import { CycleSearchTask } from './CycleSearchTask';
 import { canBeInCycle } from './utils';
-
-interface ReadHead {
-    node: GraphNode;
-    distance: number;
-}
 
 export class CycleManager implements IGraphListener {
     private readonly bfsQueue: GraphNode[] = [];
@@ -43,11 +39,22 @@ export class CycleManager implements IGraphListener {
         cycle: GraphCycle,
         headType: CycleHeadType,
         offset: number,
+        extraPath: GraphNode[] = [],
     ): void {
         headNode.cycleRef = cycle;
         headNode.headType = headType;
         headNode.cycleOffset = offset;
         cycle.heads.push(headNode);
+
+        for (let i = 0; i < extraPath.length; i++) {
+            const extraNode = extraPath[i];
+            extraNode.cycleRef = cycle;
+            const cycleLen = cycle.nodes.length;
+            const rawOffset = offset + extraPath.length - i - 1;
+            extraNode.cycleOffset =
+                ((rawOffset % cycleLen) + cycleLen) % cycleLen;
+            cycle.extraNodes.push(extraNode);
+        }
     }
 
     private tryAddCycle(graph: Graph, path: GraphNode[] | null): boolean {
@@ -70,6 +77,8 @@ export class CycleManager implements IGraphListener {
         let current = node;
         let distance = 0;
 
+        const extraPath: GraphNode[] = [];
+
         while (current.type === NodeType.PATH) {
             if (current.links.length !== 1) {
                 return null;
@@ -81,6 +90,7 @@ export class CycleManager implements IGraphListener {
                 return null;
             }
 
+            extraPath.push(current);
             current = next;
             distance++;
         }
@@ -91,17 +101,23 @@ export class CycleManager implements IGraphListener {
 
         return {
             node: current,
+            extraPath,
             distance,
         };
     }
 
     public refreshCycleIO(cycle: GraphCycle): void {
-        const { heads, nodes: cycleNodes } = cycle;
+        const { heads, extraNodes, nodes: cycleNodes } = cycle;
 
         for (let i = 0; i < heads.length; i++) {
             this.resetHead(heads[i]);
         }
         heads.length = 0;
+
+        for (let i = 0; i < extraNodes.length; i++) {
+            this.resetHead(extraNodes[i]);
+        }
+        extraNodes.length = 0;
 
         const cycleSet = this.validationSet;
         cycleSet.clear();
@@ -136,6 +152,7 @@ export class CycleManager implements IGraphListener {
                             cycle,
                             CycleHeadType.READ,
                             offset,
+                            readHead.extraPath,
                         );
                     }
                 }
@@ -422,7 +439,6 @@ export class CycleManager implements IGraphListener {
                 const current = queue[head++];
 
                 this.processRemovalNeighbors(current.links, queue, visited);
-
                 this.processRemovalNeighbors(current.backLinks, queue, visited);
             }
 
@@ -535,7 +551,6 @@ export class CycleManager implements IGraphListener {
 
         if (dismantled) {
             this.tryRebuildCycle(graph, node);
-
             this.tryRebuildCycle(graph, target);
         }
     }
@@ -565,12 +580,10 @@ export class CycleManager implements IGraphListener {
 
         if (cycleDismantled || parentsDismantled) {
             this.tryRebuildCycle(graph, fromNode);
-
             this.tryRebuildCycle(graph, toNode);
         }
 
         this.updateCycleStatusIfActive(fromNode);
-
         this.updateCycleStatusIfActive(toNode);
 
         if (fromNode.cycleRef !== null) {
@@ -603,7 +616,6 @@ export class CycleManager implements IGraphListener {
                 !this.isValidCycle(node.cycleRef.nodes)
             ) {
                 graph.removeCycle(node.cycleRef);
-
                 dismantled = true;
             } else {
                 this.refreshCycleIO(node.cycleRef);
@@ -657,7 +669,7 @@ export class CycleManager implements IGraphListener {
     }
 
     public detachNodesFromCycle(cycle: GraphCycle): void {
-        const { nodes, heads } = cycle;
+        const { nodes, heads, extraNodes } = cycle;
 
         for (let i = 0; i < nodes.length; i++) {
             this.resetNodeCycleState(nodes[i]);
@@ -665,6 +677,10 @@ export class CycleManager implements IGraphListener {
 
         for (let i = 0; i < heads.length; i++) {
             this.resetHead(heads[i]);
+        }
+
+        for (let i = 0; i < extraNodes.length; i++) {
+            this.resetHead(extraNodes[i]);
         }
     }
 
