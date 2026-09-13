@@ -20,6 +20,7 @@ declare global {
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
         getBackgroundColor(): [r: number, g: number, b: number, a: number];
+        clearArrow(x: number, y: number, scale: number): void;
         setDarkTheme(show: boolean): void;
         setShowBorder(show: boolean): void;
         setSides(sides: boolean[]): void;
