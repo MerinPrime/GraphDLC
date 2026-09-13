@@ -33,17 +33,16 @@ export const PatchGameRender: IPatcher = (
 
             // @ts-expect-error
             return class GameRender extends _module {
-                public clearRenderTextures(): void {
+                public getBackgroundColor(): [
+                    r: number,
+                    g: number,
+                    b: number,
+                    a: number,
+                ] {
                     if (!DarkThemeSetting.value) {
-                        super.clearRenderTextures();
-                        return;
+                        return super.getBackgroundColor();
                     }
-                    const _this = this as any as PrivateGameRender;
-                    _this.render.setRenderTarget(_this.mainRenderTexture);
-                    _this.render.clear(0.12, 0.13, 0.19, 1);
-                    _this.render.setRenderTarget(_this.gridRenderTexture);
-                    _this.render.clear(0.12, 0.13, 0.19, 1);
-                    _this.render.setRenderTarget(null);
+                    return [0.12, 0.13, 0.19, 1];
                 }
 
                 public setDarkTheme(show: boolean): void {
