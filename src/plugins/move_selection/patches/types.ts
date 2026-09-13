@@ -12,5 +12,9 @@ export interface MoveSelectionContext {
     deltaX: number;
     deltaY: number;
     initArrows: MovingArrow[];
-    mapSnapshot: Map<number, ArrowData>;
+}
+
+export interface RenderMoveContext {
+    initArrows: readonly MovingArrow[];
+    selection: readonly MovingArrow[];
 }

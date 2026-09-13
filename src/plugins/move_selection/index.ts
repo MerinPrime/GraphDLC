@@ -2,9 +2,10 @@ import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { LmbLocale } from '../core/KeybindsLocales';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { CorePlugin } from '../graphdlc';
+import { PatchGame } from './patches/PatchGame';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
 
-const Patches = [PatchPlayerControls];
+const Patches = [PatchPlayerControls, PatchGame];
 
 export const MoveLocale = new I18nText(
     'move',
