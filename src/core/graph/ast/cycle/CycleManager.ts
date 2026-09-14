@@ -491,7 +491,15 @@ export class CycleManager implements IGraphListener {
     }
 
     public onLinkAdded(graph: Graph, node: GraphNode, target: GraphNode): void {
-        if (canBeInCycle(node) && canBeInCycle(target)) {
+        const nodeInCycle = node.isCycle;
+        const targetInCycle = target.isCycle;
+
+        if (
+            !nodeInCycle &&
+            !targetInCycle &&
+            canBeInCycle(node) &&
+            canBeInCycle(target)
+        ) {
             const task = new CycleSearchTask(target, node);
 
             this.scheduler.schedule(
@@ -507,7 +515,14 @@ export class CycleManager implements IGraphListener {
                 target,
             );
 
-            return;
+            if (
+                node.cycleRef === null &&
+                target.cycleRef === null &&
+                node.backLinks.length === 0 &&
+                target.links.length === 0
+            ) {
+                return;
+            }
         }
 
         const nodeCycleRef = node.cycleRef;
@@ -527,7 +542,6 @@ export class CycleManager implements IGraphListener {
 
         for (let i = 0; i < node.backLinks.length; i++) {
             const ref = node.backLinks[i].cycleRef;
-
             if (
                 ref !== null &&
                 ref !== nodeCycleRef &&
@@ -539,7 +553,6 @@ export class CycleManager implements IGraphListener {
 
         for (let i = 0; i < target.links.length; i++) {
             const ref = target.links[i].cycleRef;
-
             if (
                 ref !== null &&
                 ref !== nodeCycleRef &&
@@ -568,7 +581,12 @@ export class CycleManager implements IGraphListener {
 
         let cycleDismantled = false;
 
-        if (fromCycleRef !== null && toCycleRef === fromCycleRef) {
+        if (
+            fromNode.isCycle &&
+            toNode.isCycle &&
+            fromCycleRef !== null &&
+            toCycleRef === fromCycleRef
+        ) {
             graph.removeCycle(fromCycleRef);
             cycleDismantled = true;
         }
@@ -586,12 +604,16 @@ export class CycleManager implements IGraphListener {
         this.updateCycleStatusIfActive(fromNode);
         this.updateCycleStatusIfActive(toNode);
 
-        if (fromNode.cycleRef !== null) {
-            this.refreshCycleIO(fromNode.cycleRef);
+        if (fromCycleRef !== null && !cycleDismantled) {
+            this.refreshCycleIO(fromCycleRef);
         }
 
-        if (toNode.cycleRef !== null && toNode.cycleRef !== fromNode.cycleRef) {
-            this.refreshCycleIO(toNode.cycleRef);
+        if (
+            toCycleRef !== null &&
+            toCycleRef !== fromCycleRef &&
+            !cycleDismantled
+        ) {
+            this.refreshCycleIO(toCycleRef);
         }
     }
 
