@@ -1,7 +1,4 @@
-import {
-    CycleHeadType,
-    type GraphCycle,
-} from 'src/core/graph/ast/cycle/CycleTypes';
+import { CycleHeadType, type GraphCycle } from 'src/core/graph/ast/cycle/types';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { NodeType, NodeTypes } from '../engines/core/NodeType';
 

@@ -20,3 +20,10 @@ export interface ReadHead {
     extraPath: GraphNode[];
     distance: number;
 }
+
+export interface InternalCycle {
+    key: string;
+    nodes: GraphNode[];
+    graphCycleRef: GraphCycle | null;
+    valid: boolean;
+}

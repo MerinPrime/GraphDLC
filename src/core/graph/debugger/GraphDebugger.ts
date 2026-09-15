@@ -5,7 +5,7 @@ import {
     DebugMode,
     DebugModeSetting,
 } from 'src/plugins/graphdlc/settings/tools/DebugModeSetting';
-import type { GraphCycle } from '../ast/cycle/CycleTypes';
+import type { GraphCycle } from '../ast/cycle/types';
 import type { Graph } from '../ast/Graph';
 import type { GraphNode } from '../ast/GraphNode';
 import type { IGraphListener } from '../ast/IGraphListener';

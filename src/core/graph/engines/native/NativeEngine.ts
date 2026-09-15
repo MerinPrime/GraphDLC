@@ -1,4 +1,4 @@
-import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
