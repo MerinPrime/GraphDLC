@@ -3,6 +3,7 @@ import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphDLC } from './core/GraphDLC';
 import type { Graph } from './core/graph/ast/Graph';
 import { HighlightPathData } from './plugins/connections/patches/types';
+import { RenderMoveContext } from './plugins/move_selection/patches/types';
 import { PathData } from './plugins/path/patches/types';
 
 declare global {
@@ -19,6 +20,8 @@ declare global {
 
 declare module '@logic-arrows/game-render/game-render' {
     export interface GameRender {
+        getBackgroundColor(): [r: number, g: number, b: number, a: number];
+        clearArrow(x: number, y: number, scale: number): void;
         setDarkTheme(show: boolean): void;
         setShowBorder(show: boolean): void;
         setSides(sides: boolean[]): void;
@@ -77,6 +80,7 @@ declare module '@logic-arrows/player/game' {
         customTPS: number;
         pathData: PathData | null;
         highlightPathData: HighlightPathData | null;
+        renderMoveContext: RenderMoveContext | null;
 
         getArrowAtCursor(): Arrow | undefined;
         getDrawOffsets(): { offsetX: number; offsetY: number };

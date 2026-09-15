@@ -83,8 +83,9 @@ export class RawStateSynchronizer {
 
     public onCycleDismantle(state: RawGraphState, cycle: GraphCycle) {
         const cycleState = state.cycles[cycle.index];
+        const nodes = [...cycle.nodes, ...cycle.extraNodes];
 
-        for (const node of cycle.nodes) {
+        for (const node of nodes) {
             const nodeState = state.getNode(node.nodeIdx);
 
             if (cycleState) {
@@ -113,7 +114,7 @@ export class RawStateSynchronizer {
         }
 
         const affectedNodes = new Set<GraphNode>();
-        for (const node of cycle.nodes) {
+        for (const node of nodes) {
             affectedNodes.add(node);
             for (const next of node.links) {
                 affectedNodes.add(next);

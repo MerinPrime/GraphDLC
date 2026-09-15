@@ -12,4 +12,11 @@ export interface GraphCycle {
     index: number;
     nodes: GraphNode[];
     heads: GraphNode[];
+    extraNodes: GraphNode[];
+}
+
+export interface ReadHead {
+    node: GraphNode;
+    extraPath: GraphNode[];
+    distance: number;
 }

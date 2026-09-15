@@ -1,16 +1,20 @@
 import type { KeyboardHandler } from '@logic-arrows/controls/keyboard-handler';
 import type { MouseHandler } from '@logic-arrows/controls/mouse-handler';
-import { ArrowData } from '@logic-arrows/game-logic/arrow-data';
+import type { ArrowData } from '@logic-arrows/game-logic/arrow-data';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerMapAction } from '@logic-arrows/player/player-map-action';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
-import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../../Patcher';
-import type { MoveSelectionContext, MovingArrow } from './types';
+import type {
+    MoveSelectionContext,
+    MovingArrow,
+    RenderMoveContext,
+} from './types';
 
 interface PrivatePlayerControls {
     readonly game: Game;
@@ -37,6 +41,7 @@ function packCoord(x: number, y: number): number {
 
 export function getUniqueOffsets(
     items: readonly MovingArrow[],
+    origSet: ReadonlySet<number>,
     x0: number,
     y0: number,
     x1: number,
@@ -44,43 +49,35 @@ export function getUniqueOffsets(
 ): [readonly MovingArrow[], readonly MovingArrow[], readonly MovingArrow[]] {
     const dx = x0 - x1;
     const dy = y0 - y1;
+    const len = items.length;
 
     if (dx === 0 && dy === 0) {
-        const unionAB: MovingArrow[] = new Array(items.length);
-        for (let i = 0; i < items.length; i++) {
+        const unionAB: MovingArrow[] = new Array(len);
+        for (let i = 0; i < len; i++) {
             const item = items[i];
             unionAB[i] = { x: item.x + x0, y: item.y + y0, data: item.data };
         }
         return [[], [], unionAB];
     }
 
-    const origSet = new Set<number>();
-    for (let i = 0; i < items.length; i++) {
-        origSet.add(packCoord(items[i].x, items[i].y));
-    }
-
     const onlyA: MovingArrow[] = [];
     const onlyB: MovingArrow[] = [];
+    const unionAB: MovingArrow[] = new Array(len);
 
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < len; i++) {
         const item = items[i];
         const px = item.x;
         const py = item.y;
+
+        unionAB[i] = { x: px + x1, y: py + y1, data: item.data };
 
         if (!origSet.has(packCoord(px + dx, py + dy))) {
             onlyA.push({ x: px + x0, y: py + y0, data: item.data });
         }
 
         if (!origSet.has(packCoord(px - dx, py - dy))) {
-            onlyB.push({ x: px + x1, y: py + y1, data: item.data });
+            onlyB.push(unionAB[i]);
         }
-    }
-
-    const unionAB: MovingArrow[] = new Array(items.length);
-
-    for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        unionAB[i] = { x: item.x + x1, y: item.y + y1, data: item.data };
     }
 
     return [onlyA, onlyB, unionAB];
@@ -105,11 +102,18 @@ export const PatchPlayerControls: IPatcher = (
                 private isSelectionMoving = false;
                 private startMousePos: [x: number, y: number] | undefined =
                     undefined;
+
+                private packedOrigSet = new Set<number>();
+                private initialSelectionKeys = new Set<string>();
+
                 private context: MoveSelectionContext = {
                     deltaX: 0,
                     deltaY: 0,
                     initArrows: [],
-                    mapSnapshot: new Map(),
+                };
+                private renderMoveContext: RenderMoveContext = {
+                    initArrows: [],
+                    selection: [],
                 };
 
                 public update(): void {
@@ -125,6 +129,15 @@ export const PatchPlayerControls: IPatcher = (
 
                         const selectedMap = _this.game
                             .selectedMap as unknown as SelectedMapPrivate;
+
+                        if (
+                            selectedMap.selectedArrows.size === 0 &&
+                            selectedMap.currentSelectedArrows.size === 0
+                        ) {
+                            super.update();
+                            return;
+                        }
+
                         const [mouseX, mouseY] =
                             _this.getPositionByMousePosition();
                         const arKey = `${mouseX},${mouseY}`;
@@ -159,21 +172,19 @@ export const PatchPlayerControls: IPatcher = (
                         return;
                     }
 
-                    const [removeOld, placeNew, selection] = getUniqueOffsets(
-                        this.context.initArrows,
-                        this.context.deltaX,
-                        this.context.deltaY,
-                        newDeltaX,
-                        newDeltaY,
-                    );
-
                     this.context.deltaX = newDeltaX;
                     this.context.deltaY = newDeltaY;
 
-                    this.restoreSelection(removeOld);
-                    this.placeSelection(selection);
-                    this.updateSelectedMapKeys(removeOld, placeNew);
+                    const init = this.context.initArrows;
+                    const selection = this.renderMoveContext.selection;
+                    const len = init.length;
 
+                    for (let i = 0; i < len; i++) {
+                        selection[i].x = init[i].x + newDeltaX;
+                        selection[i].y = init[i].y + newDeltaY;
+                    }
+
+                    _this.game.renderMoveContext = this.renderMoveContext;
                     _this.game.screenUpdated = true;
                 }
 
@@ -190,11 +201,13 @@ export const PatchPlayerControls: IPatcher = (
                     this.context.deltaY = 0;
                     this.context.initArrows.length = 0;
 
-                    const selection = new Set([
-                        ...selectedMap.selectedArrows,
-                        ...selectedMap.currentSelectedArrows,
-                    ]);
-                    for (const arKey of selection) {
+                    this.packedOrigSet.clear();
+                    this.initialSelectionKeys.clear();
+
+                    const processKey = (arKey: string) => {
+                        if (this.initialSelectionKeys.has(arKey)) return;
+                        this.initialSelectionKeys.add(arKey);
+
                         const [x, y] = parseCoordKey(arKey);
                         const arrow = gameMap.getArrow(x, y);
 
@@ -204,15 +217,28 @@ export const PatchPlayerControls: IPatcher = (
                             data: _ArrowData.val.fromArrow(arrow),
                         });
 
-                        this.context.mapSnapshot.set(
-                            packCoord(x, y),
-                            new _ArrowData.val(),
-                        );
+                        this.packedOrigSet.add(packCoord(x, y));
+                    };
 
-                        gameMap.removeArrow(x, y);
+                    selectedMap.selectedArrows.forEach(processKey);
+                    selectedMap.currentSelectedArrows.forEach(processKey);
+
+                    _this.game.selectedMap.clear();
+                    _this.game.selectedMap.clearCurrentSelection();
+
+                    const len = this.context.initArrows.length;
+                    const selection: MovingArrow[] = new Array(len);
+                    for (let i = 0; i < len; i++) {
+                        const item = this.context.initArrows[i];
+                        selection[i] = {
+                            x: item.x,
+                            y: item.y,
+                            data: item.data,
+                        };
                     }
 
-                    this.placeSelection(this.context.initArrows);
+                    this.renderMoveContext.initArrows = this.context.initArrows;
+                    this.renderMoveContext.selection = selection;
                 }
 
                 public stopMoveSelection(): void {
@@ -225,145 +251,93 @@ export const PatchPlayerControls: IPatcher = (
 
                     const newState = new _PlayerMapAction.val();
 
-                    for (let i = 0; i < this.context.initArrows.length; i++) {
-                        const item = this.context.initArrows[i];
-                        newState.addChangedArrow(
-                            item.x,
-                            item.y,
-                            item.data,
-                            new ArrowData(),
-                        );
-                    }
-
                     const dx = this.context.deltaX;
                     const dy = this.context.deltaY;
-                    const oldSelection = new Set<string>();
 
-                    for (let i = 0; i < this.context.initArrows.length; i++) {
-                        const item = this.context.initArrows[i];
+                    const [removeOld, _, selection] = getUniqueOffsets(
+                        this.context.initArrows,
+                        this.packedOrigSet,
+                        0,
+                        0,
+                        dx,
+                        dy,
+                    );
 
-                        oldSelection.add(`${item.x},${item.y}`);
+                    for (let i = 0; i < removeOld.length; i++) {
+                        const item = removeOld[i];
+                        const posX = item.x;
+                        const posY = item.y;
 
-                        const posX = item.x + dx;
-                        const posY = item.y + dy;
+                        const [chunk, arrow] = gameMap.getOrCreateArrow(
+                            posX,
+                            posY,
+                        );
 
-                        const arKey = packCoord(posX, posY);
-                        const [_, arrow] = gameMap.getOrCreateArrow(posX, posY);
-
-                        if (!this.context.mapSnapshot.has(arKey)) {
-                            continue;
-                        }
-
-                        const oldData =
-                            this.context.mapSnapshot.get(arKey) ??
-                            new _ArrowData.val();
-
-                        const newData = _ArrowData.val.fromArrow(arrow);
+                        const oldData = _ArrowData.val.fromArrow(arrow);
+                        const newData = new _ArrowData.val();
 
                         newState.addChangedArrow(posX, posY, oldData, newData);
+
+                        arrow.type = ArrowType.EMPTY;
+                        arrow.rotation = 0;
+                        arrow.flipped = false;
+                        gameMap.updateArrowState(arrow, chunk, posX, posY);
+                    }
+
+                    selectedMap.clear();
+                    selectedMap.clearCurrentSelection();
+                    for (let i = 0; i < selection.length; i++) {
+                        const item = selection[i];
+                        const posX = item.x;
+                        const posY = item.y;
+
+                        const [chunk, arrow] = gameMap.getOrCreateArrow(
+                            posX,
+                            posY,
+                        );
+
+                        const oldData = _ArrowData.val.fromArrow(arrow);
+                        const newData = item.data;
+
+                        newState.addChangedArrow(posX, posY, oldData, newData);
+
+                        arrow.type = item.data.type;
+                        arrow.rotation = item.data.rotation;
+                        arrow.flipped = item.data.flipped;
+                        gameMap.updateArrowState(arrow, chunk, posX, posY);
+
+                        selectedMap.select(posX, posY);
                     }
 
                     selectedMap.updateSelectionFromCurrentSelection();
-                    (newState as any).oldSelection = oldSelection;
+
+                    (newState as any).oldSelection = new Set(
+                        this.initialSelectionKeys,
+                    );
                     (newState as any).newSelection = new Set([
                         ..._selectedMap.selectedArrows,
                         ..._selectedMap.currentSelectedArrows,
                     ]);
+
                     _this.history?.pushState(newState);
                     // @ts-expect-error
                     _this.history.lastChangeTime = Number.NEGATIVE_INFINITY;
 
+                    _this.game.renderMoveContext = null;
                     this.isSelectionMoving = false;
                     this.startMousePos = undefined;
                     this.context.initArrows.length = 0;
-                    this.context.mapSnapshot.clear();
                     this.context.deltaX = 0;
                     this.context.deltaY = 0;
-                }
 
-                private placeSelection(points: readonly MovingArrow[]): void {
-                    const _this = this as any as PrivatePlayerControls;
-
-                    const gameMap = _this.game.gameMap;
-
-                    for (let i = 0; i < points.length; i++) {
-                        const { x, y, data } = points[i];
-                        const arKey = packCoord(x, y);
-
-                        if (!this.context.mapSnapshot.has(arKey)) {
-                            const [_, arrow] = gameMap.getOrCreateArrow(x, y);
-                            this.context.mapSnapshot.set(
-                                arKey,
-                                _ArrowData.val.fromArrow(arrow),
-                            );
-                        }
-
-                        this.applyArrowData(x, y, data);
-                    }
-                }
-
-                public restoreSelection(
-                    oldPoints: readonly MovingArrow[],
-                ): void {
-                    for (let i = 0; i < oldPoints.length; i++) {
-                        const { x, y } = oldPoints[i];
-                        const arKey = packCoord(x, y);
-                        const oldData =
-                            this.context.mapSnapshot.get(arKey) ??
-                            new _ArrowData.val();
-                        this.applyArrowData(x, y, oldData);
-                    }
-                }
-
-                private updateSelectedMapKeys(
-                    removePoints: readonly MovingArrow[],
-                    addPoints: readonly MovingArrow[],
-                ): void {
-                    const _this = this as any as PrivatePlayerControls;
-
-                    const selectedMap = _this.game.selectedMap;
-
-                    for (let i = 0; i < removePoints.length; i++) {
-                        const item = removePoints[i];
-                        selectedMap.deselect(item.x, item.y);
-                    }
-
-                    for (let i = 0; i < addPoints.length; i++) {
-                        const item = addPoints[i];
-                        selectedMap.select(item.x, item.y);
-                    }
-                }
-
-                private applyArrowData(
-                    x: number,
-                    y: number,
-                    data: ArrowData,
-                ): void {
-                    const _this = this as any as PrivatePlayerControls;
-
-                    const gameMap = _this.game.gameMap;
-                    const graph = gameMap.graph;
-                    const [chunk, arrow] = gameMap.getOrCreateArrow(x, y);
-
-                    arrow.type = data.type;
-                    arrow.rotation = data.rotation;
-                    arrow.flipped = data.flipped;
-                    gameMap.updateArrowState(arrow, chunk, x, y);
-
-                    const node = graph.getNodeByArrow(arrow);
-                    if (node) {
-                        gameMap.graph.engine.setNodeSignal(
-                            node.nodeIdx,
-                            NodeSignal.NONE,
-                        );
-                    }
-
-                    chunk.markRenderDirty();
+                    this.renderMoveContext.initArrows = [];
+                    this.renderMoveContext.selection = [];
+                    this.packedOrigSet.clear();
+                    this.initialSelectionKeys.clear();
                 }
 
                 public undo(): void {
                     const _this = this as any as PrivatePlayerControls;
-
                     const selectedMap = _this.game.selectedMap;
 
                     // @ts-expect-error
@@ -379,6 +353,7 @@ export const PatchPlayerControls: IPatcher = (
                     ] as any;
                     if (state?.oldSelection) {
                         selectedMap.clear();
+                        selectedMap.clearCurrentSelection();
                         state.oldSelection.forEach((arKey: string) => {
                             const [x, y] = parseCoordKey(arKey);
                             selectedMap.select(x, y);
@@ -388,12 +363,14 @@ export const PatchPlayerControls: IPatcher = (
 
                 public redo(): void {
                     const _this = this as any as PrivatePlayerControls;
-
                     const selectedMap = _this.game.selectedMap;
 
                     // @ts-expect-error
                     super.redo();
 
+                    // @ts-expect-error
+                    if (_this.history.states.length <= _this.history.current)
+                        return;
                     // @ts-expect-error
                     const state = _this.history.states[
                         // @ts-expect-error
@@ -401,6 +378,7 @@ export const PatchPlayerControls: IPatcher = (
                     ] as any;
                     if (state?.newSelection) {
                         selectedMap.clear();
+                        selectedMap.clearCurrentSelection();
                         state.newSelection.forEach((arKey: string) => {
                             const [x, y] = parseCoordKey(arKey);
                             selectedMap.select(x, y);
