@@ -23,7 +23,6 @@ export class PathFinder {
 
     public findLinearPathAsync(
         key: any,
-        gameMap: GameMap,
         startX: number,
         startY: number,
         endX: number,
@@ -32,7 +31,6 @@ export class PathFinder {
         onComplete: (path: PathStep[] | null) => void,
     ): void {
         const task = new LinearPathFindingTask(
-            gameMap,
             startX,
             startY,
             endX,

@@ -37,7 +37,9 @@ export class RustWrapper {
         return new Uint8Array(this.memoryBuffer, this.stagingBufferPtr, length);
     }
 
-    private writeNodesToStaging(...nodeGroups: GraphNode[][]): number {
+    private writeNodesToStaging(
+        ...nodeGroups: (readonly GraphNode[])[]
+    ): number {
         let totalCount = 0;
 
         for (let i = 0; i < nodeGroups.length; i++) {

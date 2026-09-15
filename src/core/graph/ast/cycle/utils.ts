@@ -6,3 +6,14 @@ const ALLOWED_IN_CYCLE = new Set([NodeType.PATH, NodeType.LOGIC_XOR]);
 export function canBeInCycle(node: GraphNode): boolean {
     return ALLOWED_IN_CYCLE.has(node.type);
 }
+
+export function containsNode(
+    array: readonly GraphNode[],
+    target: GraphNode,
+): boolean {
+    const len = array.length;
+    for (let i = 0; i < len; i++) {
+        if (array[i] === target) return true;
+    }
+    return false;
+}

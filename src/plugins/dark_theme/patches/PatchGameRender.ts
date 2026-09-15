@@ -11,6 +11,7 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import { DarkThemeSetting } from 'src/plugins/dark_theme/settings/DarkThemeSetting';
 import type { IPatcher } from '../../Patcher';
 import { HighContrastSetting } from '../settings/HighContrastSetting';
+// @ts-expect-error
 import darkAtlas from './atlas.png';
 
 interface PrivateGameRender {

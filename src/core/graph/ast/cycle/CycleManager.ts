@@ -53,17 +53,8 @@ export class CycleManager implements IGraphListener {
         return key;
     }
 
-    public resetHead(head: GraphNode): void {
-        head.cycleRef = null;
-        head.headType = CycleHeadType.NONE;
-        head.cycleOffset = 0;
-    }
-
-    private resetNodeCycleState(node: GraphNode): void {
-        node.isCycle = false;
-        node.cycleRef = null;
-        node.headType = CycleHeadType.NONE;
-        node.cycleOffset = 0;
+    private resetNodeCycleInfo(node: GraphNode): void {
+        node.cycle = null;
     }
 
     private assignCycleHead(
@@ -73,18 +64,30 @@ export class CycleManager implements IGraphListener {
         offset: number,
         extraPath: GraphNode[] = [],
     ): void {
-        headNode.cycleRef = cycle;
-        headNode.headType = headType;
-        headNode.cycleOffset = offset;
+        headNode.cycle = {
+            ref: cycle,
+            headType,
+            offset,
+            isBody: false,
+        };
         cycle.heads.push(headNode);
 
         const cycleLen = cycle.nodes.length;
-        for (let i = 0; i < extraPath.length; i++) {
+        const pathLen = extraPath.length;
+
+        for (let i = 0; i < pathLen; i++) {
             const extraNode = extraPath[i];
-            extraNode.cycleRef = cycle;
-            const rawOffset = offset + extraPath.length - i - 1;
-            extraNode.cycleOffset =
+            const rawOffset = offset + pathLen - i - 1;
+            const normalizedOffset =
                 ((rawOffset % cycleLen) + cycleLen) % cycleLen;
+
+            extraNode.cycle = {
+                ref: cycle,
+                headType: CycleHeadType.NONE,
+                offset: normalizedOffset,
+                isBody: false,
+            };
+
             cycle.extraNodes.push(extraNode);
         }
     }
@@ -130,12 +133,12 @@ export class CycleManager implements IGraphListener {
         const { heads, extraNodes, nodes: cycleNodes } = cycle;
 
         for (let i = 0; i < heads.length; i++) {
-            this.resetHead(heads[i]);
+            this.resetNodeCycleInfo(heads[i]);
         }
         heads.length = 0;
 
         for (let i = 0; i < extraNodes.length; i++) {
-            this.resetHead(extraNodes[i]);
+            this.resetNodeCycleInfo(extraNodes[i]);
         }
         extraNodes.length = 0;
 
@@ -150,7 +153,9 @@ export class CycleManager implements IGraphListener {
         try {
             for (let i = 0; i < cycleLen; i++) {
                 const node = cycleNodes[cycleLen - i - 1];
-                node.cycleOffset = i;
+                if (node.cycle !== null) {
+                    node.cycle.offset = i;
+                }
 
                 for (let j = 0; j < node.links.length; j++) {
                     const linkedNode = node.links[j];
@@ -323,7 +328,7 @@ export class CycleManager implements IGraphListener {
             }
 
             for (let j = 0; j < internal.nodes.length; j++) {
-                this.resetNodeCycleState(internal.nodes[j]);
+                this.resetNodeCycleInfo(internal.nodes[j]);
             }
         }
 
@@ -407,7 +412,7 @@ export class CycleManager implements IGraphListener {
                     }
 
                     for (let j = 0; j < nodes.length; j++) {
-                        this.resetNodeCycleState(nodes[j]);
+                        this.resetNodeCycleInfo(nodes[j]);
                     }
                     break;
                 }
@@ -463,9 +468,12 @@ export class CycleManager implements IGraphListener {
 
     public attachNodesToCycle(cycle: GraphCycle, nodes: GraphNode[]): void {
         for (let i = 0; i < nodes.length; i++) {
-            const node = nodes[i];
-            node.isCycle = true;
-            node.cycleRef = cycle;
+            nodes[i].cycle = {
+                ref: cycle,
+                headType: CycleHeadType.NONE,
+                offset: 0,
+                isBody: true,
+            };
         }
 
         this.refreshCycleIO(cycle);
@@ -475,15 +483,15 @@ export class CycleManager implements IGraphListener {
         const { nodes, heads, extraNodes } = cycle;
 
         for (let i = 0; i < nodes.length; i++) {
-            this.resetNodeCycleState(nodes[i]);
+            this.resetNodeCycleInfo(nodes[i]);
         }
 
         for (let i = 0; i < heads.length; i++) {
-            this.resetHead(heads[i]);
+            this.resetNodeCycleInfo(heads[i]);
         }
 
         for (let i = 0; i < extraNodes.length; i++) {
-            this.resetHead(extraNodes[i]);
+            this.resetNodeCycleInfo(extraNodes[i]);
         }
     }
 

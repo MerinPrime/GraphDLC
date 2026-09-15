@@ -1,4 +1,3 @@
-import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { ITask } from '../task/ITask';
 import type { ArrowType } from '../utils/ArrowType';
 import type { PathStep } from './types';
@@ -7,7 +6,6 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
     public isCanceled = false;
     public stepBatchSize = 40;
 
-    private readonly gameMap: GameMap;
     private readonly startX: number;
     private readonly startY: number;
     private readonly endX: number;
@@ -18,14 +16,12 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
     private arrowType: ArrowType;
 
     public constructor(
-        gameMap: GameMap,
         startX: number,
         startY: number,
         endX: number,
         endY: number,
         arrowType: ArrowType,
     ) {
-        this.gameMap = gameMap;
         this.startX = startX;
         this.startY = startY;
         this.endX = endX;
@@ -34,7 +30,7 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
         this.resultPath = [];
     }
 
-    public step(maxStepsCount: number): boolean {
+    public step(_maxStepsCount: number): boolean {
         if (this.isDone || this.isCanceled) {
             return true;
         }

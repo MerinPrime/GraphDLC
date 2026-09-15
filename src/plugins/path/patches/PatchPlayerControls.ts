@@ -139,7 +139,6 @@ export const PatchPlayerControls: IPatcher = (
                             } else {
                                 graphDLC.pathFinder.findLinearPathAsync(
                                     taskKey,
-                                    _this.game.gameMap,
                                     this.pathData.startPathX,
                                     this.pathData.startPathY,
                                     this.pathData.endPathX,

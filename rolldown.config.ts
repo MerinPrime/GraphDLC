@@ -314,7 +314,7 @@ const baseInputConfig = {
         '.png': 'dataurl',
         '.jpg': 'dataurl',
         '.svg': 'dataurl',
-    },
+    } as const,
 };
 
 const terserUserscriptPlugin = terser({

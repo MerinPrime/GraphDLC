@@ -42,13 +42,13 @@ const StandardLocale = new I18nText(
     'Standard',
 );
 
-const EnhancedLocale = new I18nText(
-    'Enhanced',
-    'Улучшенный',
-    'Покращений',
-    'Палепшаны',
-    'Amélioré',
-);
+// const EnhancedLocale = new I18nText(
+//     'Enhanced',
+//     'Улучшенный',
+//     'Покращений',
+//     'Палепшаны',
+//     'Amélioré',
+// );
 
 const NativeLocale = new I18nText(
     'Native',

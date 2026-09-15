@@ -38,7 +38,7 @@ class GlobalUpdateTask implements ITask<void> {
 
     public constructor(
         private readonly graph: Graph,
-        private readonly mode: ExperimentalDeadNodeDebuggerMode,
+        private readonly mode: DeadNodeDebuggerMode,
     ) {}
 
     public step(batchSize: number): boolean {

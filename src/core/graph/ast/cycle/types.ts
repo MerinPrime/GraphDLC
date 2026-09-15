@@ -27,3 +27,10 @@ export interface InternalCycle {
     graphCycleRef: GraphCycle | null;
     valid: boolean;
 }
+
+export interface NodeCycleInfo {
+    ref: GraphCycle;
+    headType: CycleHeadType;
+    offset: number;
+    isBody: boolean;
+}
