@@ -28,12 +28,21 @@ export class DesignManager {
         },
     ];
 
+    private customStyles: string[] = [];
+
+    public addCustomStyles(styles: string[]) {
+        this.customStyles.push(...styles);
+    }
+
     public setup(fallback: boolean = false) {
         this.waitForElement('documentElement', () => {
             if (!fallback) {
                 this.designSettings.forEach(this.applySetting.bind(this));
             }
             this.applyStyle(updateStyle);
+            for (const customStyle of this.customStyles) {
+                this.applyStyle(customStyle);
+            }
 
             const syncSrcToCustomProperty = (img: HTMLImageElement) => {
                 if (img.src) {
