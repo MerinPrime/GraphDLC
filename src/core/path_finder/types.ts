@@ -8,6 +8,11 @@ export interface PathStep {
     flipped: boolean;
 }
 
+export interface LinearPathStep {
+    x: number;
+    y: number;
+}
+
 export interface ArrowConfig {
     forward: number;
     sideways: number;

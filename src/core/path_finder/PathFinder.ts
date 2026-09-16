@@ -28,16 +28,26 @@ export class PathFinder {
         endX: number,
         endY: number,
         arrowType: ArrowType,
+        rotation: number,
+        flipped: boolean,
         onComplete: (path: PathStep[] | null) => void,
     ): void {
-        const task = new LinearPathFindingTask(
-            startX,
-            startY,
-            endX,
-            endY,
-            arrowType,
+        const task = new LinearPathFindingTask(startX, startY, endX, endY);
+        this.scheduler.schedule(
+            task,
+            (linearPath) => {
+                onComplete(
+                    linearPath.map((step) => ({
+                        x: step.x,
+                        y: step.y,
+                        type: arrowType,
+                        rotation,
+                        flipped,
+                    })),
+                );
+            },
+            key,
         );
-        this.scheduler.schedule(task, onComplete, key);
     }
 
     public forceCompletePath(key: any): PathStep[] | null {

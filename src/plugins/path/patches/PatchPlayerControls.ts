@@ -100,9 +100,6 @@ export const PatchPlayerControls: IPatcher = (
                             PathBuildingTrigger.value = true;
                         }
 
-                        this.pathData.rotation = rotationState;
-                        this.pathData.flip = flipState;
-
                         const gameMap = _this.game.gameMap;
                         const lastGraphUpdate = gameMap.graph.lastUpdate;
 
@@ -111,12 +108,16 @@ export const PatchPlayerControls: IPatcher = (
                             (this.pathData.endPathX !== x ||
                                 this.pathData.endPathY !== y ||
                                 this.pathData.arrowType !== selectedArrow ||
+                                this.pathData.rotation !== rotationState ||
+                                this.pathData.flip !== flipState ||
                                 this.pathData.lastGraphUpdate !==
                                     lastGraphUpdate)
                         ) {
                             this.pathData.endPathX = x;
                             this.pathData.endPathY = y;
                             this.pathData.arrowType = selectedArrow;
+                            this.pathData.rotation = rotationState;
+                            this.pathData.flip = flipState;
                             this.pathData.lastGraphUpdate = lastGraphUpdate;
 
                             graphDLC.pathFinder.cancelPathSearch(taskKey);
@@ -144,6 +145,8 @@ export const PatchPlayerControls: IPatcher = (
                                     this.pathData.endPathX,
                                     this.pathData.endPathY,
                                     selectedArrow,
+                                    rotationState,
+                                    flipState,
                                     (newPath) => {
                                         if (this.pathData) {
                                             this.pathData.path = newPath ?? [];
