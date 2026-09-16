@@ -190,4 +190,15 @@ export class PluginManager {
 
         return gathered;
     }
+
+    public gatherStyles(): string[] {
+        const gathered: string[] = [];
+
+        for (const plugin of this.getEnabledPlugins()) {
+            if (plugin.features.customStyle)
+                gathered.push(plugin.features.customStyle);
+        }
+
+        return gathered;
+    }
 }
