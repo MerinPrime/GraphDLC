@@ -23,6 +23,8 @@ export const PatchGameRender: IPatcher = (
         (_module: typeof GameRender) => {
             return class GameRender extends _module {
                 private clearQueue: [number, number, number][] = [];
+                public clearedHistory: [number, number, number][] = [];
+                public _showBorder: boolean = true;
 
                 public getBackgroundColor(): [
                     r: number,
@@ -46,6 +48,7 @@ export const PatchGameRender: IPatcher = (
                 public setShowBorder(show: boolean): void {
                     const _this = this as any as PrivateGameRender;
                     if (_this.solidColorShader === null) return;
+                    this._showBorder = show;
                     _this.render.setShader(_this.solidColorShader);
                     _this.solidColorShader.uniform1i(
                         'u_showBorder',
@@ -53,11 +56,43 @@ export const PatchGameRender: IPatcher = (
                     );
                 }
 
+                public get showBorder(): boolean {
+                    return this._showBorder;
+                }
+
+                public override drawSolidColorRect(
+                    x: number,
+                    y: number,
+                    width: number,
+                    height: number,
+                ): void {
+                    if (!this.showBorder && this.clearedHistory.length > 0) {
+                        const centerX = x + width / 2;
+                        const centerY = y + height / 2;
+
+                        for (const [cx, cy, size] of this.clearedHistory) {
+                            if (
+                                centerX >= cx &&
+                                centerX <= cx + size &&
+                                centerY >= cy &&
+                                centerY <= cy + size
+                            ) {
+                                return;
+                            }
+                        }
+                    }
+
+                    super.drawSolidColorRect(x, y, width, height);
+                }
+
                 public drawArrowsRenderTexture() {
-                    for (const [x, y, size] of this.clearQueue) {
-                        this.internalClearArrow(x, y, size);
+                    this.clearedHistory.length = 0;
+                    for (const item of this.clearQueue) {
+                        this.internalClearArrow(item[0], item[1], item[2]);
+                        this.clearedHistory.push(item);
                     }
                     this.clearQueue.length = 0;
+
                     super.drawArrowsRenderTexture();
                 }
 
