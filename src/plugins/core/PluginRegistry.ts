@@ -8,6 +8,7 @@ import { OptimizeSelectionPlugin } from '../opt_selection';
 import { PathPlugin } from '../path';
 import { PluginsPlugin } from '../plugins';
 import { PowerPlugin } from '../power';
+import { ScreenshotPlugin } from '../screenshot_region';
 import { SelectionTipPlugin } from '../selection_tip';
 import { SettingsPlugin } from '../settings';
 import { TPSPlugin } from '../tps';
@@ -30,4 +31,5 @@ export const PluginRegistry: Plugin[] = [
     OptimizeSelectionPlugin,
     MoveSelectionPlugin,
     VisualSelectionPlugin,
+    ScreenshotPlugin,
 ];
