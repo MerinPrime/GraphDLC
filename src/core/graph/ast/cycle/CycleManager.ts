@@ -106,6 +106,11 @@ export class CycleManager implements IGraphListener {
             current.type === NodeType.DETECTOR
         ) {
             if (current.links.length !== 1) return null;
+            if (
+                current.backLinks.length !== 1 &&
+                current.type === NodeType.PATH
+            )
+                return null;
 
             const next = current.links[0];
             if (cycleSet.has(next)) return null;
