@@ -101,7 +101,10 @@ export class CycleManager implements IGraphListener {
         const extraPath: GraphNode[] = [];
         const visitedPath = new Set<GraphNode>();
 
-        while (current.type === NodeType.PATH) {
+        while (
+            current.type === NodeType.PATH ||
+            current.type === NodeType.DETECTOR
+        ) {
             if (current.links.length !== 1) return null;
 
             const next = current.links[0];
