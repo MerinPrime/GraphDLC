@@ -120,40 +120,53 @@ export const PatchPlayerControls: IPatcher = (
                             this.pathData.flip = flipState;
                             this.pathData.lastGraphUpdate = lastGraphUpdate;
 
-                            graphDLC.pathFinder.cancelPathSearch(taskKey);
-
-                            if (selectedArrow === -1) {
-                                graphDLC.pathFinder.findPathAsync(
-                                    taskKey,
-                                    _this.game.gameMap,
-                                    this.pathData.startPathX,
-                                    this.pathData.startPathY,
-                                    this.pathData.endPathX,
-                                    this.pathData.endPathY,
-                                    (newPath) => {
-                                        if (this.pathData) {
-                                            this.pathData.path = newPath ?? [];
-                                            _this.game.pathData = this.pathData;
-                                        }
-                                    },
-                                );
+                            if (
+                                this.pathData.startPathX ===
+                                    this.pathData.endPathX &&
+                                this.pathData.startPathY ===
+                                    this.pathData.endPathY
+                            ) {
+                                graphDLC.pathFinder.cancelPathSearch(taskKey);
+                                this.pathData.path = [];
                             } else {
-                                graphDLC.pathFinder.findLinearPathAsync(
-                                    taskKey,
-                                    this.pathData.startPathX,
-                                    this.pathData.startPathY,
-                                    this.pathData.endPathX,
-                                    this.pathData.endPathY,
-                                    selectedArrow,
-                                    rotationState,
-                                    flipState,
-                                    (newPath) => {
-                                        if (this.pathData) {
-                                            this.pathData.path = newPath ?? [];
-                                            _this.game.pathData = this.pathData;
-                                        }
-                                    },
-                                );
+                                graphDLC.pathFinder.cancelPathSearch(taskKey);
+                                if (selectedArrow === -1) {
+                                    graphDLC.pathFinder.findPathAsync(
+                                        taskKey,
+                                        _this.game.gameMap,
+                                        this.pathData.startPathX,
+                                        this.pathData.startPathY,
+                                        this.pathData.endPathX,
+                                        this.pathData.endPathY,
+                                        (newPath) => {
+                                            if (this.pathData) {
+                                                this.pathData.path =
+                                                    newPath ?? [];
+                                                _this.game.pathData =
+                                                    this.pathData;
+                                            }
+                                        },
+                                    );
+                                } else {
+                                    graphDLC.pathFinder.findLinearPathAsync(
+                                        taskKey,
+                                        this.pathData.startPathX,
+                                        this.pathData.startPathY,
+                                        this.pathData.endPathX,
+                                        this.pathData.endPathY,
+                                        selectedArrow,
+                                        rotationState,
+                                        flipState,
+                                        (newPath) => {
+                                            if (this.pathData) {
+                                                this.pathData.path =
+                                                    newPath ?? [];
+                                                _this.game.pathData =
+                                                    this.pathData;
+                                            }
+                                        },
+                                    );
+                                }
                             }
                         }
                     } else if (this.pathData) {
