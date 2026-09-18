@@ -2,11 +2,18 @@ import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
+import UPNG from '@pdf-lib/upng';
 import { applyPalette, GIFEncoder, quantize } from 'gifenc';
+import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
-import type { AreaBounds, GifOptions, RenderOptions } from './types';
+import type {
+    AreaBounds,
+    Mp4Options,
+    RenderOptions,
+    VideoOptions,
+} from './types';
 
 interface PrivateGame {
     gameMap: GameMap;
@@ -220,19 +227,21 @@ export const PatchGame: IPatcher = (
                 }
             }
 
-            public async renderGif(options: GifOptions): Promise<Blob | null> {
+            private async captureFrames(
+                options: VideoOptions,
+                handlers: {
+                    onFrame: (
+                        frame: HTMLCanvasElement,
+                        index: number,
+                    ) => Promise<void> | void;
+                    onFinish: () => Promise<Blob | null> | Blob | null;
+                },
+            ): Promise<Blob | null> {
                 const selection = this.getSelectionBounds();
                 if (!selection) return null;
 
                 const totalFrames = options.totalFrames ?? 30;
                 const tickInterval = options.tickInterval ?? 1;
-                const fps = Math.min(options.fps ?? 10, 50);
-                const delay = Math.round(1000 / fps);
-
-                let width = 0;
-                let height = 0;
-
-                const gif = GIFEncoder();
 
                 for (let i = 0; i < totalFrames; i++) {
                     const frame = this.renderRegionToCanvas(
@@ -242,8 +251,35 @@ export const PatchGame: IPatcher = (
                     );
 
                     if (frame) {
-                        width = frame.width;
-                        height = frame.height;
+                        await handlers.onFrame(frame, i);
+                    }
+
+                    options.onProgress?.(
+                        Math.round(((i + 1) / totalFrames) * 100),
+                    );
+
+                    if (i < totalFrames - 1) {
+                        this.gameMap.graph.engine.runManyTicks(tickInterval);
+                        await new Promise((resolve) => setTimeout(resolve, 0));
+                    }
+                }
+
+                return await handlers.onFinish();
+            }
+
+            public async renderGif(
+                options: VideoOptions,
+            ): Promise<Blob | null> {
+                const fps = Math.min(options.fps ?? 10, 50);
+                const delay = Math.round(1000 / fps);
+                const maxColors = 64;
+
+                const gif = GIFEncoder();
+
+                return this.captureFrames(options, {
+                    onFrame: (frame) => {
+                        const width = frame.width;
+                        const height = frame.height;
                         const ctx = frame.getContext('2d');
                         if (!ctx) throw new Error('2d context not found');
 
@@ -253,24 +289,115 @@ export const PatchGame: IPatcher = (
                             width,
                             height,
                         ).data;
-
-                        const palette = quantize(imageData, 64);
+                        const palette = quantize(imageData, maxColors);
                         const index = applyPalette(imageData, palette);
 
                         gif.writeFrame(index, width, height, {
                             palette,
                             delay,
                         });
-                    }
+                    },
+                    onFinish: () => {
+                        gif.finish();
+                        return new Blob([gif.bytes()], { type: 'image/gif' });
+                    },
+                });
+            }
 
-                    if (i < totalFrames - 1) {
-                        this.gameMap.graph.engine.runManyTicks(tickInterval);
-                        await new Promise((resolve) => setTimeout(resolve, 0));
-                    }
-                }
+            public async renderApng(
+                options: VideoOptions,
+            ): Promise<Blob | null> {
+                const fps = options.fps && options.fps > 0 ? options.fps : 60;
+                const delay = Math.round(1000 / fps);
 
-                gif.finish();
-                return new Blob([gif.bytes()], { type: 'image/gif' });
+                const frameBuffers: ArrayBuffer[] = [];
+                let width = 0;
+                let height = 0;
+
+                return this.captureFrames(options, {
+                    onFrame: (frame) => {
+                        width = frame.width;
+                        height = frame.height;
+                        const ctx = frame.getContext('2d');
+                        if (!ctx) throw new Error('2d context not found');
+
+                        const imageData = ctx.getImageData(0, 0, width, height);
+                        frameBuffers.push(imageData.data.buffer);
+                    },
+                    onFinish: () => {
+                        if (frameBuffers.length === 0) return null;
+                        const delays = new Array(frameBuffers.length).fill(
+                            delay,
+                        );
+                        const pngBuffer = UPNG.encode(
+                            frameBuffers,
+                            width,
+                            height,
+                            0,
+                            delays,
+                        );
+                        return new Blob([pngBuffer], { type: 'image/png' });
+                    },
+                });
+            }
+
+            public async renderMp4(options: Mp4Options): Promise<Blob | null> {
+                const fps = options.fps && options.fps > 0 ? options.fps : 60;
+                const bitrate = options.bitrate ?? 8_000_000;
+
+                let muxer: Muxer<ArrayBufferTarget> | null = null;
+                let videoEncoder: VideoEncoder | null = null;
+
+                return this.captureFrames(options, {
+                    onFrame: (frame, i) => {
+                        const width = Math.floor(frame.width / 2) * 2;
+                        const height = Math.floor(frame.height / 2) * 2;
+
+                        if (!muxer || !videoEncoder) {
+                            muxer = new Muxer({
+                                target: new ArrayBufferTarget(),
+                                video: {
+                                    codec: 'avc',
+                                    width,
+                                    height,
+                                },
+                                fastStart: 'in-memory',
+                            });
+
+                            videoEncoder = new VideoEncoder({
+                                output: (chunk, meta) =>
+                                    muxer!.addVideoChunk(chunk, meta),
+                                error: (e) =>
+                                    console.error('VideoEncoder error:', e),
+                            });
+
+                            videoEncoder.configure({
+                                codec: 'avc1.4d0033',
+                                width,
+                                height,
+                                bitrate,
+                            });
+                        }
+
+                        const videoFrame = new VideoFrame(frame, {
+                            timestamp: Math.round((i * 1_000_000) / fps),
+                            visibleRect: { x: 0, y: 0, width, height },
+                        });
+
+                        videoEncoder.encode(videoFrame, {
+                            keyFrame: i % 30 === 0,
+                        });
+                        videoFrame.close();
+                    },
+                    onFinish: async () => {
+                        if (!muxer || !videoEncoder) return null;
+                        await videoEncoder.flush();
+                        muxer.finalize();
+                        return new Blob([muxer.target.buffer], {
+                            type: 'video/mp4',
+                        });
+                    },
+                });
             }
         };
     });

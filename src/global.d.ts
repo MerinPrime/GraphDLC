@@ -5,7 +5,10 @@ import type { Graph } from './core/graph/ast/Graph';
 import { HighlightPathData } from './plugins/connections/patches/types';
 import { RenderMoveContext } from './plugins/move_selection/patches/types';
 import { PathData } from './plugins/path/patches/types';
-import { GifOptions } from './plugins/screenshot_region/patches/types';
+import {
+    Mp4Options,
+    VideoOptions,
+} from './plugins/screenshot_region/patches/types';
 import type { AreaBounds, RenderOptions } from './types';
 
 declare global {
@@ -98,7 +101,9 @@ declare module '@logic-arrows/player/game' {
             options: RenderOptions = {},
         ): HTMLCanvasElement | null;
 
-        renderGif(options: GifOptions): Promise<Blob | null>;
+        renderGif(options: VideoOptions): Promise<Blob | null>;
+        renderApng(options: VideoOptions): Promise<Blob | null>;
+        renderMp4(options: Mp4Options): Promise<Blob | null>;
 
         copySelectedAreaImageToClipboard(
             options?: RenderOptions,

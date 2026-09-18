@@ -20,6 +20,8 @@
         "@rollup/plugin-terser": "^1.0.0",
         "@types/archiver": "^8.0.0",
         "@types/node": "^25.9.1",
+        "@types/pako": "^2.0.4",
+        "@types/upng-js": "^2.1.5",
         "archiver": "^8.0.0",
         "concurrently": "^10.0.3",
         "rolldown": "^1.1.1",
@@ -29,6 +31,8 @@
         "typescript": "^5.8.2"
     },
     "dependencies": {
-        "gifenc": "^1.0.3"
+        "@pdf-lib/upng": "^1.0.1",
+        "gifenc": "^1.0.3",
+        "mp4-muxer": "^5.2.2"
     }
 }
