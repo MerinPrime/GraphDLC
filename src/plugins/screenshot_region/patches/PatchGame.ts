@@ -2,10 +2,11 @@ import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
+import { applyPalette, GIFEncoder, quantize } from 'gifenc';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
-import type { AreaBounds, RenderOptions } from './types';
+import type { AreaBounds, GifOptions, RenderOptions } from './types';
 
 interface PrivateGame {
     gameMap: GameMap;
@@ -217,6 +218,59 @@ export const PatchGame: IPatcher = (
                     console.error('Screenshot clipboard error:', err);
                     return false;
                 }
+            }
+
+            public async renderGif(options: GifOptions): Promise<Blob | null> {
+                const selection = this.getSelectionBounds();
+                if (!selection) return null;
+
+                const totalFrames = options.totalFrames ?? 30;
+                const tickInterval = options.tickInterval ?? 1;
+                const fps = Math.min(options.fps ?? 10, 50);
+                const delay = Math.round(1000 / fps);
+
+                let width = 0;
+                let height = 0;
+
+                const gif = GIFEncoder();
+
+                for (let i = 0; i < totalFrames; i++) {
+                    const frame = this.renderRegionToCanvas(
+                        selection.area,
+                        selection.selectedSet,
+                        options,
+                    );
+
+                    if (frame) {
+                        width = frame.width;
+                        height = frame.height;
+                        const ctx = frame.getContext('2d');
+                        if (!ctx) throw new Error('2d context not found');
+
+                        const imageData = ctx.getImageData(
+                            0,
+                            0,
+                            width,
+                            height,
+                        ).data;
+
+                        const palette = quantize(imageData, 64);
+                        const index = applyPalette(imageData, palette);
+
+                        gif.writeFrame(index, width, height, {
+                            palette,
+                            delay,
+                        });
+                    }
+
+                    if (i < totalFrames - 1) {
+                        this.gameMap.graph.engine.runManyTicks(tickInterval);
+                        await new Promise((resolve) => setTimeout(resolve, 0));
+                    }
+                }
+
+                gif.finish();
+                return new Blob([gif.bytes()], { type: 'image/gif' });
             }
         };
     });

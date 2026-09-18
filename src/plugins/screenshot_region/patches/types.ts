@@ -6,3 +6,9 @@ export interface RenderOptions {
     minCellSize?: number;
     qualityScale?: number;
 }
+
+export interface GifOptions extends RenderOptions {
+    tickInterval: number;
+    totalFrames: number;
+    fps: number;
+}
