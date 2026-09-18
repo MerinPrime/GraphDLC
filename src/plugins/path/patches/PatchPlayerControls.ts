@@ -66,12 +66,14 @@ export const PatchPlayerControls: IPatcher = (
                     this.isPathCancelled =
                         this.isPathCancelled ||
                         (isRightMouseDown && isLeftMouseDown);
-                    if (isRightMouseDown && this.isPathCancelled) {
-                        if (this.pathData) {
-                            _this.mouseHandler.setUiInteraction(true);
+                    if (this.isPathCancelled) {
+                        if (isRightMouseDown && this.pathData) {
+                            _this.mouseHandler.setUiInteraction(false);
                             this.pathData = null;
                             _this.game.pathData = null;
                             PathBuildingTrigger.value = false;
+                        } else {
+                            this.isPathCancelled = false;
                         }
                     } else if (isRightMouseDown) {
                         _this.mouseHandler.setUiInteraction(true);
