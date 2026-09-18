@@ -3,6 +3,7 @@ import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import UPNG from '@pdf-lib/upng';
+// @ts-expect-error
 import { applyPalette, GIFEncoder, quantize } from 'gifenc';
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import type { GraphDLC } from 'src/core/GraphDLC';
@@ -74,21 +75,26 @@ export const PatchGame: IPatcher = (
 
                 const maxCells = Math.max(widthCells, heightCells);
                 const MAX_DIM = options.maxTextureDim ?? 4096;
-                const NATIVE = 256;
-                const MIN = options.minCellSize ?? 16;
+                const MAX_CELL_SIZE = 64;
+                const MIN_CELL_SIZE = options.minCellSize ?? 4;
 
-                const optimal = Math.floor(MAX_DIM / maxCells);
-                let clamped = Math.max(MIN, Math.min(NATIVE, optimal));
-                if (clamped > 32) clamped = Math.floor(clamped / 2) * 2;
+                const fitCellSize = Math.floor(MAX_DIM / maxCells);
 
-                if (options.qualityScale && options.qualityScale > 0) {
-                    clamped = Math.max(
-                        8,
-                        Math.floor(clamped * options.qualityScale),
-                    );
+                let size = Math.min(MAX_CELL_SIZE, fitCellSize);
+
+                if (size < MIN_CELL_SIZE) {
+                    size = Math.max(1, fitCellSize);
                 }
 
-                return clamped;
+                if (size > 8) {
+                    size = Math.floor(size / 2) * 2;
+                }
+
+                if (options.qualityScale && options.qualityScale > 0) {
+                    size = Math.max(1, Math.floor(size * options.qualityScale));
+                }
+
+                return size;
             }
 
             public renderRegionToCanvas(
