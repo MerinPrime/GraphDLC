@@ -1,8 +1,9 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { PatchGame } from './patches/PatchGame';
+import { PatchPlayerControls } from './patches/PatchPlayerControls';
 
-const Patches = [PatchGame];
+const Patches = [PatchGame, PatchPlayerControls];
 
 const ScreenshotRegionLocale = new I18nText(
     'screenshot',

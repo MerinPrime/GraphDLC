@@ -5,6 +5,7 @@ import type { Graph } from './core/graph/ast/Graph';
 import { HighlightPathData } from './plugins/connections/patches/types';
 import { RenderMoveContext } from './plugins/move_selection/patches/types';
 import { PathData } from './plugins/path/patches/types';
+import type { AreaBounds, RenderOptions } from './types';
 
 declare global {
     declare const __CURRENT_VERSION__: string;
@@ -84,6 +85,21 @@ declare module '@logic-arrows/player/game' {
 
         getArrowAtCursor(): Arrow | undefined;
         getDrawOffsets(): { offsetX: number; offsetY: number };
+
+        getSelectionBounds(): {
+            area: AreaBounds;
+            selectedSet: Set<string>;
+        } | null;
+
+        renderRegionToCanvas(
+            area: AreaBounds,
+            selectedSet?: Set<string>,
+            options: RenderOptions = {},
+        ): HTMLCanvasElement | null;
+
+        copySelectedAreaImageToClipboard(
+            options?: RenderOptions,
+        ): Promise<boolean>;
     }
 }
 

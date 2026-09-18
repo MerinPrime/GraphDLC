@@ -5,6 +5,7 @@ import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
+import type { AreaBounds, RenderOptions } from './types';
 
 interface PrivateGame {
     gameMap: GameMap;
@@ -17,84 +18,101 @@ export const PatchGame: IPatcher = (
 ) => {
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
-            private onKeyDownBound = (e: KeyboardEvent) =>
-                this.handleKeyDown(e);
+            public getSelectionBounds(): {
+                area: AreaBounds;
+                selectedSet: Set<string>;
+            } | null {
+                let area: AreaBounds | undefined =
+                    this.selectedMap.getCurrentSelectedArea();
+                const selectedArrows = this.selectedMap.getSelectedArrows();
+                const selectedSet = new Set(selectedArrows);
 
-            public constructor(...args: any[]) {
-                // @ts-expect-error
-                super(...args);
-                window.addEventListener('keydown', this.onKeyDownBound);
-            }
+                if (!area) {
+                    if (selectedArrows.length === 0) return null;
 
-            public override dispose(): void {
-                window.removeEventListener('keydown', this.onKeyDownBound);
-                super.dispose();
-            }
+                    let minX = Infinity,
+                        minY = Infinity;
+                    let maxX = -Infinity,
+                        maxY = -Infinity;
 
-            private async handleKeyDown(e: KeyboardEvent): Promise<void> {
-                if (
-                    e.target instanceof HTMLInputElement ||
-                    e.target instanceof HTMLTextAreaElement
-                ) {
-                    return;
-                }
-
-                if (e.code === 'KeyL') {
-                    const success =
-                        await this.copySelectedAreaImageToClipboard();
-                    if (success) {
-                        console.log('Screenshot');
+                    for (const posStr of selectedArrows) {
+                        const [x, y] = posStr
+                            .split(',')
+                            .map((v: string) => parseInt(v, 10));
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x + 1);
+                        maxY = Math.max(maxY, y + 1);
                     }
+                    area = [minX, minY, maxX, maxY];
                 }
+
+                const paddedArea: AreaBounds = [
+                    area[0] - 1,
+                    area[1] - 1,
+                    area[2] + 1,
+                    area[3] + 1,
+                ];
+
+                return { area: paddedArea, selectedSet };
             }
 
-            private calculateAdaptiveCellSize(
+            private calculateCellSize(
                 widthCells: number,
                 heightCells: number,
+                options: RenderOptions = {},
             ): number {
-                const maxCells = Math.max(widthCells, heightCells);
-                const MAX_TEXTURE_DIM = 4096;
-                const NATIVE_SPRITE_SIZE = 256;
-                const MIN_CELL_SIZE = 16;
+                if (options.cellSize) return options.cellSize;
 
-                const optimalSize = Math.floor(MAX_TEXTURE_DIM / maxCells);
-                const clamped = Math.max(
-                    MIN_CELL_SIZE,
-                    Math.min(NATIVE_SPRITE_SIZE, optimalSize),
-                );
-                return clamped > 32 ? Math.floor(clamped / 2) * 2 : clamped;
+                const maxCells = Math.max(widthCells, heightCells);
+                const MAX_DIM = options.maxTextureDim ?? 4096;
+                const NATIVE = 256;
+                const MIN = options.minCellSize ?? 16;
+
+                const optimal = Math.floor(MAX_DIM / maxCells);
+                let clamped = Math.max(MIN, Math.min(NATIVE, optimal));
+                if (clamped > 32) clamped = Math.floor(clamped / 2) * 2;
+
+                if (options.qualityScale && options.qualityScale > 0) {
+                    clamped = Math.max(
+                        8,
+                        Math.floor(clamped * options.qualityScale),
+                    );
+                }
+
+                return clamped;
             }
 
-            public async copyRegionImageToClipboard(
-                x0: number,
-                y0: number,
-                x1: number,
-                y1: number,
+            public renderRegionToCanvas(
+                area: AreaBounds,
                 selectedSet?: Set<string>,
-                originalArea?: [number, number, number, number],
-            ): Promise<boolean> {
+                options: RenderOptions = {},
+            ): HTMLCanvasElement | null {
                 const _this = this as any as PrivateGame;
-                if (!_this.render) return false;
+                if (!_this.render) return null;
 
-                const canvas = (_this.render as any)
+                const gameCanvas = (_this.render as any)
                     .canvas as HTMLCanvasElement;
-                if (!canvas) return false;
+                if (!gameCanvas) return null;
 
-                const minX = Math.min(x0, x1);
-                const maxX = Math.max(x0, x1);
-                const minY = Math.min(y0, y1);
-                const maxY = Math.max(y0, y1);
-
+                const [minX, minY, maxX, maxY] = area;
                 const widthCells = maxX - minX;
                 const heightCells = maxY - minY;
-                if (widthCells <= 0 || heightCells <= 0) return false;
+                if (widthCells <= 0 || heightCells <= 0) return null;
 
-                const cellSize = this.calculateAdaptiveCellSize(
+                const cellSize = this.calculateCellSize(
                     widthCells,
                     heightCells,
+                    options,
                 );
                 const targetWidth = widthCells * cellSize;
                 const targetHeight = heightCells * cellSize;
+
+                const outputCanvas = document.createElement('canvas');
+                outputCanvas.width = targetWidth;
+                outputCanvas.height = targetHeight;
+                const ctx = outputCanvas.getContext('2d');
+                if (!ctx) return null;
 
                 const savedWidth = this.width;
                 const savedHeight = this.height;
@@ -105,17 +123,10 @@ export const PatchGame: IPatcher = (
                 ];
                 const savedIsSelecting = this.isSelecting;
                 const savedDrawPasted = this.drawPastedArrows;
-                // @ts-expect-error
-                const savedSelectedArrows = this.selectedMap.selectedArrows;
-                const savedCurrentSelectedArrows =
-                    // @ts-expect-error
-                    this.selectedMap.currentSelectedArrows;
-
-                const canvas2d = document.createElement('canvas');
-                canvas2d.width = targetWidth;
-                canvas2d.height = targetHeight;
-                const ctx = canvas2d.getContext('2d');
-                if (!ctx) return false;
+                const savedSelectedArrows = (this.selectedMap as any)
+                    .selectedArrows;
+                const savedCurrentSelectedArrows = (this.selectedMap as any)
+                    .currentSelectedArrows;
 
                 try {
                     this.scale = cellSize;
@@ -124,10 +135,8 @@ export const PatchGame: IPatcher = (
 
                     this.isSelecting = false;
                     this.drawPastedArrows = false;
-                    // @ts-expect-error
-                    this.selectedMap.selectedArrows = [];
-                    // @ts-expect-error
-                    this.selectedMap.currentSelectedArrows = [];
+                    (this.selectedMap as any).selectedArrows = [];
+                    (this.selectedMap as any).currentSelectedArrows = [];
 
                     if (
                         typeof (_this.render as any).clearArrow === 'function'
@@ -135,12 +144,10 @@ export const PatchGame: IPatcher = (
                         for (let gx = minX; gx < maxX; gx++) {
                             for (let gy = minY; gy < maxY; gy++) {
                                 const isBorder =
-                                    originalArea !== undefined &&
-                                    (gx < originalArea[0] ||
-                                        gx >= originalArea[2] ||
-                                        gy < originalArea[1] ||
-                                        gy >= originalArea[3]);
-
+                                    gx === minX ||
+                                    gx === maxX - 1 ||
+                                    gy === minY ||
+                                    gy === maxY - 1;
                                 const isUnselected =
                                     selectedSet !== undefined &&
                                     selectedSet.size > 0 &&
@@ -149,7 +156,6 @@ export const PatchGame: IPatcher = (
                                 if (isBorder || isUnselected) {
                                     const px = (gx - minX) * cellSize;
                                     const py = (gy - minY) * cellSize;
-
                                     (_this.render as any).clearArrow(
                                         px,
                                         py,
@@ -164,17 +170,16 @@ export const PatchGame: IPatcher = (
                     this.screenUpdated = true;
                     this.draw();
 
-                    ctx.drawImage(canvas, 0, 0);
+                    ctx.drawImage(gameCanvas, 0, 0);
                 } finally {
                     this.scale = savedScale;
                     this.offset[0] = savedOffset[0];
                     this.offset[1] = savedOffset[1];
                     this.isSelecting = savedIsSelecting;
                     this.drawPastedArrows = savedDrawPasted;
-                    // @ts-expect-error
-                    this.selectedMap.selectedArrows = savedSelectedArrows;
-                    // @ts-expect-error
-                    this.selectedMap.currentSelectedArrows =
+                    (this.selectedMap as any).selectedArrows =
+                        savedSelectedArrows;
+                    (this.selectedMap as any).currentSelectedArrows =
                         savedCurrentSelectedArrows;
 
                     this.resize(savedWidth, savedHeight);
@@ -182,10 +187,25 @@ export const PatchGame: IPatcher = (
                     this.draw();
                 }
 
-                const blob = await new Promise<Blob | null>((resolve) => {
-                    canvas2d.toBlob((b) => resolve(b), 'image/png');
-                });
+                return outputCanvas;
+            }
 
+            public async copySelectedAreaImageToClipboard(
+                options?: RenderOptions,
+            ): Promise<boolean> {
+                const selection = this.getSelectionBounds();
+                if (!selection) return false;
+
+                const canvas = this.renderRegionToCanvas(
+                    selection.area,
+                    selection.selectedSet,
+                    options,
+                );
+                if (!canvas) return false;
+
+                const blob = await new Promise<Blob | null>((resolve) => {
+                    canvas.toBlob((b) => resolve(b), 'image/png');
+                });
                 if (!blob) return false;
 
                 try {
@@ -194,47 +214,9 @@ export const PatchGame: IPatcher = (
                     ]);
                     return true;
                 } catch (err) {
-                    console.error('Screenshot error:', err);
+                    console.error('Screenshot clipboard error:', err);
                     return false;
                 }
-            }
-
-            public async copySelectedAreaImageToClipboard(): Promise<boolean> {
-                let area: [number, number, number, number] | undefined =
-                    this.selectedMap.getCurrentSelectedArea();
-
-                const selectedArrows = this.selectedMap.getSelectedArrows();
-                const selectedSet = new Set(selectedArrows);
-
-                if (!area) {
-                    if (selectedArrows.length === 0) return false;
-
-                    let minX = Infinity;
-                    let minY = Infinity;
-                    let maxX = -Infinity;
-                    let maxY = -Infinity;
-
-                    for (const posStr of selectedArrows) {
-                        const [x, y] = posStr
-                            .split(',')
-                            .map((v: string) => parseInt(v, 10));
-                        minX = Math.min(minX, x);
-                        minY = Math.min(minY, y);
-                        maxX = Math.max(maxX, x + 1);
-                        maxY = Math.max(maxY, y + 1);
-                    }
-
-                    area = [minX, minY, maxX, maxY];
-                }
-
-                return this.copyRegionImageToClipboard(
-                    area[0] - 1,
-                    area[1] - 1,
-                    area[2] + 1,
-                    area[3] + 1,
-                    selectedSet,
-                    area,
-                );
             }
         };
     });
