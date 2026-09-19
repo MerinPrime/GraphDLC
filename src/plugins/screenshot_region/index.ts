@@ -1,5 +1,6 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
+import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
 
@@ -26,7 +27,7 @@ export const ScreenshotPlugin = new Plugin(
     {
         name: 'GraphDLC Screenshot',
         priority: PluginPriority.MEDIUM,
-        dependencies: [],
+        dependencies: [CorePlugin],
         defaultEnabled: true,
     },
     {
