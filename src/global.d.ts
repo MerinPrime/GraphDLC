@@ -5,11 +5,14 @@ import type { Graph } from './core/graph/ast/Graph';
 import { HighlightPathData } from './plugins/connections/patches/types';
 import { RenderMoveContext } from './plugins/move_selection/patches/types';
 import { PathData } from './plugins/path/patches/types';
+import type {
+    AreaBounds,
+    RenderOptions,
+} from './plugins/screenshot_region/patches/types';
 import {
     Mp4Options,
     VideoOptions,
 } from './plugins/screenshot_region/patches/types';
-import type { AreaBounds, RenderOptions } from './types';
 
 declare global {
     declare const __CURRENT_VERSION__: string;

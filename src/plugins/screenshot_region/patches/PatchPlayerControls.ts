@@ -40,8 +40,17 @@ export const PatchPlayerControls: IPatcher = (
                             if (_this.keyboardHandler.getCtrlPressed()) {
                                 // TODO: gif
                             } else {
+                                const isAltPressed =
+                                    _this.keyboardHandler.getKeyPressed(
+                                        'AltLeft',
+                                    ) ||
+                                    _this.keyboardHandler.getKeyPressed(
+                                        'AltRight',
+                                    );
                                 _this.game
-                                    .captureScreenshot()
+                                    .captureScreenshot({
+                                        showSolidColor: isAltPressed,
+                                    })
                                     .then(async (blob) => {
                                         if (!blob) {
                                             return;

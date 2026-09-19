@@ -20,6 +20,11 @@ const KeyBindHints: KeyBindHint[] = [
         showOn: ['selected'],
         description: ScreenshotRegionLocale,
     },
+    // {
+    //     keys: ['Alt', 'L'],
+    //     showOn: ['selected'],
+    //     description: ScreenshotRegionLocale,
+    // },
 ];
 
 export const ScreenshotPlugin = new Plugin(
