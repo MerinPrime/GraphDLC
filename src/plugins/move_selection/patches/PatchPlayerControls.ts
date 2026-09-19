@@ -186,6 +186,7 @@ export const PatchPlayerControls: IPatcher = (
 
                     _this.game.renderMoveContext = this.renderMoveContext;
                     _this.game.screenUpdated = true;
+                    _this.game.draw();
                 }
 
                 public startMoveSelection(): void {
@@ -324,6 +325,8 @@ export const PatchPlayerControls: IPatcher = (
                     _this.history.lastChangeTime = Number.NEGATIVE_INFINITY;
 
                     _this.game.renderMoveContext = null;
+                    _this.game.screenUpdated = true;
+                    _this.game.draw();
                     this.isSelectionMoving = false;
                     this.startMousePos = undefined;
                     this.context.initArrows.length = 0;
