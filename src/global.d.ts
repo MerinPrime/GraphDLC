@@ -26,6 +26,7 @@ declare module '@logic-arrows/game-render/game-render' {
         setShowBorder(show: boolean): void;
         setSides(sides: boolean[]): void;
         setFixedBorder(state: boolean): void;
+        setDisableSolidColor(value: boolean): void;
     }
 }
 
