@@ -1,0 +1,40 @@
+@use "../shared/variables" as *;
+
+input[type="number"],
+input[type="text"]:not(.ui-menu-map-name-input):not(.name-change-input):not(.custom-tps-input) {
+  background-color: var(--bg-base);
+  border: 2px solid var(--bg-surface);
+  border-radius: $border-radius-md;
+  padding: 0.4rem 0.8rem;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+
+  &:focus {
+    border-color: var(--text-blue);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-blue) 15%, transparent);
+  }
+
+  &:disabled {
+    background-color: var(--bg-disabled);
+    border-color: var(--bg-surface);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+    opacity: 1;
+  }
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}

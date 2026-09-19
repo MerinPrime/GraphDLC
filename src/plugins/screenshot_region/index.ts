@@ -3,10 +3,12 @@ import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
+import { PatchPlayerUI } from './patches/PatchPlayerUI';
+import pluginStyle from './style.scss?raw';
 
-const Patches = [PatchGame, PatchPlayerControls];
+const Patches = [PatchGame, PatchPlayerControls, PatchPlayerUI];
 
-const ScreenshotRegionLocale = new I18nText(
+export const ScreenshotLocale = new I18nText(
     'screenshot',
     'скриншот',
     'знімок екрана',
@@ -14,11 +16,24 @@ const ScreenshotRegionLocale = new I18nText(
     'capture d’écran',
 );
 
+export const RecordLocale = new I18nText(
+    'record',
+    'запись',
+    'запис',
+    'запіс',
+    'enregistrement',
+);
+
 const KeyBindHints: KeyBindHint[] = [
     {
         keys: ['L'],
         showOn: ['selected'],
-        description: ScreenshotRegionLocale,
+        description: ScreenshotLocale,
+    },
+    {
+        keys: ['Shift', 'L'],
+        showOn: ['selected'],
+        description: RecordLocale,
     },
     // {
     //     keys: ['Alt', 'L'],
@@ -38,5 +53,6 @@ export const ScreenshotPlugin = new Plugin(
     {
         patches: Patches,
         keyBindHints: KeyBindHints,
+        customStyle: pluginStyle,
     },
 );

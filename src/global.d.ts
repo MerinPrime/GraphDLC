@@ -6,6 +6,7 @@ import { HighlightPathData } from './plugins/connections/patches/types';
 import { RenderMoveContext } from './plugins/move_selection/patches/types';
 import { PathData } from './plugins/path/patches/types';
 import type {
+    AnyRecordOptions,
     AreaBounds,
     RenderOptions,
 } from './plugins/screenshot_region/patches/types';
@@ -136,6 +137,11 @@ declare module '@logic-arrows/ui/components/ui-speed-controller' {
 declare module '@logic-arrows/player/player-ui' {
     export interface PlayerUI {
         startTickFrom: number;
+
+        showVideoModal(
+            onStartRecord: (options: AnyRecordOptions) => void,
+            onCancel?: () => void,
+        ): void;
     }
 }
 

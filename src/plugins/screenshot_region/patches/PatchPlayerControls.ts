@@ -5,8 +5,13 @@ import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import { copyOrDownloadBlob, generateFilename } from 'src/core/utils/Blobs';
+import {
+    copyOrDownloadBlob,
+    downloadBlob,
+    generateFilename,
+} from 'src/core/utils/Blobs';
 import type { IPatcher } from '../../Patcher';
+import type { Mp4Options } from './types';
 
 interface PrivatePlayerControls {
     readonly game: Game;
@@ -37,8 +42,47 @@ export const PatchPlayerControls: IPatcher = (
                         key: string,
                     ) => {
                         if (code === 'KeyL') {
-                            if (_this.keyboardHandler.getCtrlPressed()) {
-                                // TODO: gif
+                            if (_this.keyboardHandler.getShiftPressed()) {
+                                playerUI.showVideoModal(
+                                    async (options) => {
+                                        let videoBlob: Blob | null = null;
+
+                                        if (options.format === 'gif') {
+                                            videoBlob =
+                                                await _this.game.renderGif(
+                                                    options,
+                                                );
+                                        } else if (options.format === 'apng') {
+                                            videoBlob =
+                                                await _this.game.renderApng(
+                                                    options,
+                                                );
+                                        } else {
+                                            videoBlob =
+                                                await _this.game.renderMp4(
+                                                    options as Mp4Options,
+                                                );
+                                        }
+
+                                        if (!videoBlob) {
+                                            console.error("Can't make video");
+                                            return;
+                                        }
+
+                                        const fileExtension =
+                                            options.format === 'apng'
+                                                ? 'png'
+                                                : options.format;
+                                        const fileName = generateFilename(
+                                            'graphdlc',
+                                            fileExtension,
+                                        );
+                                        downloadBlob(videoBlob, fileName);
+                                    },
+                                    () => {
+                                        console.log('Recording cancelled');
+                                    },
+                                );
                             } else {
                                 const isAltPressed =
                                     _this.keyboardHandler.getKeyPressed(

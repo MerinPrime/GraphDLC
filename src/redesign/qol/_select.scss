@@ -26,4 +26,10 @@ select {
     cursor: not-allowed;
     opacity: 1;
   }
+
+  option {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+  }
 }
+

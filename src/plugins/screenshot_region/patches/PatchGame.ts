@@ -13,6 +13,7 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
 import type {
     AreaBounds,
+    BaseVideoOptions,
     Mp4Options,
     RenderOptions,
     VideoOptions,
@@ -229,22 +230,19 @@ export const PatchGame: IPatcher = (
 
                 const wasPlaying = this.playing;
                 const origPlayerAccess = playerControls.val.getPlayerAccess();
-                if (wasPlaying) {
-                    this.playing = false;
-                    playerControls.val.updatePlayerAccess(
-                        playerAccess.val.makeOnly({
-                            canMove: true,
-                        }),
-                    );
-                }
+                this.playing = false;
+                playerControls.val.updatePlayerAccess(
+                    playerAccess.val.makeOnly({
+                        canMove: true,
+                        canZoom: true,
+                    }),
+                );
 
                 try {
                     return await action();
                 } finally {
-                    if (wasPlaying) {
-                        this.playing = true;
-                        playerControls.val.updatePlayerAccess(origPlayerAccess);
-                    }
+                    this.playing = wasPlaying;
+                    playerControls.val.updatePlayerAccess(origPlayerAccess);
                 }
             }
 
@@ -272,13 +270,14 @@ export const PatchGame: IPatcher = (
             }
 
             private async captureFrames(
-                options: VideoOptions,
+                options: BaseVideoOptions,
                 handlers: {
                     onFrame: (
                         frame: HTMLCanvasElement,
                         index: number,
                     ) => Promise<void> | void;
                     onFinish: () => Promise<Blob | null> | Blob | null;
+                    onAbort?: () => void;
                 },
             ): Promise<Blob | null> {
                 return this.withPaused(async () => {
@@ -289,6 +288,11 @@ export const PatchGame: IPatcher = (
                     const tickInterval = options.tickInterval ?? 1;
 
                     for (let i = 0; i < totalFrames; i++) {
+                        if (options.signal?.aborted) {
+                            handlers.onAbort?.();
+                            return null;
+                        }
+
                         const frame = this.renderRegionToCanvas(
                             selection.area,
                             selection.selectedSet,
@@ -301,16 +305,29 @@ export const PatchGame: IPatcher = (
 
                         options.onProgress?.(
                             Math.round(((i + 1) / totalFrames) * 100),
+                            i + 1,
+                            totalFrames,
                         );
 
                         if (i < totalFrames - 1) {
+                            if (options.signal?.aborted) {
+                                handlers.onAbort?.();
+                                return null;
+                            }
+
                             this.gameMap.graph.engine.runManyTicks(
                                 tickInterval,
                             );
+
                             await new Promise((resolve) =>
                                 setTimeout(resolve, 0),
                             );
                         }
+                    }
+
+                    if (options.signal?.aborted) {
+                        handlers.onAbort?.();
+                        return null;
                     }
 
                     return await handlers.onFinish();
@@ -446,6 +463,11 @@ export const PatchGame: IPatcher = (
                         return new Blob([muxer.target.buffer], {
                             type: 'video/mp4',
                         });
+                    },
+                    onAbort: () => {
+                        try {
+                            videoEncoder?.close();
+                        } catch (_) {}
                     },
                 });
             }
