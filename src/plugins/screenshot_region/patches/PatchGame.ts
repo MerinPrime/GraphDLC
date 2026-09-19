@@ -82,9 +82,12 @@ export const PatchGame: IPatcher = (
                 if (options.cellSize) return options.cellSize;
 
                 const maxCells = Math.max(widthCells, heightCells);
-                const MAX_DIM = options.maxTextureDim ?? 4096;
                 const MAX_CELL_SIZE = 64;
                 const MIN_CELL_SIZE = options.minCellSize ?? 4;
+
+                const isVideo = 'format' in options;
+                const defaultMaxDim = isVideo ? 1920 : 4096;
+                const MAX_DIM = options.maxTextureDim ?? defaultMaxDim;
 
                 const fitCellSize = Math.floor(MAX_DIM / maxCells);
 
