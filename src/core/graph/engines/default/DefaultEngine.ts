@@ -1,6 +1,6 @@
 import type { ChunkUpdates } from '@logic-arrows/game-logic/chunk-updates';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';

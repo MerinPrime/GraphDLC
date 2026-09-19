@@ -1,6 +1,6 @@
 import type { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import type { ITask } from 'src/core/task/ITask';
-import { CycleHeadType } from '../../ast/cycle/CycleTypes';
+import { CycleHeadType } from '../../ast/cycle/types';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import type { DebugChunk } from '../DebugChunk';

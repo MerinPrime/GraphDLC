@@ -1,4 +1,4 @@
-import type { GraphCycle } from '../../ast/cycle/CycleTypes';
+import type { GraphCycle } from '../../ast/cycle/types';
 import type { GraphNode } from '../../ast/GraphNode';
 import type { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
@@ -37,7 +37,9 @@ export class RustWrapper {
         return new Uint8Array(this.memoryBuffer, this.stagingBufferPtr, length);
     }
 
-    private writeNodesToStaging(...nodeGroups: GraphNode[][]): number {
+    private writeNodesToStaging(
+        ...nodeGroups: (readonly GraphNode[])[]
+    ): number {
         let totalCount = 0;
 
         for (let i = 0; i < nodeGroups.length; i++) {

@@ -15,7 +15,7 @@ export const PatchGamePage: IPatcher = (
         return class GamePage extends _module {
             private beforeUnloadHandler?: (e: BeforeUnloadEvent) => void;
             private keydownHandler: (e: KeyboardEvent) => void;
-            private settingHook: (newState: SaveMode) => void = (newState) => {
+            private settingHook: (newState: SaveMode) => void = (_newState) => {
                 // SaveTitleHook.setHookState(newState === SaveMode.CTRL_S_ONLY);
                 SaveTitleHook.setHookState(true);
             };

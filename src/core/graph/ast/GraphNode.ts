@@ -1,39 +1,34 @@
 import {
     CycleHeadType,
     type GraphCycle,
-} from 'src/core/graph/ast/cycle/CycleTypes';
+    type NodeCycleInfo,
+} from 'src/core/graph/ast/cycle/types';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { NodeType, NodeTypes } from '../engines/core/NodeType';
+import { NodeEdgeList } from './NodeEdgeList';
 
 export class GraphNode {
     public readonly nodeIdx: number;
     public readonly chunkIdx: number;
-
-    public arrowType: ArrowType = ArrowType.EMPTY;
-    public type: NodeType = NodeType.EMPTY;
-    public rotation: number = 0;
-    public flipped: boolean = false;
 
     public readonly globalX: number;
     public readonly globalY: number;
     public readonly localX: number;
     public readonly localY: number;
 
-    public links: GraphNode[] = [];
-    public linkCounts: number[] = [];
+    public readonly linksList = new NodeEdgeList();
+    public readonly backLinksList = new NodeEdgeList();
 
-    public backLinks: GraphNode[] = [];
-    public backLinkCounts: number[] = [];
+    public arrowType: ArrowType = ArrowType.EMPTY;
+    public type: NodeType = NodeType.EMPTY;
+    public rotation: number = 0;
+    public flipped: boolean = false;
 
     public detectedLink: GraphNode | null = null;
     public blockedLink: GraphNode | null = null;
 
     public isBreakpoint: boolean = false;
-
-    public isCycle: boolean = false;
-    public cycleRef: GraphCycle | null = null;
-    public headType: CycleHeadType = CycleHeadType.NONE;
-    public cycleOffset: number = 0;
+    public cycle: NodeCycleInfo | null = null;
 
     public constructor(
         nodeIdx: number,
@@ -76,54 +71,18 @@ export class GraphNode {
         this.onUpdate();
     }
 
-    public addLink(node: GraphNode) {
-        const idx = this.links.indexOf(node);
-        if (idx !== -1) {
-            this.linkCounts[idx]++;
-        } else {
-            this.links.push(node);
-            this.linkCounts.push(1);
-        }
-
-        const bIdx = node.backLinks.indexOf(this);
-        if (bIdx !== -1) {
-            node.backLinkCounts[bIdx]++;
-        } else {
-            node.backLinks.push(this);
-            node.backLinkCounts.push(1);
-        }
-
+    public addLink(target: GraphNode) {
+        this.linksList.add(target);
+        target.backLinksList.add(this);
         this.onUpdate();
-        node.onUpdate();
+        target.onUpdate();
     }
 
-    public removeLink(node: GraphNode) {
-        const idx = this.links.indexOf(node);
-        if (idx !== -1) {
-            this.linkCounts[idx]--;
-            if (this.linkCounts[idx] === 0) {
-                const last = this.links.length - 1;
-                this.links[idx] = this.links[last];
-                this.linkCounts[idx] = this.linkCounts[last];
-                this.links.pop();
-                this.linkCounts.pop();
-            }
-        }
-
-        const bIdx = node.backLinks.indexOf(this);
-        if (bIdx !== -1) {
-            node.backLinkCounts[bIdx]--;
-            if (node.backLinkCounts[bIdx] === 0) {
-                const last = node.backLinks.length - 1;
-                node.backLinks[bIdx] = node.backLinks[last];
-                node.backLinkCounts[bIdx] = node.backLinkCounts[last];
-                node.backLinks.pop();
-                node.backLinkCounts.pop();
-            }
-        }
-
+    public removeLink(target: GraphNode) {
+        this.linksList.remove(target);
+        target.backLinksList.remove(this);
         this.onUpdate();
-        node.onUpdate();
+        target.onUpdate();
     }
 
     private onUpdate() {
@@ -135,5 +94,29 @@ export class GraphNode {
         } else {
             this.isBreakpoint = false;
         }
+    }
+
+    public get links(): readonly GraphNode[] {
+        return this.linksList.nodes;
+    }
+
+    public get backLinks(): readonly GraphNode[] {
+        return this.backLinksList.nodes;
+    }
+
+    public get isCycle(): boolean {
+        return this.cycle?.isBody ?? false;
+    }
+
+    public get cycleRef(): GraphCycle | null {
+        return this.cycle?.ref ?? null;
+    }
+
+    public get headType(): CycleHeadType {
+        return this.cycle?.headType ?? CycleHeadType.NONE;
+    }
+
+    public get cycleOffset(): number {
+        return this.cycle?.offset ?? 0;
     }
 }

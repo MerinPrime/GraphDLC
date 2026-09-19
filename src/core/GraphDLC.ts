@@ -30,6 +30,7 @@ export class GraphDLC {
             this.pluginManager.gatherSettings(),
         );
         this.settingsManager.setup();
+        this.designManager.addCustomStyles(this.pluginManager.gatherStyles());
         this.designManager.setup();
         this.updateManager.setup();
         this.inject();

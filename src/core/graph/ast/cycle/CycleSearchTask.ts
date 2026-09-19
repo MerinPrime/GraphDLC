@@ -2,100 +2,134 @@ import type { ITask } from 'src/core/task/ITask';
 import type { GraphNode } from '../GraphNode';
 import { canBeInCycle } from './utils';
 
-export class CycleSearchTask implements ITask<GraphNode[] | null> {
-    public readonly startNode: GraphNode;
-    public readonly targetNode: GraphNode;
-
+export class CycleSearchTask implements ITask<void> {
     public isCanceled = false;
 
-    private queue: GraphNode[] = [];
-    private head = 0;
+    public readonly candidateQueue: GraphNode[] = [];
+    private candidateHead = 0;
+    private readonly queueSet = new Set<GraphNode>();
 
-    private readonly parentMap = new Map<GraphNode, GraphNode>();
+    private readonly pathStack: GraphNode[] = [];
+    private readonly edgeIndexStack: number[] = [];
+    private readonly inPathSet = new Set<GraphNode>();
 
-    private isDone = false;
-    private resultPath: GraphNode[] | null = null;
+    public constructor(
+        private readonly onCycleFound: (path: GraphNode[]) => void,
+        private readonly onIdle: () => void,
+    ) {}
 
-    public constructor(startNode: GraphNode, targetNode: GraphNode) {
-        this.startNode = startNode;
-        this.targetNode = targetNode;
+    public pushCandidate(node: GraphNode): void {
+        if (!this.queueSet.has(node)) {
+            this.queueSet.add(node);
+            this.candidateQueue.push(node);
+        }
+    }
 
-        if (startNode === targetNode) {
-            const links = startNode.links;
-            for (let i = 0; i < links.length; i++) {
-                const child = links[i];
-                if (canBeInCycle(child)) {
-                    this.queue.push(child);
-                    this.parentMap.set(child, startNode);
-                }
-            }
-        } else {
-            this.queue.push(startNode);
-            this.parentMap.set(startNode, startNode);
+    public clear(): void {
+        this.candidateQueue.length = 0;
+        this.candidateHead = 0;
+        this.queueSet.clear();
+        this.resetDFS();
+    }
+
+    private compactQueue(): void {
+        if (this.candidateHead > 500) {
+            this.candidateQueue.splice(0, this.candidateHead);
+            this.candidateHead = 0;
         }
     }
 
     public step(maxStepsCount: number): boolean {
-        if (this.isDone || this.isCanceled) {
-            return true;
-        }
+        if (this.isCanceled) return true;
 
         let stepsRun = 0;
 
-        while (this.head < this.queue.length && stepsRun < maxStepsCount) {
-            const current = this.queue[this.head++];
-            stepsRun++;
-
-            const links = current.links;
-            const linksLen = links.length;
-            for (let i = 0; i < linksLen; i++) {
-                const child = links[i];
-                if (child === this.targetNode) {
-                    this.buildPath(current);
-                    this.complete(this.resultPath);
+        while (stepsRun < maxStepsCount) {
+            if (this.pathStack.length === 0) {
+                if (this.candidateHead >= this.candidateQueue.length) {
+                    this.clear();
+                    this.onIdle();
                     return true;
                 }
 
-                if (canBeInCycle(child) && !this.parentMap.has(child)) {
-                    this.parentMap.set(child, current);
-                    this.queue.push(child);
+                this.compactQueue();
+
+                const root = this.candidateQueue[this.candidateHead++];
+                this.queueSet.delete(root);
+
+                if (canBeInCycle(root)) {
+                    this.resetDFS();
+                    this.pushToPath(root);
+                } else {
+                    continue;
                 }
             }
-        }
 
-        if (this.head >= this.queue.length) {
-            this.complete(null);
-            return true;
+            while (this.pathStack.length > 0 && stepsRun < maxStepsCount) {
+                stepsRun++;
+
+                const depth = this.pathStack.length - 1;
+                const current = this.pathStack[depth];
+                const edgeIdx = this.edgeIndexStack[depth];
+
+                if (!canBeInCycle(current)) {
+                    this.popFromPath();
+                    continue;
+                }
+
+                const links = current.links;
+
+                if (edgeIdx >= links.length) {
+                    this.popFromPath();
+                    continue;
+                }
+
+                const next = links[edgeIdx];
+                this.edgeIndexStack[depth]++;
+
+                if (this.inPathSet.has(next)) {
+                    const cycleStartIdx = this.pathStack.indexOf(next);
+                    if (cycleStartIdx !== -1) {
+                        const cycleLen = this.pathStack.length - cycleStartIdx;
+                        if (cycleLen >= 2) {
+                            this.onCycleFound(
+                                this.pathStack.slice(cycleStartIdx),
+                            );
+                        }
+                    }
+                    continue;
+                }
+
+                if (canBeInCycle(next)) {
+                    this.pushToPath(next);
+                }
+            }
         }
 
         return false;
     }
 
-    public getResult(): GraphNode[] | null {
-        return this.resultPath;
+    public getResult(): void {
+        return;
     }
 
-    private buildPath(lastNode: GraphNode): void {
-        const path: GraphNode[] = [this.targetNode];
-        let curr: GraphNode | undefined = lastNode;
-
-        while (curr !== undefined && curr !== this.startNode) {
-            path.push(curr);
-            curr = this.parentMap.get(curr);
-        }
-
-        if (this.startNode !== this.targetNode) {
-            path.push(this.startNode);
-        }
-
-        this.resultPath = path.reverse();
+    private resetDFS(): void {
+        this.pathStack.length = 0;
+        this.edgeIndexStack.length = 0;
+        this.inPathSet.clear();
     }
 
-    private complete(result: GraphNode[] | null): void {
-        this.resultPath = result;
-        this.isDone = true;
+    private pushToPath(node: GraphNode): void {
+        this.pathStack.push(node);
+        this.edgeIndexStack.push(0);
+        this.inPathSet.add(node);
+    }
 
-        this.queue = [];
-        this.parentMap.clear();
+    private popFromPath(): void {
+        const node = this.pathStack.pop();
+        this.edgeIndexStack.pop();
+        if (node) {
+            this.inPathSet.delete(node);
+        }
     }
 }

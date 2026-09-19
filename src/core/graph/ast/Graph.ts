@@ -2,8 +2,9 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { ArrowType } from 'src/core/utils/ArrowType';
+import { EventDispatcher } from 'src/core/utils/EventDispatcher';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativeArrow } from 'src/core/utils/getRelativeArrow';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
@@ -18,9 +19,11 @@ import { NodeType } from '../engines/core/NodeType';
 import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
 import { EngineFactory } from '../engines/EngineFactory';
 import { CycleManager } from './cycle/CycleManager';
+import { containsNode } from './cycle/utils';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
 import { NodeStateUpdater } from './NodeStateUpdater';
+import { isRewindNodeType } from './utils';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -39,7 +42,8 @@ export class Graph {
     private readonly cycleManager: CycleManager = new CycleManager();
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
 
-    private listeners: IGraphListener[] = [];
+    private readonly eventDispatcher: EventDispatcher<IGraphListener> =
+        new EventDispatcher();
 
     public engine: BaseEngine<EngineTypes>;
 
@@ -59,8 +63,8 @@ export class Graph {
         this.gameMap = gameMap;
         this.privateGameMap = gameMap as any as PrivateGameMap;
 
-        this.listeners.push(this.debugger);
-        this.listeners.push(this.cycleManager);
+        this.eventDispatcher.subscribe(this.debugger);
+        this.eventDispatcher.subscribe(this.cycleManager);
 
         this.engine = EngineFactory.create(this, this.gameMap);
         this.engine.setExtraRewindNodes(this.extraRewindNodes);
@@ -83,14 +87,15 @@ export class Graph {
 
     public markCyclesChunksDirty() {
         const cycles = this.cycles;
+        const cyclesLen = cycles.length;
 
-        for (let i = 0; i < cycles.length; i++) {
+        for (let i = 0; i < cyclesLen; i++) {
             const cycle = cycles[i];
             if (cycle === null) continue;
 
             const nodes = cycle.nodes;
-
-            for (let j = 0; j < nodes.length; j++) {
+            const nodesLen = nodes.length;
+            for (let j = 0; j < nodesLen; j++) {
                 this.engine.makeDirtyChunk(nodes[j].chunkIdx);
             }
         }
@@ -122,21 +127,26 @@ export class Graph {
 
     public updateNodeRelations(node: GraphNode) {
         const oldTargets: GraphNode[] = [];
-        for (let i = 0; i < node.links.length; i++) {
-            const n = node.links[i];
-            if (n.detectedLink !== node || node.linkCounts[i] > 1) {
+        const currentLinks = node.linksList.nodes;
+        const currentCounts = node.linksList.counts;
+        const linksLen = currentLinks.length;
+
+        for (let i = 0; i < linksLen; i++) {
+            const n = currentLinks[i];
+            if (n.detectedLink !== node || currentCounts[i] > 1) {
                 oldTargets.push(n);
             }
         }
 
         const relations = getArrowRelations(node.arrowType);
-        const newTargets = new Array<GraphNode>(relations.length);
+        const relationsLen = relations.length;
+        const newTargets = new Array<GraphNode>(relationsLen);
         const chunk = this.privateGameMap.getOrCreateChunkByArrowCoordinates(
             node.globalX,
             node.globalY,
         );
 
-        for (let i = 0; i < relations.length; i++) {
+        for (let i = 0; i < relationsLen; i++) {
             const [relX, relY] = relations[i];
 
             const relativeArrow = getRelativeArrow(
@@ -169,14 +179,17 @@ export class Graph {
             newTargets[i] = relNode;
         }
 
-        for (const oldTarget of oldTargets) {
-            if (!newTargets.includes(oldTarget)) {
+        const oldTargetsLen = oldTargets.length;
+        for (let i = 0; i < oldTargetsLen; i++) {
+            const oldTarget = oldTargets[i];
+            if (!containsNode(newTargets, oldTarget)) {
                 this.removeNodeLink(node, oldTarget, true);
             }
         }
 
-        for (const newTarget of newTargets) {
-            if (!oldTargets.includes(newTarget)) {
+        for (let i = 0; i < relationsLen; i++) {
+            const newTarget = newTargets[i];
+            if (!containsNode(oldTargets, newTarget)) {
                 this.addNodeLink(node, newTarget, true);
             }
         }
@@ -223,7 +236,10 @@ export class Graph {
             }
         }
 
-        for (const backNode of node.backLinks) {
+        const backNodes = node.backLinksList.nodes;
+        const backNodesLen = backNodes.length;
+        for (let i = 0; i < backNodesLen; i++) {
+            const backNode = backNodes[i];
             if (
                 backNode.type === NodeType.DETECTOR &&
                 backNode.detectedLink === node
@@ -245,9 +261,12 @@ export class Graph {
             const chunkIdx = this.chunks.length;
             chunk.astIndex = chunkIdx;
             this.chunks.push(chunk);
-            this.listeners.forEach((listener) => {
-                listener.onChunkAdded(this, chunk, chunkIdx);
-            });
+            this.eventDispatcher.dispatch(
+                'onChunkAdded',
+                this,
+                chunk,
+                chunkIdx,
+            );
             this.engine.ensureChunkCapacity(chunkIdx + 1);
         }
 
@@ -269,9 +288,7 @@ export class Graph {
         arrow.astIndex = nodeIdx;
         this.updater.update(node);
 
-        this.listeners.forEach((listener) => {
-            listener.onNodeAdded(this, node);
-        });
+        this.eventDispatcher.dispatch('onNodeAdded', this, node);
 
         return node;
     }
@@ -301,9 +318,8 @@ export class Graph {
         this.freeCycleIndices.length = 0;
         this.extraRewindNodes.clear();
         this.engine.clear();
-        this.listeners.forEach((listener) => {
-            listener.onGraphClear(this);
-        });
+        this.eventDispatcher.dispatch('onGraphClear', this);
+        this.eventDispatcher.clear();
     }
 
     public updateArrowType(
@@ -350,6 +366,41 @@ export class Graph {
         this.updateNodeState(node, arrow.type, arrow.rotation, arrow.flipped);
     }
 
+    private mutateNode(
+        node: GraphNode,
+        isTypeChange: boolean,
+        applyMutation: () => void,
+    ): void {
+        const oldType = node.type;
+
+        if (isTypeChange && !this.updater.isLoading) {
+            this.engine.setNodeSignal(node.nodeIdx, NodeSignal.NONE);
+        }
+
+        applyMutation();
+        this.updateNodeRelations(node);
+
+        if (isTypeChange && oldType !== node.type) {
+            this.eventDispatcher.dispatch('onNodeTypeChanged', this, node);
+
+            const backNodes = node.backLinksList.nodes;
+            const backLen = backNodes.length;
+            for (let i = 0; i < backLen; i++) {
+                this.updater.update(backNodes[i]);
+            }
+        }
+
+        this.updater.update(node);
+
+        if (isRewindNodeType(node.type)) {
+            this.extraRewindNodes.add(node.nodeIdx);
+        } else {
+            this.extraRewindNodes.delete(node.nodeIdx);
+        }
+
+        this._lastUpdate = Date.now();
+    }
+
     private updateNodeState(
         node: GraphNode,
         type: ArrowType,
@@ -360,69 +411,37 @@ export class Graph {
             node.arrowType === type &&
             node.rotation === rotation &&
             node.flipped === flipped
-        )
+        ) {
             return;
+        }
 
-        const oldType = node.type;
-        if (node.arrowType !== type && !this.updater.isLoading) {
-            this.engine.setNodeSignal(node.nodeIdx, NodeSignal.NONE);
-        }
-        node.updateState(type, rotation, flipped);
-        this.updateNodeRelations(node);
-        if (oldType !== node.type) {
-            this.listeners.forEach((listener) => {
-                listener.onNodeTypeChanged(this, node);
-            });
-            node.backLinks.forEach((backLinkedNode) => {
-                this.updater.update(backLinkedNode);
-            });
-        }
-        this.updater.update(node);
-        if (
-            node.type === NodeType.DIRECTIONAL_BUTTON ||
-            node.type === NodeType.BUTTON ||
-            node.type === NodeType.RANDOM
-        )
-            this.extraRewindNodes.add(node.nodeIdx);
-        else this.extraRewindNodes.delete(node.nodeIdx);
-        this._lastUpdate = Date.now();
+        this.mutateNode(node, node.arrowType !== type, () => {
+            node.updateState(type, rotation, flipped);
+        });
     }
 
     private setNodeType(node: GraphNode, type: ArrowType) {
-        if (!this.updater.isLoading) {
-            this.engine.setNodeSignal(node.nodeIdx, NodeSignal.NONE);
-        }
-        node.setType(type);
-        this.updateNodeRelations(node);
-        this.listeners.forEach((listener) => {
-            listener.onNodeTypeChanged(this, node);
+        if (node.arrowType === type) return;
+
+        this.mutateNode(node, true, () => {
+            node.setType(type);
         });
-        node.backLinks.forEach((backLinkedNode) => {
-            this.updater.update(backLinkedNode);
-        });
-        this.updater.update(node);
-        if (
-            node.type === NodeType.DIRECTIONAL_BUTTON ||
-            node.type === NodeType.BUTTON ||
-            node.type === NodeType.RANDOM
-        )
-            this.extraRewindNodes.add(node.nodeIdx);
-        else this.extraRewindNodes.delete(node.nodeIdx);
-        this._lastUpdate = Date.now();
     }
 
     private setNodeRotation(node: GraphNode, rotation: number) {
-        node.setRotation(rotation);
-        this.updateNodeRelations(node);
-        this.updater.update(node);
-        this._lastUpdate = Date.now();
+        if (node.rotation === rotation) return;
+
+        this.mutateNode(node, false, () => {
+            node.setRotation(rotation);
+        });
     }
 
     private setNodeFlipped(node: GraphNode, flipped: boolean) {
-        node.setFlipped(flipped);
-        this.updateNodeRelations(node);
-        this.updater.update(node);
-        this._lastUpdate = Date.now();
+        if (node.flipped === flipped) return;
+
+        this.mutateNode(node, false, () => {
+            node.setFlipped(flipped);
+        });
     }
 
     private addNodeLink(
@@ -431,9 +450,7 @@ export class Graph {
         updateState = true,
     ) {
         fromNode.addLink(toNode);
-        this.listeners.forEach((listener) => {
-            listener.onLinkAdded(this, fromNode, toNode);
-        });
+        this.eventDispatcher.dispatch('onLinkAdded', this, fromNode, toNode);
         if (updateState) {
             this.updater.update(fromNode);
             this.updater.update(toNode);
@@ -447,9 +464,7 @@ export class Graph {
         updateState = true,
     ) {
         fromNode.removeLink(toNode);
-        this.listeners.forEach((listener) => {
-            listener.onLinkRemoved(this, fromNode, toNode);
-        });
+        this.eventDispatcher.dispatch('onLinkRemoved', this, fromNode, toNode);
         if (updateState) {
             this.updater.update(fromNode);
             this.updater.update(toNode);
@@ -469,14 +484,10 @@ export class Graph {
         this.cycles[index] = cycle;
 
         this.cycleManager.attachNodesToCycle(cycle, nodes);
-
         this.syncNodesAndHeadsState(cycle.nodes, cycle.heads, cycle.extraNodes);
 
         this.engine.addCycle(cycle);
-
-        this.listeners.forEach((listener) => {
-            listener.onCycleAdded(this, cycle);
-        });
+        this.eventDispatcher.dispatch('onCycleAdded', this, cycle);
 
         return cycle;
     }
@@ -484,23 +495,13 @@ export class Graph {
     public removeCycle(cycle: GraphCycle) {
         this.engine.removeCycle(cycle);
 
-        const affectedNodes = [...cycle.nodes];
-        const affectedHeads = [...cycle.heads];
-        const affectedExtra = [...cycle.extraNodes];
-
         this.cycleManager.detachNodesFromCycle(cycle);
 
-        this.syncNodesAndHeadsState(
-            affectedNodes,
-            affectedHeads,
-            affectedExtra,
-        );
+        this.syncNodesAndHeadsState(cycle.nodes, cycle.heads, cycle.extraNodes);
 
         this.reclaimCycleIndex(cycle.index);
 
-        this.listeners.forEach((listener) => {
-            listener.onCycleRemoved(this, cycle);
-        });
+        this.eventDispatcher.dispatch('onCycleRemoved', this, cycle);
     }
 
     private allocateCycleIndex(): number {
@@ -516,18 +517,23 @@ export class Graph {
     }
 
     private syncNodesAndHeadsState(
-        nodes: GraphNode[],
-        heads: GraphNode[],
-        extraNodes: GraphNode[],
+        nodes: readonly GraphNode[],
+        heads: readonly GraphNode[],
+        extraNodes: readonly GraphNode[],
     ) {
-        for (const node of nodes) {
-            this.updater.update(node);
+        const nodesLen = nodes.length;
+        for (let i = 0; i < nodesLen; i++) {
+            this.updater.update(nodes[i]);
         }
-        for (const head of heads) {
-            this.updater.update(head);
+
+        const headsLen = heads.length;
+        for (let i = 0; i < headsLen; i++) {
+            this.updater.update(heads[i]);
         }
-        for (const extra of extraNodes) {
-            this.updater.update(extra);
+
+        const extraLen = extraNodes.length;
+        for (let i = 0; i < extraLen; i++) {
+            this.updater.update(extraNodes[i]);
         }
     }
 }

@@ -1,40 +1,32 @@
-import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { ITask } from '../task/ITask';
-import type { ArrowType } from '../utils/ArrowType';
-import type { PathStep } from './types';
+import type { LinearPathStep } from './types';
 
-export class LinearPathFindingTask implements ITask<PathStep[] | null> {
+export class LinearPathFindingTask implements ITask<LinearPathStep[] | null> {
     public isCanceled = false;
     public stepBatchSize = 40;
 
-    private readonly gameMap: GameMap;
     private readonly startX: number;
     private readonly startY: number;
     private readonly endX: number;
     private readonly endY: number;
 
     private isDone = false;
-    private resultPath: PathStep[];
-    private arrowType: ArrowType;
+    private resultPath: LinearPathStep[];
 
     public constructor(
-        gameMap: GameMap,
         startX: number,
         startY: number,
         endX: number,
         endY: number,
-        arrowType: ArrowType,
     ) {
-        this.gameMap = gameMap;
         this.startX = startX;
         this.startY = startY;
         this.endX = endX;
         this.endY = endY;
-        this.arrowType = arrowType;
         this.resultPath = [];
     }
 
-    public step(maxStepsCount: number): boolean {
+    public step(_maxStepsCount: number): boolean {
         if (this.isDone || this.isCanceled) {
             return true;
         }
@@ -52,9 +44,6 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
             this.resultPath.push({
                 x,
                 y,
-                type: this.arrowType,
-                rotation: 0,
-                flipped: false,
             });
 
             if (x === this.endX && y === this.endY) break;
@@ -73,7 +62,7 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
         return true;
     }
 
-    public getResult(): PathStep[] {
+    public getResult(): LinearPathStep[] {
         return this.resultPath;
     }
 }

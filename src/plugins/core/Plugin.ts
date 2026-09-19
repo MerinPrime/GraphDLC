@@ -36,6 +36,7 @@ export interface PluginFeatures {
     readonly settings?: BaseSetting<any>[];
     readonly enableSetting?: BoolSetting | null;
     readonly keyBindHints?: KeyBindHint[];
+    readonly customStyle?: string;
 }
 
 export class Plugin {

@@ -67,10 +67,13 @@ export const PatchPlayerUI: IPatcher = (
                                 `IsBreakpoint: ${nodeState.isBreakpoint}`,
                             );
                             debugLines.push(
-                                `Links: ${node.linkCounts.reduce((sum, count) => sum + count, 0)}`,
+                                `Links: ${node.linksList.counts.reduce((sum, count) => sum + count, 0)}`,
                             );
                             debugLines.push(
-                                `Backlinks: ${node.backLinkCounts.reduce((sum, count) => sum + count, 0)}`,
+                                `Backlinks: ${node.backLinksList.counts.reduce(
+                                    (sum, count) => sum + count,
+                                    0,
+                                )}`,
                             );
                             debugLines.push(
                                 `HasDetector: ${node.detectedLink !== null}`,

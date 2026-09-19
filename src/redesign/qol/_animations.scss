@@ -21,8 +21,12 @@
 // Maps Page
 .ui-saved-item,
 .ui-new-item {
-  background-color: color-mix(in srgb, var(--bg-hover), transparent 90%) !important;
-  border: 2px solid color-mix(in srgb, var(--bg-hover), transparent 50%) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--bg-hover),
+    var(--bg-base) 90%
+  ) !important;
+  border: 2px solid color-mix(in srgb, var(--bg-hover), var(--bg-base) 50%) !important;
   border-radius: $border-radius-lg !important;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.02),
@@ -39,7 +43,11 @@
     box-shadow:
       0 10px 20px -3px rgba(0, 0, 0, 0.08),
       0 4px 8px -2px rgba(0, 0, 0, 0.03) !important;
-    background-color: color-mix(in srgb, var(--bg-hover), transparent 70%) !important;
+    background-color: color-mix(
+      in srgb,
+      var(--bg-hover),
+      var(--bg-base) 70%
+    ) !important;
   }
 }
 

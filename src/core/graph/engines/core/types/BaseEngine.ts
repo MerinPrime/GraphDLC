@@ -1,4 +1,4 @@
-import type { GraphCycle } from 'src/core/graph/ast/cycle/CycleTypes';
+import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
 import { NodeSignal } from '../NodeSignal';

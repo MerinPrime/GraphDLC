@@ -3,7 +3,6 @@ import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
-import type { ArrowType } from 'src/core/utils/ArrowType';
 import type { IPatcher } from '../../Patcher';
 import type { PathData } from './types';
 
@@ -47,28 +46,15 @@ export const PatchGame: IPatcher = (
                 render.setArrowSize(this.scale);
                 render.setArrowAlpha(0.5);
 
-                const isLinearPath = pathData.arrowType !== (-1 as ArrowType);
-
                 pathData.path.forEach(({ x, y, type, rotation, flipped }) => {
-                    if (isLinearPath) {
-                        render.drawArrow(
-                            x * this.scale + offsetX,
-                            y * this.scale + offsetY,
-                            type,
-                            0,
-                            pathData.rotation,
-                            pathData.flip,
-                        );
-                    } else {
-                        render.drawArrow(
-                            x * this.scale + offsetX,
-                            y * this.scale + offsetY,
-                            type,
-                            0,
-                            rotation,
-                            flipped,
-                        );
-                    }
+                    render.drawArrow(
+                        x * this.scale + offsetX,
+                        y * this.scale + offsetY,
+                        type,
+                        0,
+                        rotation,
+                        flipped,
+                    );
                 });
             }
 
