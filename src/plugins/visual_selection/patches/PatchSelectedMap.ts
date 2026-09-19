@@ -73,7 +73,9 @@ export const PatchSelectedMap: IPatcher = (
                 }
 
                 public getSelectionForRender(): SelectedArrow[] {
-                    return Array.from(this.renderDatas.values());
+                    return this.getSelectedArrows()
+                        .map((arKey) => this.renderDatas.get(arKey))
+                        .filter((data) => data !== undefined);
                 }
             };
         },
