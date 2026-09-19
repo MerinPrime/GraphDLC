@@ -2,6 +2,8 @@ import { CELL_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
+import type { PlayerAccess } from '@logic-arrows/player/player-access';
+import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import UPNG from '@pdf-lib/upng';
 // @ts-expect-error
 import { applyPalette, GIFEncoder, quantize } from 'gifenc';
@@ -25,6 +27,11 @@ export const PatchGame: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
 ) => {
+    const playerControls =
+        patchLoader.getInstance<PlayerControls>('PlayerControls');
+    const playerAccess =
+        patchLoader.getDefinition<typeof PlayerAccess>('PlayerAccess');
+
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public getSelectionBounds(): {
@@ -142,6 +149,9 @@ export const PatchGame: IPatcher = (
                 const savedCurrentSelectedArrows = (this.selectedMap as any)
                     .currentSelectedArrows;
 
+                // @ts-expect-error
+                const savedFocusing = this.focusing;
+
                 try {
                     this.scale = cellSize;
                     this.offset[0] = -minX * CELL_SIZE - this.scale * 0.025;
@@ -184,6 +194,8 @@ export const PatchGame: IPatcher = (
                     this.screenUpdated = true;
                     // @ts-expect-error
                     this.render?.setDisableSolidColor(!options.showSolidColor);
+                    // @ts-expect-error
+                    this.focusing = false;
                     this.draw();
 
                     ctx.drawImage(gameCanvas, 0, 0);
@@ -202,31 +214,61 @@ export const PatchGame: IPatcher = (
                     this.screenUpdated = true;
                     // @ts-expect-error
                     this.render?.setDisableSolidColor(false);
+                    // @ts-expect-error
+                    this.focusing = savedFocusing;
                     this.draw();
                 }
 
                 return outputCanvas;
             }
 
+            private async withPaused<T>(action: () => Promise<T>): Promise<T> {
+                if (!playerControls.val) {
+                    throw new Error('PlayerControls not found.');
+                }
+
+                const wasPlaying = this.playing;
+                const origPlayerAccess = playerControls.val.getPlayerAccess();
+                if (wasPlaying) {
+                    this.playing = false;
+                    playerControls.val.updatePlayerAccess(
+                        playerAccess.val.makeOnly({
+                            canMove: true,
+                        }),
+                    );
+                }
+
+                try {
+                    return await action();
+                } finally {
+                    if (wasPlaying) {
+                        this.playing = true;
+                        playerControls.val.updatePlayerAccess(origPlayerAccess);
+                    }
+                }
+            }
+
             public async captureScreenshot(
                 options?: RenderOptions,
             ): Promise<Blob | null> {
-                const selection = this.getSelectionBounds();
-                if (!selection) return null;
+                return this.withPaused(async () => {
+                    const selection = this.getSelectionBounds();
+                    if (!selection) return null;
 
-                const canvas = this.renderRegionToCanvas(
-                    selection.area,
-                    selection.selectedSet,
-                    options,
-                );
-                if (!canvas) return null;
+                    const canvas = this.renderRegionToCanvas(
+                        selection.area,
+                        selection.selectedSet,
+                        options,
+                    );
+                    if (!canvas) return null;
 
-                const blob = await new Promise<Blob | null>((resolve) => {
-                    canvas.toBlob((b) => resolve(b), 'image/png');
+                    const blob = await new Promise<Blob | null>((resolve) => {
+                        canvas.toBlob((b) => resolve(b), 'image/png');
+                    });
+                    if (!blob) return null;
+
+                    return blob;
                 });
-                if (!blob) return null;
-
-                return blob;
             }
 
             private async captureFrames(
@@ -239,34 +281,40 @@ export const PatchGame: IPatcher = (
                     onFinish: () => Promise<Blob | null> | Blob | null;
                 },
             ): Promise<Blob | null> {
-                const selection = this.getSelectionBounds();
-                if (!selection) return null;
+                return this.withPaused(async () => {
+                    const selection = this.getSelectionBounds();
+                    if (!selection) return null;
 
-                const totalFrames = options.totalFrames ?? 30;
-                const tickInterval = options.tickInterval ?? 1;
+                    const totalFrames = options.totalFrames ?? 30;
+                    const tickInterval = options.tickInterval ?? 1;
 
-                for (let i = 0; i < totalFrames; i++) {
-                    const frame = this.renderRegionToCanvas(
-                        selection.area,
-                        selection.selectedSet,
-                        options,
-                    );
+                    for (let i = 0; i < totalFrames; i++) {
+                        const frame = this.renderRegionToCanvas(
+                            selection.area,
+                            selection.selectedSet,
+                            options,
+                        );
 
-                    if (frame) {
-                        await handlers.onFrame(frame, i);
+                        if (frame) {
+                            await handlers.onFrame(frame, i);
+                        }
+
+                        options.onProgress?.(
+                            Math.round(((i + 1) / totalFrames) * 100),
+                        );
+
+                        if (i < totalFrames - 1) {
+                            this.gameMap.graph.engine.runManyTicks(
+                                tickInterval,
+                            );
+                            await new Promise((resolve) =>
+                                setTimeout(resolve, 0),
+                            );
+                        }
                     }
 
-                    options.onProgress?.(
-                        Math.round(((i + 1) / totalFrames) * 100),
-                    );
-
-                    if (i < totalFrames - 1) {
-                        this.gameMap.graph.engine.runManyTicks(tickInterval);
-                        await new Promise((resolve) => setTimeout(resolve, 0));
-                    }
-                }
-
-                return await handlers.onFinish();
+                    return await handlers.onFinish();
+                });
             }
 
             public async renderGif(
