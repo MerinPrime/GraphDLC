@@ -5,6 +5,7 @@ export interface RenderOptions {
     maxTextureDim?: number;
     minCellSize?: number;
     qualityScale?: number;
+    showSolidColor?: boolean;
 }
 
 export interface VideoOptions extends RenderOptions {

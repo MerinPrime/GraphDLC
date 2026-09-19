@@ -182,6 +182,8 @@ export const PatchGame: IPatcher = (
 
                     this.resize(targetWidth, targetHeight);
                     this.screenUpdated = true;
+                    // @ts-expect-error
+                    this.render?.setDisableSolidColor(!options.showSolidColor);
                     this.draw();
 
                     ctx.drawImage(gameCanvas, 0, 0);
@@ -198,6 +200,8 @@ export const PatchGame: IPatcher = (
 
                     this.resize(savedWidth, savedHeight);
                     this.screenUpdated = true;
+                    // @ts-expect-error
+                    this.render?.setDisableSolidColor(false);
                     this.draw();
                 }
 
