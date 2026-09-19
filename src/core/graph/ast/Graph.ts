@@ -495,9 +495,10 @@ export class Graph {
     public removeCycle(cycle: GraphCycle) {
         this.engine.removeCycle(cycle);
 
+        this.cycleManager.detachNodesFromCycle(cycle);
+
         this.syncNodesAndHeadsState(cycle.nodes, cycle.heads, cycle.extraNodes);
 
-        this.cycleManager.detachNodesFromCycle(cycle);
         this.reclaimCycleIndex(cycle.index);
 
         this.eventDispatcher.dispatch('onCycleRemoved', this, cycle);

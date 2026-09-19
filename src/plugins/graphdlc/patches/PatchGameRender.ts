@@ -23,8 +23,9 @@ export const PatchGameRender: IPatcher = (
         (_module: typeof GameRender) => {
             return class GameRender extends _module {
                 private clearQueue: [number, number, number][] = [];
-                public clearedHistory: [number, number, number][] = [];
-                public _showBorder: boolean = true;
+                private clearedHistory: [number, number, number][] = [];
+                private _showBorder: boolean = true;
+                private _disableSolidColor: boolean = false;
 
                 public getBackgroundColor(): [
                     r: number,
@@ -60,12 +61,17 @@ export const PatchGameRender: IPatcher = (
                     return this._showBorder;
                 }
 
+                public setDisableSolidColor(value: boolean) {
+                    this._disableSolidColor = value;
+                }
+
                 public override drawSolidColorRect(
                     x: number,
                     y: number,
                     width: number,
                     height: number,
                 ): void {
+                    if (this._disableSolidColor) return;
                     if (!this.showBorder && this.clearedHistory.length > 0) {
                         const centerX = x + width / 2;
                         const centerY = y + height / 2;

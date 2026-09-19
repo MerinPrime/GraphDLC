@@ -99,11 +99,18 @@ export class CycleManager implements IGraphListener {
         let current = node;
         let distance = 0;
         const extraPath: GraphNode[] = [];
-
         const visitedPath = new Set<GraphNode>();
 
-        while (current.type === NodeType.PATH) {
+        while (
+            current.type === NodeType.PATH ||
+            current.type === NodeType.DETECTOR
+        ) {
             if (current.links.length !== 1) return null;
+            if (
+                current.backLinks.length !== 1 &&
+                current.type === NodeType.PATH
+            )
+                return null;
 
             const next = current.links[0];
             if (cycleSet.has(next)) return null;
@@ -129,8 +136,18 @@ export class CycleManager implements IGraphListener {
         };
     }
 
-    public refreshCycleIO(cycle: GraphCycle): void {
+    public refreshCycleIO(cycle: GraphCycle, graph?: Graph): void {
         const { heads, extraNodes, nodes: cycleNodes } = cycle;
+
+        const affectedNodesToUpdate: GraphNode[] = [];
+        if (graph) {
+            for (let i = 0; i < heads.length; i++) {
+                affectedNodesToUpdate.push(heads[i]);
+            }
+            for (let i = 0; i < extraNodes.length; i++) {
+                affectedNodesToUpdate.push(extraNodes[i]);
+            }
+        }
 
         for (let i = 0; i < heads.length; i++) {
             this.resetNodeCycleInfo(heads[i]);
@@ -198,6 +215,19 @@ export class CycleManager implements IGraphListener {
             }
         } finally {
             cycleSet.clear();
+        }
+
+        if (graph) {
+            for (let i = 0; i < heads.length; i++) {
+                affectedNodesToUpdate.push(heads[i]);
+            }
+            for (let i = 0; i < extraNodes.length; i++) {
+                affectedNodesToUpdate.push(extraNodes[i]);
+            }
+
+            for (let i = 0; i < affectedNodesToUpdate.length; i++) {
+                graph.updater.update(affectedNodesToUpdate[i]);
+            }
         }
     }
 
@@ -337,7 +367,7 @@ export class CycleManager implements IGraphListener {
             if (internal.graphCycleRef === null) {
                 graph.addCycle(internal.nodes);
             } else {
-                this.refreshCycleIO(internal.graphCycleRef);
+                this.refreshCycleIO(internal.graphCycleRef, graph);
             }
         }
     }

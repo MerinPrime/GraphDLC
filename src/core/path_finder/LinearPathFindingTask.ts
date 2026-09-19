@@ -1,8 +1,7 @@
 import type { ITask } from '../task/ITask';
-import type { ArrowType } from '../utils/ArrowType';
-import type { PathStep } from './types';
+import type { LinearPathStep } from './types';
 
-export class LinearPathFindingTask implements ITask<PathStep[] | null> {
+export class LinearPathFindingTask implements ITask<LinearPathStep[] | null> {
     public isCanceled = false;
     public stepBatchSize = 40;
 
@@ -12,21 +11,18 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
     private readonly endY: number;
 
     private isDone = false;
-    private resultPath: PathStep[];
-    private arrowType: ArrowType;
+    private resultPath: LinearPathStep[];
 
     public constructor(
         startX: number,
         startY: number,
         endX: number,
         endY: number,
-        arrowType: ArrowType,
     ) {
         this.startX = startX;
         this.startY = startY;
         this.endX = endX;
         this.endY = endY;
-        this.arrowType = arrowType;
         this.resultPath = [];
     }
 
@@ -48,9 +44,6 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
             this.resultPath.push({
                 x,
                 y,
-                type: this.arrowType,
-                rotation: 0,
-                flipped: false,
             });
 
             if (x === this.endX && y === this.endY) break;
@@ -69,7 +62,7 @@ export class LinearPathFindingTask implements ITask<PathStep[] | null> {
         return true;
     }
 
-    public getResult(): PathStep[] {
+    public getResult(): LinearPathStep[] {
         return this.resultPath;
     }
 }
