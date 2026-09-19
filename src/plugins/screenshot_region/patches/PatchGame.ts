@@ -208,33 +208,25 @@ export const PatchGame: IPatcher = (
                 return outputCanvas;
             }
 
-            public async copySelectedAreaImageToClipboard(
+            public async captureScreenshot(
                 options?: RenderOptions,
-            ): Promise<boolean> {
+            ): Promise<Blob | null> {
                 const selection = this.getSelectionBounds();
-                if (!selection) return false;
+                if (!selection) return null;
 
                 const canvas = this.renderRegionToCanvas(
                     selection.area,
                     selection.selectedSet,
                     options,
                 );
-                if (!canvas) return false;
+                if (!canvas) return null;
 
                 const blob = await new Promise<Blob | null>((resolve) => {
                     canvas.toBlob((b) => resolve(b), 'image/png');
                 });
-                if (!blob) return false;
+                if (!blob) return null;
 
-                try {
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ 'image/png': blob }),
-                    ]);
-                    return true;
-                } catch (err) {
-                    console.error('Screenshot clipboard error:', err);
-                    return false;
-                }
+                return blob;
             }
 
             private async captureFrames(

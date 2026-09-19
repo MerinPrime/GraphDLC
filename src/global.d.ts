@@ -106,9 +106,7 @@ declare module '@logic-arrows/player/game' {
         renderApng(options: VideoOptions): Promise<Blob | null>;
         renderMp4(options: Mp4Options): Promise<Blob | null>;
 
-        copySelectedAreaImageToClipboard(
-            options?: RenderOptions,
-        ): Promise<boolean>;
+        captureScreenshot(options?: RenderOptions): Promise<Blob | null>;
     }
 }
 

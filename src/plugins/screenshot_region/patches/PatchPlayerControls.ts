@@ -5,6 +5,7 @@ import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
+import { copyOrDownloadBlob, generateFilename } from 'src/core/utils/Blobs';
 import type { IPatcher } from '../../Patcher';
 
 interface PrivatePlayerControls {
@@ -40,9 +41,28 @@ export const PatchPlayerControls: IPatcher = (
                                 // TODO: gif
                             } else {
                                 _this.game
-                                    .copySelectedAreaImageToClipboard()
-                                    .then((isSuccess) => {
-                                        console.log('Screenshot', isSuccess);
+                                    .captureScreenshot()
+                                    .then(async (blob) => {
+                                        if (!blob) {
+                                            return;
+                                        }
+                                        const result = await copyOrDownloadBlob(
+                                            blob,
+                                            generateFilename('graphdlc', 'png'),
+                                        );
+                                        if (!result.success) {
+                                            console.warn(
+                                                "Can't take screenshot!",
+                                            );
+                                        } else if (
+                                            result.method === 'clipboard'
+                                        ) {
+                                            console.log('Screenshot copied.');
+                                        } else if (
+                                            result.method === 'download'
+                                        ) {
+                                            console.log('Screenshot saved.');
+                                        }
                                     });
                             }
                             return;
