@@ -105,6 +105,7 @@ declare module '@logic-arrows/player/game' {
         renderGif(options: VideoOptions): Promise<Blob | null>;
         renderApng(options: VideoOptions): Promise<Blob | null>;
         renderMp4(options: Mp4Options): Promise<Blob | null>;
+        focusOnCell(x: number, y: number, speed: number = 1): void;
 
         captureScreenshot(options?: RenderOptions): Promise<Blob | null>;
     }
