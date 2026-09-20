@@ -4,7 +4,7 @@ import { PatchLoader } from './core/PatchLoader';
 import { STORAGE_KEYS } from './core/StorageKeys';
 import { DesignManager } from './redesign/DesignManager';
 
-export function injectGraphDLC() {
+function injectGraphDLC() {
     const patchLoader = new PatchLoader();
     patchLoader.hook();
     const graphDLC = new GraphDLC(patchLoader);
