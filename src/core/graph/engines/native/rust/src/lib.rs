@@ -40,7 +40,6 @@ pub extern "C" fn update_node_state(
     node_type: u8,
     is_entry_point: i32,
     is_additional_update: i32,
-    is_breakpoint: i32,
     cycle_idx: i32,
     cycle_offset: u32,
     head_type: u8,
@@ -71,7 +70,7 @@ pub extern "C" fn update_node_state(
     state.update_node_back_links(node_idx, &links[..safe_links_count]);
 
     let existing_flags = state.nodes[node_idx as usize].flags;
-    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_CHANGED);
+    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_CHANGED | FLAG_IS_BREAKPOINT);
 
     let node = &mut state.nodes[node_idx as usize];
     node.set_type_id(node_type);
@@ -81,9 +80,6 @@ pub extern "C" fn update_node_state(
     }
     if is_additional_update != 0 {
         flags |= FLAG_IS_ADDITIONAL_UPDATE;
-    }
-    if is_breakpoint != 0 {
-        flags |= FLAG_IS_BREAKPOINT;
     }
 
     if cycle_idx >= 0 {
@@ -161,6 +157,25 @@ pub extern "C" fn update_node_state(
 
     for &idx in &all_links[..count] {
         state.full_node_state_calculate(idx);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn set_node_breakpoint(node_idx: u32, is_breakpoint: bool) {
+    let state = get_state();
+    state.ensure_node_capacity(node_idx as usize + 1);
+
+    let node = &mut state.nodes[node_idx as usize];
+
+    if is_breakpoint {
+        node.flags |= FLAG_IS_BREAKPOINT;
+        state.break_points.push(node_idx);
+    } else {
+        node.flags &= !FLAG_IS_BREAKPOINT;
+        let index = state.break_points.iter().position(|&x| x == node_idx);
+        if let Some(index) = index {
+            state.break_points.swap_remove(index);
+        }
     }
 }
 

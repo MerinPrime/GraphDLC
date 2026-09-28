@@ -38,6 +38,7 @@ export class Graph {
     private cycles: (GraphCycle | null)[] = [];
     private freeCycleIndices: number[] = [];
     public readonly extraRewindNodes: Set<number> = new Set();
+    // public readonly breakpoints: Set<GraphNode> = new Set();
 
     private readonly cycleManager: CycleManager = new CycleManager();
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
@@ -222,6 +223,8 @@ export class Graph {
 
         if (node.blockedLink !== blockedLink) {
             node.blockedLink = blockedLink;
+            this.syncBreakpointState(node);
+            this.syncBreakpointState(blockedLink);
             this.updater.update(node);
         }
 
@@ -386,6 +389,7 @@ export class Graph {
             const backNodes = node.backLinksList.nodes;
             const backLen = backNodes.length;
             for (let i = 0; i < backLen; i++) {
+                this.syncBreakpointState(backNodes[i]);
                 this.updater.update(backNodes[i]);
             }
         }
@@ -470,6 +474,28 @@ export class Graph {
             this.updater.update(toNode);
         }
         this._lastUpdate = Date.now();
+    }
+
+    private syncBreakpointState(node: GraphNode | null) {
+        if (!node) return;
+
+        const isBreakpoint =
+            node.type === NodeType.BLOCKER &&
+            node.blockedLink !== null &&
+            node.blockedLink.type === NodeType.BLOCKER &&
+            node.blockedLink.blockedLink === node;
+
+        if (node.isBreakpoint !== isBreakpoint) {
+            node.isBreakpoint = isBreakpoint;
+
+            // if (isBp) {
+            //     this.breakpoints.add(node);
+            // } else {
+            //     this.breakpoints.delete(node);
+            // }
+
+            this.updater.updateBreakpoint(node);
+        }
     }
 
     public addCycle(nodes: GraphNode[]): GraphCycle {

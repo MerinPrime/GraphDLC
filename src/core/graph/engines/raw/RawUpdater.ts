@@ -1,4 +1,5 @@
 import { CycleHeadType } from 'src/core/graph/ast/cycle/types';
+import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeSignal } from '../core/NodeSignal';
@@ -166,14 +167,16 @@ export class RawGraphUpdater {
                 if (signal !== NodeSignal.KEEP_SIGNAL) {
                     nodeState.signal = signal;
                     state.makeDirtyChunk(nodeState.chunkIdx);
-                    if (
-                        signal === NodeSignal.ACTIVE &&
-                        nodeState.isBreakpoint
-                    ) {
-                        state.breakPoint = true;
-                        state.breakPointNode = nodeState.nodeIdx;
-                    }
                 }
+            }
+        }
+
+        for (let i = 0; i < state.breakPoints.length; i++) {
+            const nodeState = state.getNode(state.breakPoints[i]);
+            if (nodeState.signal === NodeSignal.ACTIVE) {
+                state.breakPoint = true;
+                state.breakPointNode = nodeState.nodeIdx;
+                break;
             }
         }
 
@@ -304,7 +307,6 @@ export class RawGraphUpdater {
         nodeState.isAdditionalUpdate = NodeTypes.isAdditionalUpdate(
             nodeState.type,
         );
-        nodeState.isBreakpoint = node.isBreakpoint;
         if (node.cycleRef) {
             nodeState.cycleIdx = node.cycleRef.index;
             nodeState.headType = node.headType;
@@ -325,6 +327,20 @@ export class RawGraphUpdater {
 
         for (const n of allLinks) {
             this.fullNodeStateCalculate(state, graph.getNode(n));
+        }
+    }
+
+    public setNodeBreakpoint(
+        state: RawGraphState,
+        nodeIdx: number,
+        isBreakpoint: boolean,
+    ) {
+        const nodeState = state.getNode(nodeIdx);
+        if (nodeState.isBreakpoint === isBreakpoint) return;
+        nodeState.isBreakpoint = isBreakpoint;
+        removeWithSwap(state.breakPoints, nodeIdx);
+        if (isBreakpoint) {
+            state.breakPoints.push(nodeIdx);
         }
     }
 }

@@ -96,7 +96,6 @@ export class RustWrapper {
             node.type,
             NodeTypes.isEntryPoint(node.type) ? 1 : 0,
             NodeTypes.isAdditionalUpdate(node.type) ? 1 : 0,
-            node.isBreakpoint ? 1 : 0,
             cycleRef ? cycleRef.index : -1,
             cycleRef ? node.cycleOffset : 0,
             cycleRef ? node.headType : 0,
@@ -106,6 +105,10 @@ export class RustWrapper {
             node.detectedLink ? node.detectedLink.nodeIdx : -1,
             node.blockedLink ? node.blockedLink.nodeIdx : -1,
         );
+    }
+
+    public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
+        this.exports.set_node_breakpoint(nodeIdx, isBreakpoint);
     }
 
     public ensureNodeCapacity(count: number): void {

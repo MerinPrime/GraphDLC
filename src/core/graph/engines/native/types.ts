@@ -10,7 +10,6 @@ export interface RustEngineExports extends WebAssembly.Exports {
         node_type: number,
         is_entry_point: number,
         is_additional_update: number,
-        is_breakpoint: number,
         cycle_idx: number,
         cycle_offset: number,
         head_type: number,
@@ -20,6 +19,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
         detected_link: number,
         blocked_link: number,
     ): void;
+    set_node_breakpoint(node_idx: number, is_breakpoint: boolean): void;
     ensure_node_capacity_export(count: number): void;
     ensure_chunk_capacity_export(count: number): void;
     reset_export(): void;

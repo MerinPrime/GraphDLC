@@ -12,6 +12,7 @@ pub struct GraphState {
     pub temp_changed_nodes: Vec<u32>,
     pub cycles: Vec<Option<CycleState>>,
     pub tick: u32,
+    pub break_points: Vec<u32>,
     pub break_point: bool,
     pub break_point_node: u32,
     pub back_links: Vec<Vec<u32>>,
@@ -38,6 +39,7 @@ impl GraphState {
             temp_changed_nodes: Vec::with_capacity(4096),
             cycles: Vec::with_capacity(64),
             tick: 0,
+            break_points: Vec::with_capacity(64),
             break_point: false,
             break_point_node: 0,
             back_links: vec![Vec::new(); 4096],
@@ -52,6 +54,7 @@ impl GraphState {
         self.temp_changed_nodes.clear();
         self.cycles.clear();
         self.tick = 0;
+        self.break_points.clear();
         self.break_point = false;
         // reset_rng(new_state);
     }
@@ -367,13 +370,17 @@ impl GraphState {
                     node.signal = signal;
                     let chunk_idx = node.chunk_idx;
                     self.make_dirty_chunk(chunk_idx);
-                    let flags = node.flags;
-                    let is_breakpoint = (flags & FLAG_IS_BREAKPOINT) != 0;
-                    if signal == NODE_SIGNAL_ACTIVE && is_breakpoint {
-                        self.break_point = true;
-                        self.break_point_node = node_idx;
-                    }
                 }
+            }
+        }
+
+        for &node_idx in &self.break_points {
+            let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
+
+            if node.signal == NODE_SIGNAL_ACTIVE {
+                self.break_point = true;
+                self.break_point_node = node_idx;
+                break;
             }
         }
 

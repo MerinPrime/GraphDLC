@@ -50,17 +50,14 @@ export class GraphNode {
     public setType(type: ArrowType) {
         this.arrowType = type;
         this.type = NodeTypes.fromArrowType(type);
-        this.onUpdate();
     }
 
     public setRotation(rotation: number) {
         this.rotation = rotation;
-        this.onUpdate();
     }
 
     public setFlipped(flipped: boolean) {
         this.flipped = flipped;
-        this.onUpdate();
     }
 
     public updateState(type: ArrowType, rotation: number, flipped: boolean) {
@@ -68,32 +65,16 @@ export class GraphNode {
         this.type = NodeTypes.fromArrowType(type);
         this.rotation = rotation;
         this.flipped = flipped;
-        this.onUpdate();
     }
 
     public addLink(target: GraphNode) {
         this.linksList.add(target);
         target.backLinksList.add(this);
-        this.onUpdate();
-        target.onUpdate();
     }
 
     public removeLink(target: GraphNode) {
         this.linksList.remove(target);
         target.backLinksList.remove(this);
-        this.onUpdate();
-        target.onUpdate();
-    }
-
-    private onUpdate() {
-        if (this.type === NodeType.BLOCKER) {
-            const isBreakpoint =
-                this.blockedLink?.type === NodeType.BLOCKER &&
-                this.blockedLink?.blockedLink === this;
-            this.isBreakpoint = isBreakpoint;
-        } else {
-            this.isBreakpoint = false;
-        }
     }
 
     public get links(): readonly GraphNode[] {

@@ -8,6 +8,7 @@ import { ChunkSnapshot, DefaultSnapshot } from './DefaultSnapshot';
 
 export class DefaultState implements IState<DefaultSnapshot> {
     public tick: number = 0;
+    public breakPoints: number[] = [];
     public isBreakPoint: boolean = false;
     public breakPointNode: number = 0;
 
@@ -23,6 +24,7 @@ export class DefaultState implements IState<DefaultSnapshot> {
     }
 
     public clear(): void {
+        this.breakPoints.length = 0;
         this.tick = 0;
     }
 

@@ -56,6 +56,8 @@ export class RawGraphState implements IState<RawSnapshot> {
     public cycles: (RawCycleState | null)[] = [];
 
     public tick: number = 0;
+
+    public breakPoints: number[] = [];
     public breakPoint: boolean = false;
     public breakPointNode: number = 0;
 
@@ -66,7 +68,9 @@ export class RawGraphState implements IState<RawSnapshot> {
         this.chunks.length = 0;
         this.cycles.length = 0;
         this.tick = 0;
+        this.breakPoints.length = 0;
         this.breakPoint = false;
+        this.breakPointNode = 0;
     }
 
     public getTick(): number {
