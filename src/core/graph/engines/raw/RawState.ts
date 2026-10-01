@@ -171,6 +171,7 @@ export class RawGraphState implements IState<RawSnapshot> {
 
         snapshot.tick = this.tick;
         snapshot.breakPoint = this.breakPoint;
+        snapshot.breakPointNode = this.breakPointNode;
 
         snapshot.nodes = this.nodes.map((nodeState, nodeIdx) => {
             const nodeSnapshot = new RawNodeSnapshot();
@@ -215,6 +216,7 @@ export class RawGraphState implements IState<RawSnapshot> {
     public loadSnapshot(snapshot: RawSnapshot) {
         this.tick = snapshot.tick;
         this.breakPoint = snapshot.breakPoint;
+        this.breakPointNode = snapshot.breakPointNode;
 
         snapshot.nodes.forEach((nodeSnapshot) => {
             const nodeState = this.getNode(nodeSnapshot.nodeIdx);
