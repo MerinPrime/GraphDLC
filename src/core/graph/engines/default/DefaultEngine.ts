@@ -56,4 +56,9 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
             this.state.breakPoints.push(nodeIdx);
         }
     }
+
+    public setSnapshotsState(_newState: boolean): void {
+        // TIP: disable snapshots
+        super.setSnapshotsState(false);
+    }
 }
