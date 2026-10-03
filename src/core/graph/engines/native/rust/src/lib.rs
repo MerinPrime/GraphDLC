@@ -12,8 +12,6 @@ use consts::*;
 use serialization::{deserialize_state, serialize_state};
 use state::get_state;
 
-use crate::rng::reset_rng;
-
 static mut STAGING_BUFFER: [u32; 1048576] = [0; 1048576];
 static mut SERIALIZED_BUFFER: Vec<u8> = Vec::new();
 
@@ -23,14 +21,14 @@ pub extern "C" fn get_staging_buffer_ptr() -> *mut u32 {
 }
 
 #[no_mangle]
-pub extern "C" fn init(rng_state: u64) {
+pub extern "C" fn init(rng_state: u32) {
     let state = get_state();
     state.clear();
-    reset_rng(rng_state);
+    state.seed = rng_state;
 }
 
 #[no_mangle]
-pub extern "C" fn clear(rng_state: u64) {
+pub extern "C" fn clear(rng_state: u32) {
     init(rng_state);
 }
 

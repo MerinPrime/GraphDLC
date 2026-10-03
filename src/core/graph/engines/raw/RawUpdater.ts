@@ -268,7 +268,8 @@ export class RawGraphUpdater {
                 }
                 return NodeSignal.KEEP_SIGNAL;
             case NodeType.RANDOM:
-                return nodeState.signalsCount > 0 && Math.random() > 0.5
+                return nodeState.signalsCount > 0 &&
+                    randomBool(state.seed, nodeState.nodeIdx, state.tick)
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
             case NodeType.BUTTON:
@@ -343,4 +344,16 @@ export class RawGraphUpdater {
             state.breakPoints.push(nodeIdx);
         }
     }
+}
+
+function randomBool(seed: number, cellId: number, tick: number): boolean {
+    let x = seed ^ Math.imul(cellId, 0x9e3779b9) ^ Math.imul(tick, 0x85ebca6b);
+
+    x ^= x >>> 16;
+    x = Math.imul(x, 0x21f0aaad);
+    x ^= x >>> 15;
+    x = Math.imul(x, 0x735a2d97);
+    x ^= x >>> 15;
+
+    return x >>> 31 !== 0;
 }

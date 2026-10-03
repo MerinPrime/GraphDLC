@@ -11,6 +11,7 @@ pub struct GraphState {
     pub changed_nodes: Vec<u32>,
     pub temp_changed_nodes: Vec<u32>,
     pub cycles: Vec<Option<CycleState>>,
+    pub seed: u32,
     pub tick: u32,
     pub break_points: Vec<u32>,
     pub break_point: bool,
@@ -38,6 +39,7 @@ impl GraphState {
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
             cycles: Vec::with_capacity(64),
+            seed: 12345,
             tick: 0,
             break_points: Vec::with_capacity(64),
             break_point: false,
@@ -53,10 +55,10 @@ impl GraphState {
         self.changed_nodes.clear();
         self.temp_changed_nodes.clear();
         self.cycles.clear();
+        self.seed = 12345;
         self.tick = 0;
         self.break_points.clear();
         self.break_point = false;
-        // reset_rng(new_state);
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
@@ -365,7 +367,7 @@ impl GraphState {
                 let chunk_idx = node.chunk_idx;
                 self.make_dirty_chunk(chunk_idx);
             } else {
-                let signal = self.update_node_signal(node_ptr as *const Node);
+                let signal = self.update_node_signal(node_idx, node_ptr as *const Node);
                 if signal != NODE_SIGNAL_KEEP_SIGNAL {
                     node.signal = signal;
                     let chunk_idx = node.chunk_idx;
@@ -389,7 +391,7 @@ impl GraphState {
     }
 
     #[inline(always)]
-    fn update_node_signal(&self, node_ptr: *const Node) -> u8 {
+    fn update_node_signal(&self, node_idx: u32, node_ptr: *const Node) -> u8 {
         let node = unsafe { &*node_ptr };
         let signals_count = node.signals_count;
         let flags = node.flags;
@@ -494,7 +496,7 @@ impl GraphState {
                 }
             }
             NODE_TYPE_RANDOM => {
-                if signals_count > 0 && random_bool() {
+                if signals_count > 0 && random_bool(self.seed, node_idx, self.tick) {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE

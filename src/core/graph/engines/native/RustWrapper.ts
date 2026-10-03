@@ -15,10 +15,9 @@ export class RustWrapper {
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
     }
 
-    private generateRngSeed(): bigint {
-        const arr = new Uint32Array(2);
-        crypto.getRandomValues(arr);
-        return (BigInt(arr[0]) << 32n) | BigInt(arr[1]);
+    private generateRngSeed(): number {
+        const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+        return seed;
     }
 
     private get memoryBuffer(): ArrayBuffer {

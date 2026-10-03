@@ -23,7 +23,6 @@ import { containsNode } from './cycle/utils';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
 import { NodeStateUpdater } from './NodeStateUpdater';
-import { isRewindNodeType } from './utils';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -37,7 +36,6 @@ export class Graph {
     private chunks: Chunk[] = [];
     private cycles: (GraphCycle | null)[] = [];
     private freeCycleIndices: number[] = [];
-    public readonly extraRewindNodes: Set<number> = new Set();
     // public readonly breakpoints: Set<GraphNode> = new Set();
 
     private readonly cycleManager: CycleManager = new CycleManager();
@@ -68,7 +66,6 @@ export class Graph {
         this.eventDispatcher.subscribe(this.cycleManager);
 
         this.engine = EngineFactory.create(this, this.gameMap);
-        this.engine.setExtraRewindNodes(this.extraRewindNodes);
 
         this.updater = new NodeStateUpdater(this);
 
@@ -319,7 +316,6 @@ export class Graph {
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
-        this.extraRewindNodes.clear();
         this.engine.clear();
         this.eventDispatcher.dispatch('onGraphClear', this);
         this.eventDispatcher.clear();
@@ -395,12 +391,6 @@ export class Graph {
         }
 
         this.updater.update(node);
-
-        if (isRewindNodeType(node.type)) {
-            this.extraRewindNodes.add(node.nodeIdx);
-        } else {
-            this.extraRewindNodes.delete(node.nodeIdx);
-        }
 
         this._lastUpdate = Date.now();
     }

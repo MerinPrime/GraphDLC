@@ -2,8 +2,8 @@ export interface RustEngineExports extends WebAssembly.Exports {
     readonly memory: WebAssembly.Memory;
 
     get_staging_buffer_ptr(): number;
-    init(rng_state: BigInt): void;
-    clear(rng_state: BigInt): void;
+    init(rng_state: number): void;
+    clear(rng_state: number): void;
     reset_node_signal(node_idx: number): void;
     update_node_state(
         node_idx: number,
