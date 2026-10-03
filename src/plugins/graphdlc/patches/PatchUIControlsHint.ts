@@ -81,7 +81,7 @@ export const PatchUIControlsHint: IPatcher = (
                 public updateRights(rights: PlayerAccess): void {
                     super.updateRights(rights);
                     // @ts-expect-error
-                    if (this.rights.canOpenMenu) return;
+                    if (!this.rights.canOpenMenu) return;
                     // @ts-expect-error
                     this.hint.innerHTML += makeHints(
                         // @ts-expect-error
@@ -92,9 +92,11 @@ export const PatchUIControlsHint: IPatcher = (
                 public setState(
                     state: 'none' | 'free' | 'arrow' | 'selected',
                 ): void {
+                    // @ts-expect-error
+                    if (this.state === state) return;
                     super.setState(state);
                     // @ts-expect-error
-                    if (this.rights.canOpenMenu) return;
+                    if (!this.rights.canOpenMenu) return;
                     // @ts-expect-error
                     this.hint.innerHTML += makeHints(
                         // @ts-expect-error
