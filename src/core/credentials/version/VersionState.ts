@@ -24,7 +24,7 @@ export const VersionState = {
 };
 
 export async function checkVersion() {
-    const currentVersion = __CURRENT_VERSION__.replace(/-test$/i, '');
+    const currentVersion = __CURRENT_VERSION__;
 
     const cache = VersionStorage.get();
     let latestVersion: string;

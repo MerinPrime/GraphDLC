@@ -228,7 +228,7 @@ const chromeExtensionPlugin = (
         const manifestDest = path.join(outDir, 'manifest.json');
         if (fs.existsSync(manifestSrc)) {
             const manifest = JSON.parse(fs.readFileSync(manifestSrc, 'utf8'));
-            manifest.version = pkg.version.replace(/-test$/i, '');
+            manifest.version = pkg.version.replace(/-test\d+$/i, '');
             fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2));
         }
 
