@@ -21,6 +21,13 @@ export interface ReadHead {
     distance: number;
 }
 
+export interface HeadData {
+    node: GraphNode;
+    headType: CycleHeadType;
+    offset: number;
+    extraPath: GraphNode[];
+}
+
 export interface InternalCycle {
     key: string;
     nodes: GraphNode[];

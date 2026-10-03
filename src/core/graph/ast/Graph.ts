@@ -2,7 +2,7 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
+import type { GraphCycle, HeadData } from 'src/core/graph/ast/cycle/types';
 import type { ArrowType } from 'src/core/utils/ArrowType';
 import { EventDispatcher } from 'src/core/utils/EventDispatcher';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
@@ -488,7 +488,7 @@ export class Graph {
         }
     }
 
-    public addCycle(nodes: GraphNode[]): GraphCycle {
+    public addCycle(nodes: GraphNode[], heads?: HeadData[]): GraphCycle {
         const index = this.allocateCycleIndex();
 
         const cycle: GraphCycle = {
@@ -499,7 +499,7 @@ export class Graph {
         };
         this.cycles[index] = cycle;
 
-        this.cycleManager.attachNodesToCycle(cycle, nodes);
+        this.cycleManager.attachNodesToCycle(cycle, nodes, heads);
         this.syncNodesAndHeadsState(cycle.nodes, cycle.heads, cycle.extraNodes);
 
         this.engine.addCycle(cycle);
