@@ -14,6 +14,10 @@ export class NativeState implements IState<NativeSnapshot> {
         this.wrapper.clear();
     }
 
+    public setSeed(seed: number): void {
+        this.wrapper.setSeed(seed);
+    }
+
     public makeSnapshot(): NativeSnapshot {
         return this.wrapper.makeSnapshot();
     }

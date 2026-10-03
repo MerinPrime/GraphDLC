@@ -31,10 +31,14 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         this.state.reset();
         this.rewinder.reset();
         this.extraSignalsHistory.clear();
+        const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+        this.state.setSeed(seed);
     }
 
     public clear(): void {
         this.state.clear();
+        const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+        this.state.setSeed(seed);
     }
 
     public runTick(): boolean {

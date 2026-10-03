@@ -28,6 +28,8 @@ export class DefaultState implements IState<DefaultSnapshot> {
         this.tick = 0;
     }
 
+    public setSeed(_seed: number): void {}
+
     public makeSnapshot(): DefaultSnapshot {
         const snapshot = new DefaultSnapshot();
         snapshot.tick = this.getTick();

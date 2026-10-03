@@ -21,15 +21,20 @@ pub extern "C" fn get_staging_buffer_ptr() -> *mut u32 {
 }
 
 #[no_mangle]
-pub extern "C" fn init(rng_state: u32) {
+pub extern "C" fn init() {
     let state = get_state();
     state.clear();
-    state.seed = rng_state;
 }
 
 #[no_mangle]
-pub extern "C" fn clear(rng_state: u32) {
-    init(rng_state);
+pub extern "C" fn clear() {
+    init();
+}
+
+#[no_mangle]
+pub extern "C" fn set_seed(seed: u32) {
+    let state = get_state();
+    state.seed = seed;
 }
 
 #[no_mangle]

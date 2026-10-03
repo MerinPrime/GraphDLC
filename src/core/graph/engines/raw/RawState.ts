@@ -68,11 +68,14 @@ export class RawGraphState implements IState<RawSnapshot> {
         this.nodes.length = 0;
         this.chunks.length = 0;
         this.cycles.length = 0;
-        this.seed = (Math.random() * 0x1_0000_0000) >>> 0;
         this.tick = 0;
         this.breakPoints.length = 0;
         this.breakPoint = false;
         this.breakPointNode = 0;
+    }
+
+    public setSeed(seed: number): void {
+        this.seed = seed;
     }
 
     public getTick(): number {
@@ -111,7 +114,6 @@ export class RawGraphState implements IState<RawSnapshot> {
     }
 
     public reset() {
-        this.seed = (Math.random() * 0x1_0000_0000) >>> 0;
         this.tick = 0;
         this.changedNodes.length = 0;
         this.tempChangedNodes.length = 0;

@@ -15,11 +15,6 @@ export class RustWrapper {
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
     }
 
-    private generateRngSeed(): number {
-        const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-        return seed;
-    }
-
     private get memoryBuffer(): ArrayBuffer {
         return this.exports.memory.buffer as ArrayBuffer;
     }
@@ -60,11 +55,15 @@ export class RustWrapper {
     }
 
     public init(): void {
-        this.exports.init(this.generateRngSeed());
+        this.exports.init();
     }
 
     public clear(): void {
-        this.exports.clear(this.generateRngSeed());
+        this.exports.clear();
+    }
+
+    public setSeed(seed: number): void {
+        this.exports.set_seed(seed);
     }
 
     public updateNodeState(node: GraphNode): void {

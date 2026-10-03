@@ -39,7 +39,7 @@ impl GraphState {
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
             cycles: Vec::with_capacity(64),
-            seed: 12345,
+            seed: 0,
             tick: 0,
             break_points: Vec::with_capacity(64),
             break_point: false,
@@ -55,7 +55,6 @@ impl GraphState {
         self.changed_nodes.clear();
         self.temp_changed_nodes.clear();
         self.cycles.clear();
-        self.seed = 12345;
         self.tick = 0;
         self.break_points.clear();
         self.break_point = false;
