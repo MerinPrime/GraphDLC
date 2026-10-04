@@ -2,7 +2,7 @@ import type { GraphCycle } from '../../ast/cycle/types';
 import type { GraphNode } from '../../ast/GraphNode';
 import type { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
-import { instantiateRustEngine } from './loader';
+import { getRustEngine } from './loader';
 import type { NativeSnapshot } from './NativeSnapshot';
 import type { RustEngineExports } from './types';
 
@@ -11,7 +11,7 @@ export class RustWrapper {
     private readonly stagingBufferPtr: number;
 
     public constructor() {
-        this.exports = instantiateRustEngine();
+        this.exports = getRustEngine();
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
     }
 

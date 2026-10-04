@@ -1,6 +1,7 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { PatchArrow } from './patches/PatchArrow';
+import { PatchBackend } from './patches/PatchBackend';
 import { PatchChunk } from './patches/PatchChunk';
 import { PatchChunkUpdates } from './patches/PatchChunkUpdates';
 import { PatchGame } from './patches/PatchGame';
@@ -32,6 +33,7 @@ const Patches = [
     PatchPlayerUI,
     PatchSave,
     PatchUIControlsHint,
+    PatchBackend,
 ];
 
 const Settings = [
