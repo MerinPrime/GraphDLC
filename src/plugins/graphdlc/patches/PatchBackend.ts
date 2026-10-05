@@ -21,22 +21,38 @@ export const PatchBackend: IPatcher = (
                 callback: (mapInfo: MapInfo) => void,
             ): Promise<void> => {
                 if (GraphEngineSetting.value === GraphEngine.NATIVE) {
-                    await tryLoadRustEngine();
+                    await Promise.all([
+                        tryLoadRustEngine(),
+                        original.getMap(id, callback),
+                    ]);
+                } else {
+                    await original.getMap(id, callback);
                 }
-                return await original.getMap(id, callback);
             };
 
             namespace.getMaps = async (ids: string[]): Promise<MapInfo[]> => {
                 if (GraphEngineSetting.value === GraphEngine.NATIVE) {
-                    await tryLoadRustEngine();
+                    const [, maps] = await Promise.all([
+                        tryLoadRustEngine(),
+                        original.getMaps(ids),
+                    ]);
+
+                    return maps;
                 }
+
                 return await original.getMaps(ids);
             };
 
             namespace.getMapsInfo = async (): Promise<MapInfo[]> => {
                 if (GraphEngineSetting.value === GraphEngine.NATIVE) {
-                    await tryLoadRustEngine();
+                    const [, mapsInfo] = await Promise.all([
+                        tryLoadRustEngine(),
+                        original.getMapsInfo(),
+                    ]);
+
+                    return mapsInfo;
                 }
+
                 return await original.getMapsInfo();
             };
         },
