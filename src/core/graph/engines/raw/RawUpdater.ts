@@ -173,7 +173,10 @@ export class RawGraphUpdater {
 
         for (let i = 0; i < state.breakPoints.length; i++) {
             const nodeState = state.getNode(state.breakPoints[i]);
-            if (nodeState.signal === NodeSignal.ACTIVE) {
+            if (
+                nodeState.signal === NodeSignal.ACTIVE &&
+                nodeState.lastSignal === NodeSignal.NONE
+            ) {
                 state.breakPoint = true;
                 state.breakPointNode = nodeState.nodeIdx;
                 break;
