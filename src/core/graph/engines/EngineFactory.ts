@@ -10,6 +10,9 @@ import { RawEngine } from './raw/RawEngine';
 
 export namespace EngineFactory {
     export function create(graph: Graph, gameMap: GameMap) {
+        if (!location.pathname.startsWith('/map')) {
+            return new DefaultEngine(graph, gameMap);
+        }
         switch (GraphEngineSetting.value) {
             case GraphEngine.ORIGINAL:
                 return new DefaultEngine(graph, gameMap);
