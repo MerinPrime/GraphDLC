@@ -58,6 +58,8 @@ impl GraphState {
         self.tick = 0;
         self.break_points.clear();
         self.break_point = false;
+        self.back_links.clear();
+        self.detected_links.clear();
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
