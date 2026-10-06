@@ -1,6 +1,7 @@
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import { StaticSeedSetting } from 'src/plugins/graphdlc/settings/tools/StaticSeedSetting';
 import type { NodeSignal } from '../NodeSignal';
 import { StateRewinder } from '../StateRewinder';
 import type { IEngine } from './IEngine';
@@ -27,18 +28,21 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     protected saveSnapshots: boolean = false;
     protected useBreakPoints: boolean = false;
 
+    public getSeed(): number {
+        if (StaticSeedSetting.value !== 0) return StaticSeedSetting.value;
+        return crypto.getRandomValues(new Uint32Array(1))[0];
+    }
+
     public reset(): void {
         this.state.reset();
         this.rewinder.reset();
         this.extraSignalsHistory.clear();
-        const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-        this.state.setSeed(seed);
+        this.state.setSeed(this.getSeed());
     }
 
     public clear(): void {
         this.state.clear();
-        const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-        this.state.setSeed(seed);
+        this.state.setSeed(this.getSeed());
     }
 
     public runTick(): boolean {

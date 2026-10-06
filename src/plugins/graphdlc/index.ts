@@ -18,6 +18,7 @@ import { EnableSnapshotsSetting } from './settings/performance/EnableSnapshotsSe
 import { GraphEngineSetting } from './settings/performance/GraphEngineSetting';
 import { DebugModeSetting } from './settings/tools/DebugModeSetting';
 import { EnableBreakpointSetting } from './settings/tools/EnableBreakpointSetting';
+import { StaticSeedSetting } from './settings/tools/StaticSeedSetting';
 
 const Patches = [
     PatchArrow,
@@ -42,6 +43,7 @@ const Settings = [
 
     DebugModeSetting,
     EnableBreakpointSetting,
+    StaticSeedSetting,
 ];
 
 export const TickRewindLocale = new I18nText(
