@@ -5,6 +5,7 @@ export interface NumberSettingOptions {
     min: number;
     max: number;
     step?: number;
+    inputType?: 'range' | 'number';
     formatLabel?: (value: number) => string;
 }
 
@@ -12,6 +13,7 @@ export class NumberSetting extends BaseSetting<number> {
     public readonly min: number;
     public readonly max: number;
     public readonly step: number;
+    public readonly inputType: 'range' | 'number';
     private readonly formatLabel: (value: number) => string;
 
     public constructor(
@@ -35,6 +37,7 @@ export class NumberSetting extends BaseSetting<number> {
         this.min = options.min;
         this.max = options.max;
         this.step = options.step ?? 1;
+        this.inputType = options.inputType ?? 'range';
         this.formatLabel = options.formatLabel ?? ((value) => value.toString());
     }
 
@@ -47,7 +50,7 @@ export class NumberSetting extends BaseSetting<number> {
         const slider = document.createElement('input');
         const label = document.createElement('span');
 
-        slider.type = 'range';
+        slider.type = this.inputType;
         slider.min = this.min.toString();
         slider.max = this.max.toString();
         slider.step = this.step.toString();
