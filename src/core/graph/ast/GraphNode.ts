@@ -16,6 +16,8 @@ export class GraphNode {
     public readonly localX: number;
     public readonly localY: number;
 
+    public readonly posHash: number;
+
     public readonly linksList = new NodeEdgeList();
     public readonly backLinksList = new NodeEdgeList();
 
@@ -45,6 +47,8 @@ export class GraphNode {
         this.globalY = globalY;
         this.localX = localX;
         this.localY = localY;
+
+        this.posHash = hashXY(globalX, globalY);
     }
 
     public setType(type: ArrowType) {
@@ -100,4 +104,17 @@ export class GraphNode {
     public get cycleOffset(): number {
         return this.cycle?.offset ?? 0;
     }
+}
+
+function hashXY(x: number, y: number): number {
+    let h = Math.imul(x, 0x9e3779b1);
+    h ^= Math.imul(y, 0x85ebca6b);
+
+    h ^= h >>> 16;
+    h = Math.imul(h, 0x85ebca6b);
+    h ^= h >>> 13;
+    h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16;
+
+    return h >>> 0;
 }

@@ -8,6 +8,7 @@ import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
 export class RawNodeState {
     public readonly nodeIdx: number;
+    public posHash: number = 0;
     public chunkIdx: number = 0;
 
     public type: NodeType = NodeType.EMPTY;

@@ -272,7 +272,7 @@ export class RawGraphUpdater {
                 return NodeSignal.KEEP_SIGNAL;
             case NodeType.RANDOM:
                 return nodeState.signalsCount > 0 &&
-                    randomBool(state.seed, nodeState.nodeIdx, state.tick)
+                    randomBool(state.seed, nodeState.posHash, state.tick)
                     ? NodeSignal.ACTIVE
                     : NodeSignal.NONE;
             case NodeType.BUTTON:
@@ -290,6 +290,7 @@ export class RawGraphUpdater {
         const nodeState = state.getNode(node.nodeIdx);
 
         nodeState.chunkIdx = node.chunkIdx;
+        nodeState.posHash = node.posHash;
         nodeState.type = node.type;
         nodeState.links = node.links
             .filter(

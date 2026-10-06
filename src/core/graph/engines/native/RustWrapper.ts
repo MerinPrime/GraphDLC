@@ -91,6 +91,7 @@ export class RustWrapper {
 
         this.exports.update_node_state(
             nodeIdx,
+            node.posHash,
             node.type,
             NodeTypes.isEntryPoint(node.type) ? 1 : 0,
             NodeTypes.isAdditionalUpdate(node.type) ? 1 : 0,

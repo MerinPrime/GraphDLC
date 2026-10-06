@@ -8,6 +8,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     reset_node_signal(node_idx: number): void;
     update_node_state(
         node_idx: number,
+        pos_hash: number,
         node_type: number,
         is_entry_point: number,
         is_additional_update: number,

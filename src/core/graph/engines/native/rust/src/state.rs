@@ -18,6 +18,7 @@ pub struct GraphState {
     pub break_point_node: u32,
     pub back_links: Vec<Vec<u32>>,
     pub detected_links: Vec<Option<u32>>,
+    pub pos_hashes: Vec<u32>,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -46,6 +47,7 @@ impl GraphState {
             break_point_node: 0,
             back_links: vec![Vec::new(); 4096],
             detected_links: vec![None; 4096],
+            pos_hashes: vec![0; 4096],
         }
     }
 
@@ -60,6 +62,7 @@ impl GraphState {
         self.break_point = false;
         self.back_links.clear();
         self.detected_links.clear();
+        self.pos_hashes.clear();
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
@@ -84,6 +87,7 @@ impl GraphState {
             });
             self.back_links.resize(count, Vec::new());
             self.detected_links.resize(count, None);
+            self.pos_hashes.resize(count, 0);
         }
     }
 
@@ -497,7 +501,9 @@ impl GraphState {
                 }
             }
             NODE_TYPE_RANDOM => {
-                if signals_count > 0 && random_bool(self.seed, node_idx, self.tick) {
+                if signals_count > 0
+                    && random_bool(self.seed, self.pos_hashes[node_idx as usize], self.tick)
+                {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
