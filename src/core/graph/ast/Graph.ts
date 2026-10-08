@@ -66,6 +66,7 @@ export class Graph {
         this.eventDispatcher.subscribe(this.cycleManager);
 
         this.engine = EngineFactory.create(this, this.gameMap);
+        this.engine.reset();
 
         this.updater = new NodeStateUpdater(this);
 
