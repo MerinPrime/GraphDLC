@@ -21,13 +21,9 @@ export const PatchBackend: IPatcher = (
                 callback: (mapInfo: MapInfo) => void,
             ): Promise<void> => {
                 if (GraphEngineSetting.value === GraphEngine.NATIVE) {
-                    await Promise.all([
-                        tryLoadRustEngine(),
-                        original.getMap(id, callback),
-                    ]);
-                } else {
-                    await original.getMap(id, callback);
+                    await tryLoadRustEngine();
                 }
+                await original.getMap(id, callback);
             };
 
             namespace.getMaps = async (ids: string[]): Promise<MapInfo[]> => {
