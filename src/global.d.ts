@@ -142,6 +142,7 @@ declare module '@logic-arrows/player/player-ui' {
             onStartRecord: (options: AnyRecordOptions) => void,
             onCancel?: () => void,
         ): void;
+        tryHideVideoModal(): boolean;
     }
 }
 

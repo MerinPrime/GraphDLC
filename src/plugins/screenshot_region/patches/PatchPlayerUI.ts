@@ -69,6 +69,11 @@ export const PatchPlayerUI: IPatcher = (
                 onStartRecord: (options: AnyRecordOptions) => void,
                 onCancel?: () => void,
             ): void {
+                if (this.isMenuOpen()) {
+                    this.menu?.remove();
+                    this.menu = null;
+                }
+
                 this.initRecordUI();
                 this.onCancelRecordCallback = onCancel || null;
 
@@ -166,6 +171,13 @@ export const PatchPlayerUI: IPatcher = (
                         onStartRecord(options);
                     };
                 }
+            }
+
+            public tryHideVideoModal(): boolean {
+                if (!this.recordDialog?.open) return false;
+
+                this.recordDialog.close();
+                return true;
             }
 
             private updateProgress(

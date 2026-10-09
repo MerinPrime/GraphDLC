@@ -41,7 +41,9 @@ export const PatchPlayerControls: IPatcher = (
                         code: string,
                         key: string,
                     ) => {
-                        if (code === 'KeyL') {
+                        if (code === 'Escape') {
+                            if (playerUI.tryHideVideoModal()) return;
+                        } else if (code === 'KeyL') {
                             if (
                                 _this.game.selectedMap.getSelectedArrows()
                                     .length === 0
