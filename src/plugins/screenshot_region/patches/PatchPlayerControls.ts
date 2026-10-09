@@ -42,7 +42,14 @@ export const PatchPlayerControls: IPatcher = (
                         key: string,
                     ) => {
                         if (code === 'KeyL') {
-                            if (_this.keyboardHandler.getShiftPressed()) {
+                            if (
+                                _this.game.selectedMap.getSelectedArrows()
+                                    .length === 0
+                            ) {
+                                console.log("Can't take screenshot/video");
+                            } else if (
+                                _this.keyboardHandler.getShiftPressed()
+                            ) {
                                 playerUI.showVideoModal(
                                     async (options) => {
                                         let videoBlob: Blob | null = null;
