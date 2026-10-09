@@ -18,8 +18,6 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
 
     protected readonly state;
 
-    private breakPoints: number[] = [];
-
     public constructor(
         public readonly graph: Graph,
         public readonly gameMap: GameMap,
@@ -33,7 +31,7 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
 
     protected runTickInternal(): boolean {
         if (this.useBreakPoints) {
-            this.breakPoints.forEach((nodeIdx) => {
+            this.state.breakPoints.forEach((nodeIdx) => {
                 const arrow = this.graph.getArrow(nodeIdx);
                 if (arrow.lastSignal === 0 && arrow.signal !== 0) {
                     this.state.isBreakPoint = true;
@@ -50,10 +48,17 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
 
     public removeCycle(_cycle: GraphCycle): void {}
 
-    public updateNodeState(_graph: Graph, node: GraphNode): void {
-        removeWithSwap(this.breakPoints, node.nodeIdx);
-        if (node.isBreakpoint) {
-            this.breakPoints.push(node.nodeIdx);
+    public updateNodeState(_graph: Graph, _node: GraphNode): void {}
+
+    public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
+        removeWithSwap(this.state.breakPoints, nodeIdx);
+        if (isBreakpoint) {
+            this.state.breakPoints.push(nodeIdx);
         }
+    }
+
+    public setSnapshotsState(_newState: boolean): void {
+        // TIP: disable snapshots
+        super.setSnapshotsState(false);
     }
 }

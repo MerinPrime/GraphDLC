@@ -42,4 +42,8 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
     public updateNodeState(_graph: Graph, node: GraphNode): void {
         this.wrapper.updateNodeState(node);
     }
+
+    public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
+        this.wrapper.setNodeBreakpoint(nodeIdx, isBreakpoint);
+    }
 }

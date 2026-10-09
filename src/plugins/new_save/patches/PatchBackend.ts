@@ -26,19 +26,6 @@ export const PatchBackend: IPatcher = (
                 if (status === 200) GamePage.val?.updateIsMapChanged(false);
                 return status;
             };
-
-            namespace.saveMapInfo = async (
-                mapInfo: MapInfo,
-                callback: (responseStatus: number) => void,
-            ): Promise<void> => {
-                if (SaveModeSetting.value === SaveMode.NEVER) {
-                    return;
-                }
-                await original.saveMapInfo(mapInfo, (status: number) => {
-                    if (status === 200) GamePage.val?.updateIsMapChanged(false);
-                    callback(status);
-                });
-            };
         },
     );
 };

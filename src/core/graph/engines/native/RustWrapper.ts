@@ -2,7 +2,7 @@ import type { GraphCycle } from '../../ast/cycle/types';
 import type { GraphNode } from '../../ast/GraphNode';
 import type { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
-import { instantiateRustEngine } from './loader';
+import { getRustEngine } from './loader';
 import type { NativeSnapshot } from './NativeSnapshot';
 import type { RustEngineExports } from './types';
 
@@ -11,14 +11,8 @@ export class RustWrapper {
     private readonly stagingBufferPtr: number;
 
     public constructor() {
-        this.exports = instantiateRustEngine();
+        this.exports = getRustEngine();
         this.stagingBufferPtr = this.exports.get_staging_buffer_ptr();
-    }
-
-    private generateRngSeed(): bigint {
-        const arr = new Uint32Array(2);
-        crypto.getRandomValues(arr);
-        return (BigInt(arr[0]) << 32n) | BigInt(arr[1]);
     }
 
     private get memoryBuffer(): ArrayBuffer {
@@ -61,11 +55,15 @@ export class RustWrapper {
     }
 
     public init(): void {
-        this.exports.init(this.generateRngSeed());
+        this.exports.init();
     }
 
     public clear(): void {
-        this.exports.clear(this.generateRngSeed());
+        this.exports.clear();
+    }
+
+    public setSeed(seed: number): void {
+        this.exports.set_seed(seed);
     }
 
     public updateNodeState(node: GraphNode): void {
@@ -93,10 +91,10 @@ export class RustWrapper {
 
         this.exports.update_node_state(
             nodeIdx,
+            node.posHash,
             node.type,
             NodeTypes.isEntryPoint(node.type) ? 1 : 0,
             NodeTypes.isAdditionalUpdate(node.type) ? 1 : 0,
-            node.isBreakpoint ? 1 : 0,
             cycleRef ? cycleRef.index : -1,
             cycleRef ? node.cycleOffset : 0,
             cycleRef ? node.headType : 0,
@@ -106,6 +104,10 @@ export class RustWrapper {
             node.detectedLink ? node.detectedLink.nodeIdx : -1,
             node.blockedLink ? node.blockedLink.nodeIdx : -1,
         );
+    }
+
+    public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
+        this.exports.set_node_breakpoint(nodeIdx, isBreakpoint);
     }
 
     public ensureNodeCapacity(count: number): void {

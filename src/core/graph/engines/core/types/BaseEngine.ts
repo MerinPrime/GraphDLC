@@ -1,7 +1,8 @@
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
-import { NodeSignal } from '../NodeSignal';
+import { StaticSeedSetting } from 'src/plugins/graphdlc/settings/tools/StaticSeedSetting';
+import type { NodeSignal } from '../NodeSignal';
 import { StateRewinder } from '../StateRewinder';
 import type { IEngine } from './IEngine';
 import type { ISnapshot } from './ISnapshot';
@@ -19,7 +20,6 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         new StateRewinder();
     protected abstract readonly state: T['State'];
 
-    protected extraRewindNodes: Set<number> = new Set();
     protected readonly extraSignalsHistory: Map<
         number,
         Map<number, NodeSignal>
@@ -28,30 +28,26 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     protected saveSnapshots: boolean = false;
     protected useBreakPoints: boolean = false;
 
+    public getSeed(): number {
+        if (StaticSeedSetting.value !== 0) return StaticSeedSetting.value;
+        return crypto.getRandomValues(new Uint32Array(1))[0];
+    }
+
     public reset(): void {
         this.state.reset();
         this.rewinder.reset();
         this.extraSignalsHistory.clear();
+        this.state.setSeed(this.getSeed());
     }
 
     public clear(): void {
         this.state.clear();
+        this.state.setSeed(this.getSeed());
     }
 
     public runTick(): boolean {
         if (this.saveSnapshots) {
             const tick = this.getTick();
-
-            const curSignals = this.extraSignalsHistory.get(this.getTick());
-            const signals = curSignals ?? new Map<number, NodeSignal>();
-            for (const nodeIdx of this.extraRewindNodes) {
-                const signal = this.getNodeSignal(nodeIdx);
-                if (signal === NodeSignal.NONE) {
-                    continue;
-                }
-                signals.set(nodeIdx, signal);
-            }
-            this.extraSignalsHistory.set(tick, signals);
 
             if (this.rewinder.canDoSnapshot(tick)) {
                 this.rewinder.saveSnapshot(this.makeSnapshot());
@@ -135,9 +131,7 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         const recordedSignals = this.extraSignalsHistory.get(tick);
         if (!recordedSignals) return;
 
-        for (const nodeIdx of this.extraRewindNodes) {
-            const signal = recordedSignals.get(nodeIdx) ?? NodeSignal.NONE;
-
+        for (const [nodeIdx, signal] of recordedSignals.entries()) {
             this.setNodeSignal(nodeIdx, signal);
         }
     }
@@ -185,13 +179,13 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         this.state.makeUndirtyChunk(chunkIdx);
     }
 
-    public setExtraRewindNodes(_nodeIndices: Set<number>): void {
-        this.extraRewindNodes = _nodeIndices;
-    }
-
     public abstract addCycle(cycle: GraphCycle): void;
     public abstract removeCycle(cycle: GraphCycle): void;
     public abstract updateNodeState(graph: Graph, node: GraphNode): void;
+    public abstract setNodeBreakpoint(
+        nodeIdx: number,
+        isBreakpoint: boolean,
+    ): void;
 
     public ensureNodeCapacity(nodesCount: number): void {
         this.state.ensureNodeCapacity(nodesCount);

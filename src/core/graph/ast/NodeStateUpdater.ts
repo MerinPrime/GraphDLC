@@ -5,6 +5,7 @@ export class NodeStateUpdater {
     private loading = false;
 
     private readonly pendingNodes = new Set<GraphNode>();
+    private readonly pendingBreakpoints = new Set<GraphNode>();
     private maxNodeIdx = -1;
 
     public constructor(private readonly graph: Graph) {}
@@ -30,8 +31,15 @@ export class NodeStateUpdater {
         for (const node of this.pendingNodes) {
             this.graph.engine.updateNodeState(this.graph, node);
         }
+        for (const node of this.pendingBreakpoints) {
+            this.graph.engine.setNodeBreakpoint(
+                node.nodeIdx,
+                node.isBreakpoint,
+            );
+        }
 
         this.pendingNodes.clear();
+        this.pendingBreakpoints.clear();
         this.maxNodeIdx = -1;
     }
 
@@ -43,7 +51,20 @@ export class NodeStateUpdater {
         }
 
         this.pendingNodes.add(node);
+        this.maxNodeIdx = Math.max(this.maxNodeIdx, node.nodeIdx);
+    }
 
+    public updateBreakpoint(node: GraphNode): void {
+        if (!this.loading) {
+            this.graph.engine.ensureNodeCapacity(node.nodeIdx + 1);
+            this.graph.engine.setNodeBreakpoint(
+                node.nodeIdx,
+                node.isBreakpoint,
+            );
+            return;
+        }
+
+        this.pendingBreakpoints.add(node);
         this.maxNodeIdx = Math.max(this.maxNodeIdx, node.nodeIdx);
     }
 }

@@ -2,7 +2,7 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
-import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
+import type { GraphCycle, HeadData } from 'src/core/graph/ast/cycle/types';
 import type { ArrowType } from 'src/core/utils/ArrowType';
 import { EventDispatcher } from 'src/core/utils/EventDispatcher';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
@@ -23,7 +23,6 @@ import { containsNode } from './cycle/utils';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
 import { NodeStateUpdater } from './NodeStateUpdater';
-import { isRewindNodeType } from './utils';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -37,7 +36,7 @@ export class Graph {
     private chunks: Chunk[] = [];
     private cycles: (GraphCycle | null)[] = [];
     private freeCycleIndices: number[] = [];
-    public readonly extraRewindNodes: Set<number> = new Set();
+    // public readonly breakpoints: Set<GraphNode> = new Set();
 
     private readonly cycleManager: CycleManager = new CycleManager();
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
@@ -67,7 +66,7 @@ export class Graph {
         this.eventDispatcher.subscribe(this.cycleManager);
 
         this.engine = EngineFactory.create(this, this.gameMap);
-        this.engine.setExtraRewindNodes(this.extraRewindNodes);
+        this.engine.reset();
 
         this.updater = new NodeStateUpdater(this);
 
@@ -222,6 +221,8 @@ export class Graph {
 
         if (node.blockedLink !== blockedLink) {
             node.blockedLink = blockedLink;
+            this.syncBreakpointState(node);
+            this.syncBreakpointState(blockedLink);
             this.updater.update(node);
         }
 
@@ -316,7 +317,6 @@ export class Graph {
         this.nodes.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
-        this.extraRewindNodes.clear();
         this.engine.clear();
         this.eventDispatcher.dispatch('onGraphClear', this);
         this.eventDispatcher.clear();
@@ -386,17 +386,12 @@ export class Graph {
             const backNodes = node.backLinksList.nodes;
             const backLen = backNodes.length;
             for (let i = 0; i < backLen; i++) {
+                this.syncBreakpointState(backNodes[i]);
                 this.updater.update(backNodes[i]);
             }
         }
 
         this.updater.update(node);
-
-        if (isRewindNodeType(node.type)) {
-            this.extraRewindNodes.add(node.nodeIdx);
-        } else {
-            this.extraRewindNodes.delete(node.nodeIdx);
-        }
 
         this._lastUpdate = Date.now();
     }
@@ -472,7 +467,29 @@ export class Graph {
         this._lastUpdate = Date.now();
     }
 
-    public addCycle(nodes: GraphNode[]): GraphCycle {
+    private syncBreakpointState(node: GraphNode | null) {
+        if (!node) return;
+
+        const isBreakpoint =
+            node.type === NodeType.BLOCKER &&
+            node.blockedLink !== null &&
+            node.blockedLink.type === NodeType.BLOCKER &&
+            node.blockedLink.blockedLink === node;
+
+        if (node.isBreakpoint !== isBreakpoint) {
+            node.isBreakpoint = isBreakpoint;
+
+            // if (isBp) {
+            //     this.breakpoints.add(node);
+            // } else {
+            //     this.breakpoints.delete(node);
+            // }
+
+            this.updater.updateBreakpoint(node);
+        }
+    }
+
+    public addCycle(nodes: GraphNode[], heads?: HeadData[]): GraphCycle {
         const index = this.allocateCycleIndex();
 
         const cycle: GraphCycle = {
@@ -483,7 +500,7 @@ export class Graph {
         };
         this.cycles[index] = cycle;
 
-        this.cycleManager.attachNodesToCycle(cycle, nodes);
+        this.cycleManager.attachNodesToCycle(cycle, nodes, heads);
         this.syncNodesAndHeadsState(cycle.nodes, cycle.heads, cycle.extraNodes);
 
         this.engine.addCycle(cycle);

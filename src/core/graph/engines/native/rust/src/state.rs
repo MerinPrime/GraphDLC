@@ -11,11 +11,14 @@ pub struct GraphState {
     pub changed_nodes: Vec<u32>,
     pub temp_changed_nodes: Vec<u32>,
     pub cycles: Vec<Option<CycleState>>,
+    pub seed: u32,
     pub tick: u32,
+    pub break_points: Vec<u32>,
     pub break_point: bool,
     pub break_point_node: u32,
     pub back_links: Vec<Vec<u32>>,
     pub detected_links: Vec<Option<u32>>,
+    pub pos_hashes: Vec<u32>,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -37,11 +40,14 @@ impl GraphState {
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
             cycles: Vec::with_capacity(64),
+            seed: 0,
             tick: 0,
+            break_points: Vec::with_capacity(64),
             break_point: false,
             break_point_node: 0,
             back_links: vec![Vec::new(); 4096],
             detected_links: vec![None; 4096],
+            pos_hashes: vec![0; 4096],
         }
     }
 
@@ -52,8 +58,11 @@ impl GraphState {
         self.temp_changed_nodes.clear();
         self.cycles.clear();
         self.tick = 0;
+        self.break_points.clear();
         self.break_point = false;
-        // reset_rng(new_state);
+        self.back_links.clear();
+        self.detected_links.clear();
+        self.pos_hashes.clear();
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
@@ -78,6 +87,7 @@ impl GraphState {
             });
             self.back_links.resize(count, Vec::new());
             self.detected_links.resize(count, None);
+            self.pos_hashes.resize(count, 0);
         }
     }
 
@@ -362,18 +372,22 @@ impl GraphState {
                 let chunk_idx = node.chunk_idx;
                 self.make_dirty_chunk(chunk_idx);
             } else {
-                let signal = self.update_node_signal(node_ptr as *const Node);
+                let signal = self.update_node_signal(node_idx, node_ptr as *const Node);
                 if signal != NODE_SIGNAL_KEEP_SIGNAL {
                     node.signal = signal;
                     let chunk_idx = node.chunk_idx;
                     self.make_dirty_chunk(chunk_idx);
-                    let flags = node.flags;
-                    let is_breakpoint = (flags & FLAG_IS_BREAKPOINT) != 0;
-                    if signal == NODE_SIGNAL_ACTIVE && is_breakpoint {
-                        self.break_point = true;
-                        self.break_point_node = node_idx;
-                    }
                 }
+            }
+        }
+
+        for &node_idx in &self.break_points {
+            let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
+
+            if node.signal == NODE_SIGNAL_ACTIVE && node.last_signal == NODE_SIGNAL_NONE {
+                self.break_point = true;
+                self.break_point_node = node_idx;
+                break;
             }
         }
 
@@ -382,7 +396,7 @@ impl GraphState {
     }
 
     #[inline(always)]
-    fn update_node_signal(&self, node_ptr: *const Node) -> u8 {
+    fn update_node_signal(&self, node_idx: u32, node_ptr: *const Node) -> u8 {
         let node = unsafe { &*node_ptr };
         let signals_count = node.signals_count;
         let flags = node.flags;
@@ -487,7 +501,9 @@ impl GraphState {
                 }
             }
             NODE_TYPE_RANDOM => {
-                if signals_count > 0 && random_bool() {
+                if signals_count > 0
+                    && random_bool(self.seed, self.pos_hashes[node_idx as usize], self.tick)
+                {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE

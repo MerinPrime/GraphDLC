@@ -17,8 +17,6 @@ export interface IEngine {
     makeUndirtyChunk(chunkIdx: number): void;
     getNodeSignal(nodeIdx: number): NodeSignal;
 
-    setExtraRewindNodes(nodeIndices: Set<number>): void;
-
     reset(): void;
 
     addCycle(cycle: GraphCycle): void;

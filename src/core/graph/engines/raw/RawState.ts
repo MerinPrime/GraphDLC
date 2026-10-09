@@ -8,6 +8,7 @@ import { RawCycleSnapshot, RawNodeSnapshot, RawSnapshot } from './RawSnapshot';
 
 export class RawNodeState {
     public readonly nodeIdx: number;
+    public posHash: number = 0;
     public chunkIdx: number = 0;
 
     public type: NodeType = NodeType.EMPTY;
@@ -55,7 +56,10 @@ export class RawGraphState implements IState<RawSnapshot> {
 
     public cycles: (RawCycleState | null)[] = [];
 
+    public seed: number = 0;
     public tick: number = 0;
+
+    public breakPoints: number[] = [];
     public breakPoint: boolean = false;
     public breakPointNode: number = 0;
 
@@ -66,7 +70,13 @@ export class RawGraphState implements IState<RawSnapshot> {
         this.chunks.length = 0;
         this.cycles.length = 0;
         this.tick = 0;
+        this.breakPoints.length = 0;
         this.breakPoint = false;
+        this.breakPointNode = 0;
+    }
+
+    public setSeed(seed: number): void {
+        this.seed = seed;
     }
 
     public getTick(): number {
@@ -167,6 +177,7 @@ export class RawGraphState implements IState<RawSnapshot> {
 
         snapshot.tick = this.tick;
         snapshot.breakPoint = this.breakPoint;
+        snapshot.breakPointNode = this.breakPointNode;
 
         snapshot.nodes = this.nodes.map((nodeState, nodeIdx) => {
             const nodeSnapshot = new RawNodeSnapshot();
@@ -211,6 +222,7 @@ export class RawGraphState implements IState<RawSnapshot> {
     public loadSnapshot(snapshot: RawSnapshot) {
         this.tick = snapshot.tick;
         this.breakPoint = snapshot.breakPoint;
+        this.breakPointNode = snapshot.breakPointNode;
 
         snapshot.nodes.forEach((nodeSnapshot) => {
             const nodeState = this.getNode(nodeSnapshot.nodeIdx);

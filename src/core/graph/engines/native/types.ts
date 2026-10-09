@@ -2,15 +2,16 @@ export interface RustEngineExports extends WebAssembly.Exports {
     readonly memory: WebAssembly.Memory;
 
     get_staging_buffer_ptr(): number;
-    init(rng_state: BigInt): void;
-    clear(rng_state: BigInt): void;
+    init(): void;
+    clear(): void;
+    set_seed(seed: number): void;
     reset_node_signal(node_idx: number): void;
     update_node_state(
         node_idx: number,
+        pos_hash: number,
         node_type: number,
         is_entry_point: number,
         is_additional_update: number,
-        is_breakpoint: number,
         cycle_idx: number,
         cycle_offset: number,
         head_type: number,
@@ -20,6 +21,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
         detected_link: number,
         blocked_link: number,
     ): void;
+    set_node_breakpoint(node_idx: number, is_breakpoint: boolean): void;
     ensure_node_capacity_export(count: number): void;
     ensure_chunk_capacity_export(count: number): void;
     reset_export(): void;

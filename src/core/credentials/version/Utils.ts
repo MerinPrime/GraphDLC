@@ -17,21 +17,44 @@ export async function fetchLatestVersion(): Promise<string> {
 }
 
 export function compareVersions(a: string, b: string): number {
-    const parse = (version: string) =>
-        version.replace(/^v/, '').split('.').map(Number);
+    const parse = (version: string) => {
+        const match = version.match(/^(\d+(?:\.\d+)*)(?:-test(\d+))?$/i);
 
-    const va = parse(a);
-    const vb = parse(b);
+        if (!match) {
+            throw new Error(`Invalid version: ${version}`);
+        }
 
-    const length = Math.max(va.length, vb.length);
+        return {
+            parts: match[1].split('.').map(Number),
+            test: match[2] === undefined ? null : Number(match[2]),
+        };
+    };
+
+    const left = parse(a);
+    const right = parse(b);
+
+    const length = Math.max(left.parts.length, right.parts.length);
 
     for (let i = 0; i < length; i++) {
-        const na = va[i] ?? 0;
-        const nb = vb[i] ?? 0;
+        const leftPart = left.parts[i] ?? 0;
+        const rightPart = right.parts[i] ?? 0;
 
-        if (na > nb) return 1;
-        if (na < nb) return -1;
+        if (leftPart !== rightPart) {
+            return leftPart - rightPart;
+        }
     }
 
-    return 0;
+    if (left.test === null && right.test === null) {
+        return 0;
+    }
+
+    if (left.test === null) {
+        return 1;
+    }
+
+    if (right.test === null) {
+        return -1;
+    }
+
+    return left.test - right.test;
 }

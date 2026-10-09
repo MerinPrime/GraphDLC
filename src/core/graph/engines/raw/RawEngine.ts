@@ -34,4 +34,8 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
     public updateNodeState(graph: Graph, node: GraphNode): void {
         this.updater.updateNodeState(graph, this.state, node);
     }
+
+    public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
+        this.updater.setNodeBreakpoint(this.state, nodeIdx, isBreakpoint);
+    }
 }
