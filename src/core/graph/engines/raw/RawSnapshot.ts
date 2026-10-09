@@ -24,6 +24,7 @@ export class RawCycleSnapshot {
 export class RawSnapshot implements ISnapshot {
     public tick: number = 0;
     public breakPoint: boolean = false;
+    public breakPointNode: number = 0;
 
     public nodes: RawNodeSnapshot[] = [];
     public chunks: number[] = [];

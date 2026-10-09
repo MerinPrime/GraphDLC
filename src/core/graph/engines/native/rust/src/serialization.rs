@@ -50,6 +50,7 @@ pub fn serialize_state(state: &GraphState) -> Vec<u8> {
 
     writer.write_u32(state.tick);
     writer.write_u8(if state.break_point { 1 } else { 0 });
+    writer.write_u32(state.break_point_node);
 
     writer.write_u32(state.nodes.len() as u32);
     for (i, node) in state.nodes.iter().enumerate() {
@@ -95,6 +96,7 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
 
     let restored_tick = reader.read_u32();
     let restored_break_point = reader.read_u8() != 0;
+    let restored_break_point_node = reader.read_u32();
 
     let mut updated_nodes = Vec::new();
     for &node_idx in &state.changed_nodes {
@@ -119,6 +121,7 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
 
     state.tick = restored_tick;
     state.break_point = restored_break_point;
+    state.break_point_node = restored_break_point_node;
 
     let nodes_len = reader.read_u32() as usize;
     state.ensure_node_capacity(nodes_len);

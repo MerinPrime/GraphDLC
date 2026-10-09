@@ -4,6 +4,7 @@ import type { ISnapshot } from './ISnapshot';
 export interface IState<TSnapshot extends ISnapshot> {
     reset(): void;
     clear(): void;
+    setSeed(seed: number): void;
 
     makeSnapshot(): TSnapshot;
     loadSnapshot(snapshot: TSnapshot): void;

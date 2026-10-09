@@ -11,11 +11,52 @@ function decodeBase64(base64: string): Uint8Array {
     return bytes;
 }
 
-export function instantiateRustEngine(
-    importObject: WebAssembly.Imports = {},
-): RustEngineExports {
+let rustExports: RustEngineExports | null = null;
+let rustLoading: Promise<RustEngineExports> | null = null;
+
+export function instantiateRustEngine(): RustEngineExports {
     const wasmBytes = decodeBase64(wasmBase64);
     const module = new WebAssembly.Module(wasmBytes);
-    const instance = new WebAssembly.Instance(module, importObject);
-    return instance.exports as RustEngineExports;
+    const instance = new WebAssembly.Instance(module, {});
+
+    const exports = instance.exports as RustEngineExports;
+    rustExports = exports;
+
+    return exports;
+}
+
+export async function tryLoadRustEngine(): Promise<RustEngineExports> {
+    if (rustExports) {
+        return rustExports;
+    }
+
+    if (rustLoading) {
+        return rustLoading;
+    }
+
+    rustLoading = (async () => {
+        const wasmBytes = decodeBase64(wasmBase64);
+        const module = await WebAssembly.compile(wasmBytes);
+        const instance = await WebAssembly.instantiate(module, {});
+
+        const exports = instance.exports as RustEngineExports;
+        rustExports = exports;
+        console.log('Rust engine loaded asynchronously');
+
+        return exports;
+    })();
+
+    try {
+        return await rustLoading;
+    } finally {
+        rustLoading = null;
+    }
+}
+
+export function getRustEngine(): RustEngineExports {
+    if (!rustExports) {
+        throw new Error('Rust engine is not initialized');
+    }
+
+    return rustExports;
 }

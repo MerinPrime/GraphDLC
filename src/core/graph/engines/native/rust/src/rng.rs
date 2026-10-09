@@ -1,30 +1,12 @@
-static mut RNG_STATE: u64 = 123456789;
-static mut RANDOM_BUFFER: u64 = 0;
-static mut RANDOM_BUFFER_INDEX: u8 = 64;
-
 #[inline(always)]
-pub fn random_bool() -> bool {
-    unsafe {
-        if RANDOM_BUFFER_INDEX >= 64 {
-            let mut x = RNG_STATE;
-            x ^= x << 13;
-            x ^= x >> 7;
-            x ^= x << 17;
-            RNG_STATE = x;
-            RANDOM_BUFFER = x;
-            RANDOM_BUFFER_INDEX = 0;
-        }
-        let bit = (RANDOM_BUFFER & 1) == 1;
-        RANDOM_BUFFER >>= 1;
-        RANDOM_BUFFER_INDEX += 1;
-        bit
-    }
-}
+pub fn random_bool(seed: u32, pos_hash: u32, tick: u32) -> bool {
+    let mut x = seed ^ pos_hash.wrapping_mul(0x9e37_79b9) ^ tick.wrapping_mul(0x85eb_ca6b);
 
-pub fn reset_rng(state: u64) {
-    unsafe {
-        RNG_STATE = state;
-        RANDOM_BUFFER = 0;
-        RANDOM_BUFFER_INDEX = 64;
-    }
+    x ^= x >> 16;
+    x = x.wrapping_mul(0x21f0_aaad);
+    x ^= x >> 15;
+    x = x.wrapping_mul(0x735a_2d97);
+    x ^= x >> 15;
+
+    x >> 31 != 0
 }

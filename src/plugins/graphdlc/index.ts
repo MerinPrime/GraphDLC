@@ -1,6 +1,7 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { PatchArrow } from './patches/PatchArrow';
+import { PatchBackend } from './patches/PatchBackend';
 import { PatchChunk } from './patches/PatchChunk';
 import { PatchChunkUpdates } from './patches/PatchChunkUpdates';
 import { PatchGame } from './patches/PatchGame';
@@ -17,6 +18,7 @@ import { EnableSnapshotsSetting } from './settings/performance/EnableSnapshotsSe
 import { GraphEngineSetting } from './settings/performance/GraphEngineSetting';
 import { DebugModeSetting } from './settings/tools/DebugModeSetting';
 import { EnableBreakpointSetting } from './settings/tools/EnableBreakpointSetting';
+import { StaticSeedSetting } from './settings/tools/StaticSeedSetting';
 
 const Patches = [
     PatchArrow,
@@ -32,6 +34,7 @@ const Patches = [
     PatchPlayerUI,
     PatchSave,
     PatchUIControlsHint,
+    PatchBackend,
 ];
 
 const Settings = [
@@ -40,6 +43,7 @@ const Settings = [
 
     DebugModeSetting,
     EnableBreakpointSetting,
+    StaticSeedSetting,
 ];
 
 export const TickRewindLocale = new I18nText(

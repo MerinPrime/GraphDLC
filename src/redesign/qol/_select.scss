@@ -1,6 +1,7 @@
 @use "../shared/variables" as *;
 
 select {
+  width: 100%;
   background-color: var(--bg-base);
   border: 2px solid var(--bg-surface);
   border-radius: $border-radius-md;

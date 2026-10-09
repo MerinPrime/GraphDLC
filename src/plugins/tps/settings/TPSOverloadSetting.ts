@@ -18,7 +18,7 @@ const DescriptionLocale = new I18nText(
     'Protège le jeu contre les blocages lorsque le TPS devient trop élevé\nLe TPS peut devenir instable et perturber les afficheurs qui dépendent d’une valeur de TPS spécifique',
 );
 
-export const TPSOverloadSetting = new BoolSetting('TpsOverload', false, {
+export const TPSOverloadSetting = new BoolSetting('TpsOverload', true, {
     name: NameLocale,
     description: DescriptionLocale,
     isMapSetting: false,

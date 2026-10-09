@@ -60,64 +60,47 @@ export const PatchUIControlsHint: IPatcher = (
         (_module: typeof UIControlsHint) => {
             const keybindHints = graphDLC.pluginManager.gatherKeybindHints();
 
-            let updateHints: (() => void) | null = null;
+            let controlsHint: UIControlsHint | null = null;
 
             keybindHints.forEach((keybindHint) => {
                 keybindHint.triggers?.forEach((trigger) => {
                     trigger.add(() => {
-                        updateHints?.();
+                        // @ts-expect-error
+                        controlsHint?.setState(controlsHint?.state);
                     });
                 });
             });
 
-            // @ts-expect-error
             return class UIControlsHint extends _module {
                 public constructor(parent: HTMLElement, rights: PlayerAccess) {
                     super(parent, rights);
 
-                    updateHints = () => {
-                        this.updateHints();
-                    };
+                    controlsHint = this;
                 }
 
-                public updateHints(): void {
+                public updateRights(rights: PlayerAccess): void {
+                    super.updateRights(rights);
                     // @ts-expect-error
-                    if (this.state === 'none') this.hide();
-                    // @ts-expect-error
-                    else if (this.state === 'free') this.showFreeCursorHint();
-                    // @ts-expect-error
-                    else if (this.state === 'arrow') this.showArrowCursorHint();
-                    // @ts-expect-error
-                    else if (this.state === 'selected') this.showSelectedHint();
-                }
-
-                public showFreeCursorHint(): void {
-                    // @ts-expect-error
-                    super.showFreeCursorHint();
-
+                    if (!this.rights.canOpenMenu) return;
                     // @ts-expect-error
                     this.hint.innerHTML += makeHints(
-                        filterByState('free', keybindHints),
+                        // @ts-expect-error
+                        filterByState(this.state, keybindHints),
                     );
                 }
 
-                public showArrowCursorHint(): void {
+                public setState(
+                    state: 'none' | 'free' | 'arrow' | 'selected',
+                ): void {
                     // @ts-expect-error
-                    super.showArrowCursorHint();
-
+                    if (this.state === state) return;
+                    super.setState(state);
                     // @ts-expect-error
-                    this.hint.innerHTML += makeHints(
-                        filterByState('arrow', keybindHints),
-                    );
-                }
-
-                public showSelectedHint(): void {
-                    // @ts-expect-error
-                    super.showSelectedHint();
-
+                    if (!this.rights.canOpenMenu) return;
                     // @ts-expect-error
                     this.hint.innerHTML += makeHints(
-                        filterByState('selected', keybindHints),
+                        // @ts-expect-error
+                        filterByState(this.state, keybindHints),
                     );
                 }
             };

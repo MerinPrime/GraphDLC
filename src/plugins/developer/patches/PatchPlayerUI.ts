@@ -51,6 +51,7 @@ export const PatchPlayerUI: IPatcher = (
                             debugLines.push(
                                 `Position: [${node.globalX}, ${node.globalY}]`,
                             );
+                            debugLines.push(`AST Index: ${node.nodeIdx}`);
                             debugLines.push(
                                 `Signal: ${DebugNodeSignal[nodeState.signal]}`,
                             );

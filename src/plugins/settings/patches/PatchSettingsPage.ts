@@ -58,9 +58,13 @@ export const PatchSettingsPage: IPatcher = (
 
                     VersionState.subscribe((state) => {
                         if (state === 'latest') {
-                            const text = __CURRENT_VERSION__.endsWith('-test')
-                                ? TestVersionTextLocale.get()
+                            const testBuild =
+                                __CURRENT_VERSION__.match(/-test(\d+)$/i)?.[1];
+
+                            const text = testBuild
+                                ? TestVersionTextLocale.get(testBuild)
                                 : LatestVersionTextLocale.get();
+
                             versionNode.update(GraphDLCPrefix + text);
                         } else if (state === 'outdated') {
                             versionNode.update(

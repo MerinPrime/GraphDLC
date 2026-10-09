@@ -4,11 +4,11 @@ import { RepoLatestRelease } from './version/Utils';
 export const GraphDLCPrefix = `GraphDLC ${__CURRENT_VERSION__}: `;
 
 export const TestVersionTextLocale = new I18nText(
-    'Test version',
-    'Тестовая версия',
-    'Тестова версія',
-    'Тэставая версія',
-    'Version test',
+    (args) => `Test version (Build ${args[0]})`,
+    (args) => `Тестовая версия (Номер ${args[0]})`,
+    (args) => `Тестова версія (Номер ${args[0]})`,
+    (args) => `Тэставая версія (Нумар ${args[0]})`,
+    (args) => `Version test (Build ${args[0]})`,
 );
 
 export const LatestVersionTextLocale = new I18nText(
