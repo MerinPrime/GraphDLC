@@ -1,0 +1,93 @@
+.ui-record-actions {
+  padding-top: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+}
+
+.ui-record-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+
+  min-height: 42px;
+  padding: 10px 20px;
+
+  border-radius: 8px;
+
+  font-family: var(--font, monospace);
+  font-size: 1rem;
+  font-weight: 600;
+
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    transform 0.15s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--btn-blue);
+    outline-offset: 3px;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &-cancel {
+    padding: 9px 18px;
+
+    background: var(--bg-accent-hover);
+    border: 2px solid var(--bg-base-hover);
+    color: var(--text-muted);
+
+    &:hover:not(:disabled) {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+  }
+
+  &-start {
+    padding: 10px 24px;
+
+    background: var(--btn-blue);
+    border: 2px solid var(--btn-blue-hover);
+    color: #ffffff;
+
+    font-weight: 700;
+
+    box-shadow: 0 3px 10px rgba(43, 92, 255, 0.2);
+
+    &:hover:not(:disabled) {
+      background: var(--btn-blue-hover);
+      box-shadow: 0 4px 16px rgba(43, 92, 255, 0.3);
+    }
+  }
+}
+
+@media (max-width: 380px) {
+  .ui-record-actions {
+    gap: 8px;
+  }
+
+  .ui-record-btn {
+    padding-inline: 12px;
+    flex: 1;
+  }
+}

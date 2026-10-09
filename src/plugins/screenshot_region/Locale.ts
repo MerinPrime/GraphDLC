@@ -1,11 +1,11 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
 
 export const VideoModalTitleLocale = new I18nText(
-    'Export Animation / Video',
-    'Экспорт анимации / видео',
-    'Експорт анімації / відео',
-    'Экспарт анімацыі / відэа',
-    'Exporter animation / vidéo',
+    'Record Video',
+    'Запись видео',
+    'Запис відео',
+    'Запіс відэа',
+    'Enregistrer une vidéo',
 );
 
 export const FormatLabelLocale = new I18nText(

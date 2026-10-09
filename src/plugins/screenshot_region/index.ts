@@ -4,7 +4,7 @@ import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
 import { PatchPlayerUI } from './patches/PatchPlayerUI';
-import pluginStyle from './style.scss?raw';
+import pluginStyle from './style/index.scss?raw';
 
 const Patches = [PatchGame, PatchPlayerControls, PatchPlayerUI];
 

@@ -210,35 +210,78 @@ export const PatchPlayerUI: IPatcher = (
 
                 this.recordDialog.innerHTML = `
                     <div class="ui-record-title">${VideoModalTitleLocale.get()}</div>
-                    <div class="ui-record-fields">
-                        <label class="ui-record-row">
-                            <span>${FormatLabelLocale.get()}</span>
-                            <select id="ui-rec-format" class="ui-record-input">
-                                <option value="mp4" selected>MP4</option>
-                                <option value="gif">GIF</option>
-                                <option value="apng">APNG</option>
-                            </select>
-                        </label>
-                        <label class="ui-record-row">
-                            <span>${TotalFramesLabelLocale.get()}</span>
-                            <input id="ui-rec-frames" class="ui-record-input ui-record-input-number" type="number" value="40" min="1" max="2000" />
-                        </label>
-                        <label class="ui-record-row">
-                            <span>${FpsLabelLocale.get()}</span>
-                            <input id="ui-rec-fps" class="ui-record-input ui-record-input-number" type="number" value="15" min="1" max="60" />
-                        </label>
-                        <label class="ui-record-row">
-                            <span>${TickIntervalLabelLocale.get()}</span>
-                            <input id="ui-rec-interval" class="ui-record-input ui-record-input-number" type="number" value="1" min="1" max="20" />
-                        </label>
-                        <label id="ui-rec-bitrate-row" class="ui-record-row">
-                            <span>${BitrateLabelLocale.get()}</span>
-                            <input id="ui-rec-bitrate" class="ui-record-input ui-record-input-number" type="number" value="2" step="0.5" min="0.5" max="20" />
-                        </label>
-                    </div>
+                    <table class="ui-record-fields">
+                        <tr class="ui-record-row">
+                            <th>${FormatLabelLocale.get()}</th>
+                            <td>
+                                <select id="ui-rec-format" class="ui-record-input">
+                                    <option value="mp4" selected>MP4</option>
+                                    <option value="apng">APNG</option>
+                                    <option value="gif">GIF</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr class="ui-record-row">
+                            <th>${TotalFramesLabelLocale.get()}</th>
+                            <td>
+                                <input
+                                    id="ui-rec-frames"
+                                    class="ui-record-input ui-record-input-number"
+                                    type="number"
+                                    value="40"
+                                    min="1"
+                                    max="2000"
+                                />
+                            </td>
+                        </tr>
+                        <tr class="ui-record-row">
+                            <th>${FpsLabelLocale.get()}</th>
+                            <td>
+                                <input
+                                    id="ui-rec-fps"
+                                    class="ui-record-input ui-record-input-number"
+                                    type="number"
+                                    value="15"
+                                    min="1"
+                                    max="60"
+                                />
+                            </td>
+                        </tr>
+                        <tr class="ui-record-row">
+                            <th>${TickIntervalLabelLocale.get()}</th>
+                            <td>
+                                <input
+                                    id="ui-rec-interval"
+                                    class="ui-record-input ui-record-input-number"
+                                    type="number"
+                                    value="1"
+                                    min="1"
+                                    max="20"
+                                />
+                            </td>
+                        </tr>
+                        <tr id="ui-rec-bitrate-row" class="ui-record-row">
+                            <th>${BitrateLabelLocale.get()}</th>
+                            <td>
+                                <input
+                                    id="ui-rec-bitrate"
+                                    class="ui-record-input ui-record-input-number"
+                                    type="number"
+                                    value="2"
+                                    step="0.5"
+                                    min="0.5"
+                                    max="20"
+                                />
+                            </td>
+                        </tr>
+                    </table>
                     <div class="ui-record-actions">
-                        <button id="ui-rec-start" class="ui-record-btn ui-record-btn-start">${RecordBtnLocale.get()}</button>
-                        <button id="ui-rec-cancel" class="ui-record-btn ui-record-btn-cancel">${CancelBtnLocale.get()}</button>
+                        <button id="ui-rec-start" class="ui-record-btn ui-record-btn-start">
+                            ${RecordBtnLocale.get()}
+                        </button>
+                        <button id="ui-rec-cancel" class="ui-record-btn ui-record-btn-cancel">
+                            ${CancelBtnLocale.get()}
+                        </button>
                     </div>
                 `;
 
