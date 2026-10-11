@@ -17,11 +17,11 @@ export const FormatLabelLocale = new I18nText(
 );
 
 export const TotalFramesLabelLocale = new I18nText(
-    'Total Frames:',
-    'Всего кадров:',
-    'Всього кадрів:',
-    'Усяго кадраў:',
-    'Images totales :',
+    'Total Frames (0 = Unlimited):',
+    'Всего кадров (0 = безлимит):',
+    'Всього кадрів (0 = безліміт):',
+    'Усяго кадраў (0 = безліміт):',
+    'Images totales (0 = illimité) :',
 );
 
 export const FpsLabelLocale = new I18nText(
@@ -53,6 +53,14 @@ export const RecordBtnLocale = new I18nText(
     'Запись',
     'Запис',
     'Запіс',
+    'Enregistrer',
+);
+
+export const SaveBtnLocale = new I18nText(
+    'Save',
+    'Сохранить',
+    'Зберегти',
+    'Захаваць',
     'Enregistrer',
 );
 

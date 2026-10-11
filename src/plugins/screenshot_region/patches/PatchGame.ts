@@ -288,12 +288,17 @@ export const PatchGame: IPatcher = (
                     if (!selection) return null;
 
                     const totalFrames = options.totalFrames ?? 30;
+                    const isUnlimited = totalFrames <= 0;
                     const tickInterval = options.tickInterval ?? 1;
 
-                    for (let i = 0; i < totalFrames; i++) {
+                    let i = 0;
+                    while (isUnlimited || i < totalFrames) {
                         if (options.signal?.aborted) {
                             handlers.onAbort?.();
                             return null;
+                        }
+                        if (options.stopSignal?.aborted) {
+                            break;
                         }
 
                         const frame = this.renderRegionToCanvas(
@@ -306,16 +311,19 @@ export const PatchGame: IPatcher = (
                             await handlers.onFrame(frame, i);
                         }
 
-                        options.onProgress?.(
-                            Math.round(((i + 1) / totalFrames) * 100),
-                            i + 1,
-                            totalFrames,
-                        );
+                        const percent = isUnlimited
+                            ? 0
+                            : Math.round(((i + 1) / totalFrames) * 100);
 
-                        if (i < totalFrames - 1) {
+                        options.onProgress?.(percent, i + 1, totalFrames);
+
+                        if (isUnlimited || i < totalFrames - 1) {
                             if (options.signal?.aborted) {
                                 handlers.onAbort?.();
                                 return null;
+                            }
+                            if (options.stopSignal?.aborted) {
+                                break;
                             }
 
                             this.gameMap.graph.engine.runManyTicks(
@@ -326,6 +334,8 @@ export const PatchGame: IPatcher = (
                                 setTimeout(resolve, 0),
                             );
                         }
+
+                        i++;
                     }
 
                     if (options.signal?.aborted) {

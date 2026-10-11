@@ -21,6 +21,7 @@ export interface BaseVideoOptions extends RenderOptions {
         totalFrames: number,
     ) => void;
     signal?: AbortSignal;
+    stopSignal?: AbortSignal;
 }
 
 export interface VideoOptions extends BaseVideoOptions {
