@@ -380,7 +380,10 @@ export class Graph {
         applyMutation();
         this.updateNodeRelations(node);
 
-        if (isTypeChange && oldType !== node.type) {
+        if (
+            (isTypeChange && oldType !== node.type) ||
+            node.type === NodeType.DETECTOR
+        ) {
             this.eventDispatcher.dispatch('onNodeTypeChanged', this, node);
 
             const backNodes = node.backLinksList.nodes;
