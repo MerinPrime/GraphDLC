@@ -43,15 +43,32 @@ export const PatchPlayerControls: IPatcher = (
                     ) => {
                         if (code === 'Escape') {
                             if (playerUI.tryHideVideoModal()) return;
+
+                            if (playerUI.isGifRecording()) {
+                                playerUI.cancelGifRecording();
+                                return;
+                            }
                         } else if (code === 'KeyL') {
+                            if (playerUI.isRecordModalOpen) {
+                                return;
+                            }
+
+                            if (playerUI.isGifRecording()) {
+                                if (_this.keyboardHandler.getShiftPressed()) {
+                                    playerUI.stopGifRecording();
+                                }
+                                return;
+                            }
+
                             if (
                                 _this.game.selectedMap.getSelectedArrows()
                                     .length === 0
                             ) {
                                 console.log("Can't take screenshot/video");
-                            } else if (
-                                _this.keyboardHandler.getShiftPressed()
-                            ) {
+                                return;
+                            }
+
+                            if (_this.keyboardHandler.getShiftPressed()) {
                                 playerUI.showVideoModal(
                                     async (options) => {
                                         let videoBlob: Blob | null = null;
@@ -129,6 +146,7 @@ export const PatchPlayerControls: IPatcher = (
                             }
                             return;
                         }
+
                         if (oldKeyDownCallback) oldKeyDownCallback(code, key);
                     };
                 }

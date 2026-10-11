@@ -137,12 +137,16 @@ declare module '@logic-arrows/ui/components/ui-speed-controller' {
 declare module '@logic-arrows/player/player-ui' {
     export interface PlayerUI {
         startTickFrom: number;
+        get isRecordModalOpen(): boolean;
 
         showVideoModal(
             onStartRecord: (options: AnyRecordOptions) => void,
             onCancel?: () => void,
         ): void;
         tryHideVideoModal(): boolean;
+        stopGifRecording(): void;
+        cancelGifRecording(): void;
+        isGifRecording(): boolean;
     }
 }
 
