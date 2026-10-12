@@ -23,6 +23,7 @@
     },
     "include": [
         "src/**/*",
+        "benchmark/**/*",
         "rolldown.config.ts",
         "webpack.config.ts",
         "webpack/**/*"
