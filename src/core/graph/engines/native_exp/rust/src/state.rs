@@ -455,6 +455,7 @@ impl GraphState {
 
         let changed_nodes_ptr = self.changed_nodes.as_ptr();
         let len = self.changed_nodes.len();
+        let chunks_ptr = self.chunks.as_mut_ptr();
 
         for i in 0..len {
             let node_idx = unsafe { *changed_nodes_ptr.add(i) };
@@ -466,14 +467,14 @@ impl GraphState {
             let blocked_count = node.blocked_count;
             if blocked_count > 0 {
                 node.signal = NODE_SIGNAL_NONE;
-                let chunk_idx = node.chunk_idx;
-                self.make_dirty_chunk(chunk_idx);
+                let chunk = unsafe { &mut *chunks_ptr.add(node.chunk_idx as usize) };
+                chunk.flags |= CHUNK_FLAG_IS_DIRTY;
             } else {
                 let signal = self.update_node_signal(node_idx, node_ptr as *const Node);
                 if signal != NODE_SIGNAL_KEEP_SIGNAL {
                     node.signal = signal;
-                    let chunk_idx = node.chunk_idx;
-                    self.make_dirty_chunk(chunk_idx);
+                    let chunk = unsafe { &mut *chunks_ptr.add(node.chunk_idx as usize) };
+                    chunk.flags |= CHUNK_FLAG_IS_DIRTY;
                 }
             }
         }
