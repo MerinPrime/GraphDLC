@@ -5,6 +5,13 @@ use crate::node::Node;
 use crate::rng::random_bool;
 use std::collections::HashSet;
 
+const REQUEUE_FLAGS: u8 =
+    FLAG_IS_UPDATED | FLAG_IS_ADDITIONAL_UPDATE | FLAG_IS_READ_HEAD | FLAG_IS_ENTRY_POINT;
+
+const REQUEUE_TYPES: u64 = (1u64 << (NODE_TYPE_BUTTON as u32))
+    | (1u64 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
+    | (1u64 << (NODE_TYPE_RANDOM as u32));
+
 pub struct GraphState {
     pub nodes: Vec<Node>,
     pub chunks: Vec<Chunk>,
@@ -135,7 +142,10 @@ impl GraphState {
     #[inline(always)]
     pub fn make_dirty_chunk(&mut self, chunk_idx: u32) {
         unsafe {
-            self.chunks.get_unchecked_mut(chunk_idx as usize).flags |= CHUNK_FLAG_IS_DIRTY;
+            let chunk = self.chunks.get_unchecked_mut(chunk_idx as usize);
+            if chunk.flags & CHUNK_FLAG_IS_DIRTY == 0 {
+                chunk.flags |= CHUNK_FLAG_IS_DIRTY;
+            }
         }
     }
 
@@ -418,14 +428,17 @@ impl GraphState {
             }
 
             let signals_count = node.signals_count;
-            if (flags & FLAG_IS_UPDATED) != 0
-                || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
-                || (signal != NODE_SIGNAL_NONE
-                    && signals_count == 0
-                    && (node_type == NODE_TYPE_BUTTON || node_type == NODE_TYPE_DIRECTIONAL_BUTTON))
-                || (signals_count > 0
-                    && (node_type == NODE_TYPE_RANDOM || (flags & FLAG_IS_READ_HEAD) != 0))
-                || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0)
+            if ((flags & REQUEUE_FLAGS) != 0
+                || ((REQUEUE_TYPES >> (node_type as u32 & 63)) & 1) != 0)
+                && ((flags & FLAG_IS_UPDATED) != 0
+                    || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
+                    || (signal != NODE_SIGNAL_NONE
+                        && signals_count == 0
+                        && (node_type == NODE_TYPE_BUTTON
+                            || node_type == NODE_TYPE_DIRECTIONAL_BUTTON))
+                    || (signals_count > 0
+                        && (node_type == NODE_TYPE_RANDOM || (flags & FLAG_IS_READ_HEAD) != 0))
+                    || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0))
             {
                 node.flags &= !FLAG_IS_UPDATED;
                 unsafe {
