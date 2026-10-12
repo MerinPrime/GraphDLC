@@ -19,6 +19,8 @@ pub struct GraphState {
     pub back_links: Vec<Vec<u32>>,
     pub detected_links: Vec<Option<u32>>,
     pub pos_hashes: Vec<u32>,
+    pub in_changed_list: Vec<u64>,
+    pub has_external_marks: bool,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -29,6 +31,15 @@ pub fn get_state() -> &'static mut GraphState {
             STATE = Some(GraphState::new());
         }
         STATE.as_mut().unwrap()
+    }
+}
+
+#[inline(always)]
+fn push_changed_unchecked(v: &mut Vec<u32>, idx: u32) {
+    unsafe {
+        let len = v.len();
+        v.as_mut_ptr().add(len).write(idx);
+        v.set_len(len + 1);
     }
 }
 
@@ -48,6 +59,8 @@ impl GraphState {
             back_links: vec![Vec::new(); 4096],
             detected_links: vec![None; 4096],
             pos_hashes: vec![0; 4096],
+            in_changed_list: vec![0; 64],
+            has_external_marks: false,
         }
     }
 
@@ -61,8 +74,14 @@ impl GraphState {
         self.break_points.clear();
         self.break_point = false;
         self.back_links.clear();
+        self.back_links.resize(4096, Vec::new());
         self.detected_links.clear();
+        self.detected_links.resize(4096, None);
         self.pos_hashes.clear();
+        self.pos_hashes.resize(4096, 0);
+        self.in_changed_list.clear();
+        self.in_changed_list.resize(64, 0);
+        self.has_external_marks = false;
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
@@ -85,9 +104,25 @@ impl GraphState {
                 links: [0u32; 4],
                 detectors: [0u32; 4],
             });
-            self.back_links.resize(count, Vec::new());
-            self.detected_links.resize(count, None);
-            self.pos_hashes.resize(count, 0);
+            if self.back_links.len() < count {
+                self.back_links.resize(count, Vec::new());
+            }
+            if self.detected_links.len() < count {
+                self.detected_links.resize(count, None);
+            }
+            if self.pos_hashes.len() < count {
+                self.pos_hashes.resize(count, 0);
+            }
+            let words = (count + 63) / 64;
+            if self.in_changed_list.len() < words {
+                self.in_changed_list.resize(words, 0);
+            }
+        }
+        if self.temp_changed_nodes.capacity() < count {
+            self.temp_changed_nodes.reserve(count);
+        }
+        if self.changed_nodes.capacity() < count {
+            self.changed_nodes.reserve(count);
         }
     }
 
@@ -154,7 +189,7 @@ impl GraphState {
     #[inline(always)]
     pub fn mark_node_as_changed(&mut self, node_idx: u32) {
         let node = &mut self.nodes[node_idx as usize];
-        if (node.flags & FLAG_IS_CHANGED) != 0 {
+        if node.flags & FLAG_IS_CHANGED != 0 {
             return;
         }
         node.flags |= FLAG_IS_CHANGED;
@@ -168,15 +203,26 @@ impl GraphState {
         node_idx: usize,
     ) {
         let node = &mut *nodes_ptr.add(node_idx);
-
         if node.flags & FLAG_IS_CHANGED == 0 {
             node.flags |= FLAG_IS_CHANGED;
-            temp_changed_nodes.push(node_idx as u32);
+            push_changed_unchecked(temp_changed_nodes, node_idx as u32);
         }
     }
 
     #[inline(always)]
     pub fn mark_node_as_changed_non_temp(&mut self, node_idx: u32) {
+        if !self.has_external_marks {
+            for &idx in &self.changed_nodes {
+                self.in_changed_list[(idx >> 6) as usize] |= 1u64 << (idx & 63);
+            }
+            self.has_external_marks = true;
+        }
+        let word = (node_idx >> 6) as usize;
+        let bit = 1u64 << (node_idx & 63);
+        if self.in_changed_list[word] & bit != 0 {
+            return;
+        }
+        self.in_changed_list[word] |= bit;
         self.changed_nodes.push(node_idx);
     }
 
@@ -210,7 +256,26 @@ impl GraphState {
         }
     }
 
+    #[cold]
+    #[inline(never)]
+    fn clear_external_marks(&mut self) {
+        for &idx in &self.changed_nodes {
+            self.in_changed_list[(idx >> 6) as usize] &= !(1u64 << (idx & 63));
+        }
+        self.has_external_marks = false;
+    }
+
     pub fn update_state(&mut self) {
+        let need = self.nodes.len();
+        if self.temp_changed_nodes.capacity() < need {
+            let len = self.temp_changed_nodes.len();
+            self.temp_changed_nodes.reserve(need.saturating_sub(len));
+        }
+
+        if self.has_external_marks {
+            self.clear_external_marks();
+        }
+
         let changed_nodes_ptr = self.changed_nodes.as_ptr();
         let nodes_ptr = self.nodes.as_mut_ptr();
         let len = self.changed_nodes.len();
@@ -284,8 +349,8 @@ impl GraphState {
                     let is_blocker = node_type == NODE_TYPE_BLOCKER;
                     if is_blocker {
                         let blocked_link_idx = node.blocked_link;
-                        for i in 0..links_count {
-                            let edge_idx = links[i] as usize;
+                        for k in 0..links_count {
+                            let edge_idx = links[k] as usize;
                             let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
                             if edge_idx as u32 == blocked_link_idx {
                                 edge.blocked_count = edge.blocked_count.wrapping_add(delta);
@@ -301,8 +366,8 @@ impl GraphState {
                             }
                         }
                     } else {
-                        for i in 0..links_count {
-                            let edge_idx = links[i] as usize;
+                        for k in 0..links_count {
+                            let edge_idx = links[k] as usize;
                             let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
                             edge.signals_count = edge.signals_count.wrapping_add(delta);
                             unsafe {
@@ -320,20 +385,31 @@ impl GraphState {
 
                 if detectors_count != 0 {
                     let detectors = &node.detectors;
-
                     let sig_count = (signal != NODE_SIGNAL_NONE) as u8;
 
                     if detectors_count == 1 {
                         let detector_idx = unsafe { *detectors.get_unchecked(0) } as usize;
-                        let detector = unsafe { &mut *nodes_ptr.add(detector_idx as usize) };
+                        let detector = unsafe { &mut *nodes_ptr.add(detector_idx) };
                         detector.signals_count = sig_count;
-                        self.mark_node_as_changed_internal(detector_idx as u32);
+                        unsafe {
+                            GraphState::mark_node_as_changed_fast(
+                                nodes_ptr,
+                                &mut self.temp_changed_nodes,
+                                detector_idx,
+                            );
+                        }
                     } else {
-                        for i in 0..detectors_count {
-                            let detector_idx = detectors[i] as usize;
-                            let detector = unsafe { &mut *nodes_ptr.add(detector_idx as usize) };
+                        for k in 0..detectors_count {
+                            let detector_idx = detectors[k] as usize;
+                            let detector = unsafe { &mut *nodes_ptr.add(detector_idx) };
                             detector.signals_count = sig_count;
-                            self.mark_node_as_changed_internal(detector_idx as u32);
+                            unsafe {
+                                GraphState::mark_node_as_changed_fast(
+                                    nodes_ptr,
+                                    &mut self.temp_changed_nodes,
+                                    detector_idx,
+                                );
+                            }
                         }
                     }
                 }
@@ -352,7 +428,13 @@ impl GraphState {
                 || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0)
             {
                 node.flags &= !FLAG_IS_UPDATED;
-                self.mark_node_as_changed(node_idx);
+                unsafe {
+                    GraphState::mark_node_as_changed_fast(
+                        nodes_ptr,
+                        &mut self.temp_changed_nodes,
+                        node_idx as usize,
+                    );
+                }
             }
         }
 
@@ -516,11 +598,6 @@ impl GraphState {
         }
     }
 
-    #[inline(always)]
-    fn mark_node_as_changed_internal(&mut self, node_idx: u32) {
-        self.mark_node_as_changed(node_idx);
-    }
-
     pub fn full_node_state_calculate(&mut self, node_idx: u32) {
         let node_type = self.nodes[node_idx as usize].type_id();
         let is_detector = node_type == NODE_TYPE_DETECTOR;
@@ -601,21 +678,28 @@ impl GraphState {
             self.make_dirty_chunk(chunk_idx);
         }
 
-        for &node_idx in cycle_nodes {
-            let node = &self.nodes[node_idx as usize];
-            let is_head = node.head_type() != CYCLE_HEAD_TYPE_NONE
-                && node.head_type() != CYCLE_HEAD_TYPE_READ;
+        let mut removed: HashSet<u32> = HashSet::new();
 
-            if !is_head {
-                let is_changed = (node.flags & FLAG_IS_CHANGED) != 0;
-                if is_changed {
-                    self.changed_nodes.retain(|&x| x != node_idx);
-                    self.temp_changed_nodes.retain(|&x| x != node_idx);
-                    self.nodes[node_idx as usize].flags &= !FLAG_IS_CHANGED;
-                }
-            } else {
+        for &node_idx in cycle_nodes {
+            let is_head = {
+                let node = &self.nodes[node_idx as usize];
+                node.head_type() != CYCLE_HEAD_TYPE_NONE && node.head_type() != CYCLE_HEAD_TYPE_READ
+            };
+
+            if is_head {
                 self.mark_node_as_changed_non_temp(node_idx);
                 self.mark_node_as_changed(node_idx);
+            } else {
+                removed.insert(node_idx);
+            }
+        }
+
+        if !removed.is_empty() {
+            self.changed_nodes.retain(|x| !removed.contains(x));
+            self.temp_changed_nodes.retain(|x| !removed.contains(x));
+            for &node_idx in &removed {
+                self.nodes[node_idx as usize].flags &= !FLAG_IS_CHANGED;
+                self.in_changed_list[(node_idx >> 6) as usize] &= !(1u64 << (node_idx & 63));
             }
         }
 
@@ -667,6 +751,7 @@ impl GraphState {
                 };
                 (node.cycle_offset, node.chunk_idx, active)
             };
+            let _ = cycle_offset;
 
             let has_cycle_state = self.cycles[cycle_idx as usize].is_some();
             let node = &mut self.nodes[node_idx as usize];
