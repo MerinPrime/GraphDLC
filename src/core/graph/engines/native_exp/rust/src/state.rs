@@ -12,6 +12,66 @@ const REQUEUE_TYPES: u64 = (1u64 << (NODE_TYPE_BUTTON as u32))
     | (1u64 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
     | (1u64 << (NODE_TYPE_RANDOM as u32));
 
+const COMBINATIONAL_MASK: u32 = (1 << (NODE_TYPE_PATH as u32))
+    | (1 << (NODE_TYPE_BLOCKER as u32))
+    | (1 << (NODE_TYPE_DETECTOR as u32))
+    | (1 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
+    | (1 << (NODE_TYPE_SOURCE as u32))
+    | (1 << (NODE_TYPE_LOGIC_NOT as u32))
+    | (1 << (NODE_TYPE_LOGIC_AND as u32))
+    | (1 << (NODE_TYPE_LOGIC_XOR as u32));
+
+const fn build_combinational_lut() -> [u8; 8192] {
+    let mut lut = [NODE_SIGNAL_NONE; 8192];
+    let mut t = 0usize;
+    while t < 32 {
+        let mut s = 0usize;
+        while s < 256 {
+            let idx = (t << 8) | s;
+            lut[idx] = match t as u8 {
+                NODE_TYPE_PATH
+                | NODE_TYPE_BLOCKER
+                | NODE_TYPE_DETECTOR
+                | NODE_TYPE_DIRECTIONAL_BUTTON => {
+                    if s > 0 {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    }
+                }
+                NODE_TYPE_SOURCE => NODE_SIGNAL_ACTIVE,
+                NODE_TYPE_LOGIC_NOT => {
+                    if s == 0 {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    }
+                }
+                NODE_TYPE_LOGIC_AND => {
+                    if s > 1 {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    }
+                }
+                NODE_TYPE_LOGIC_XOR => {
+                    if (s & 1) == 1 {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    }
+                }
+                _ => NODE_SIGNAL_NONE,
+            };
+            s += 1;
+        }
+        t += 1;
+    }
+    lut
+}
+
+static COMBINATIONAL_LUT: [u8; 8192] = build_combinational_lut();
+
 pub struct GraphState {
     pub nodes: Vec<Node>,
     pub chunks: Vec<Chunk>,
@@ -511,18 +571,13 @@ impl GraphState {
         }
 
         let node_type = node.type_id();
+
+        if (COMBINATIONAL_MASK & (1 << (node_type as u32))) != 0 {
+            let lut_index = ((node_type as usize) << 8) | (signals_count as usize);
+            return unsafe { *COMBINATIONAL_LUT.get_unchecked(lut_index) };
+        }
+
         match node_type {
-            NODE_TYPE_PATH
-            | NODE_TYPE_BLOCKER
-            | NODE_TYPE_DETECTOR
-            | NODE_TYPE_DIRECTIONAL_BUTTON => {
-                if signals_count > 0 {
-                    NODE_SIGNAL_ACTIVE
-                } else {
-                    NODE_SIGNAL_NONE
-                }
-            }
-            NODE_TYPE_SOURCE => NODE_SIGNAL_ACTIVE,
             NODE_TYPE_DELAY => {
                 let signal = node.signal;
                 if signal == NODE_SIGNAL_PENDING {
@@ -543,27 +598,6 @@ impl GraphState {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_PENDING
-                }
-            }
-            NODE_TYPE_LOGIC_NOT => {
-                if signals_count == 0 {
-                    NODE_SIGNAL_ACTIVE
-                } else {
-                    NODE_SIGNAL_NONE
-                }
-            }
-            NODE_TYPE_LOGIC_AND => {
-                if signals_count > 1 {
-                    NODE_SIGNAL_ACTIVE
-                } else {
-                    NODE_SIGNAL_NONE
-                }
-            }
-            NODE_TYPE_LOGIC_XOR => {
-                if signals_count & 1 == 1 {
-                    NODE_SIGNAL_ACTIVE
-                } else {
-                    NODE_SIGNAL_NONE
                 }
             }
             NODE_TYPE_LATCH => {
@@ -596,7 +630,6 @@ impl GraphState {
                     NODE_SIGNAL_NONE
                 }
             }
-            NODE_TYPE_BUTTON => NODE_SIGNAL_NONE,
             _ => NODE_SIGNAL_NONE,
         }
     }
