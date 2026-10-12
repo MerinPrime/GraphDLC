@@ -99,14 +99,16 @@ impl GraphState {
 
     #[inline(always)]
     pub fn make_dirty_chunk(&mut self, chunk_idx: u32) {
-        self.ensure_chunk_capacity((chunk_idx + 1) as usize);
-        self.chunks[chunk_idx as usize].flags |= CHUNK_FLAG_IS_DIRTY;
+        unsafe {
+            self.chunks.get_unchecked_mut(chunk_idx as usize).flags |= CHUNK_FLAG_IS_DIRTY;
+        }
     }
 
     #[inline(always)]
     pub fn make_undirty_chunk(&mut self, chunk_idx: u32) {
-        self.ensure_chunk_capacity((chunk_idx + 1) as usize);
-        self.chunks[chunk_idx as usize].flags &= !CHUNK_FLAG_IS_DIRTY;
+        unsafe {
+            self.chunks.get_unchecked_mut(chunk_idx as usize).flags &= !CHUNK_FLAG_IS_DIRTY;
+        }
     }
 
     pub fn get_node_signal(&self, node_idx: u32) -> u8 {
