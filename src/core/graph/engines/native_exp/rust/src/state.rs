@@ -575,17 +575,16 @@ impl GraphState {
             node.flags &= !FLAG_IS_CHANGED;
 
             let blocked_count = node.blocked_count;
-            if blocked_count > 0 {
-                node.signal = NODE_SIGNAL_NONE;
+            let signal = if blocked_count > 0 {
+                NODE_SIGNAL_NONE
+            } else {
+                self.update_node_signal(node_idx, node_ptr as *const Node)
+            };
+
+            if signal != NODE_SIGNAL_KEEP_SIGNAL {
+                node.signal = signal;
                 let chunk = unsafe { &mut *chunks_ptr.add(node.chunk_idx as usize) };
                 chunk.flags |= CHUNK_FLAG_IS_DIRTY;
-            } else {
-                let signal = self.update_node_signal(node_idx, node_ptr as *const Node);
-                if signal != NODE_SIGNAL_KEEP_SIGNAL {
-                    node.signal = signal;
-                    let chunk = unsafe { &mut *chunks_ptr.add(node.chunk_idx as usize) };
-                    chunk.flags |= CHUNK_FLAG_IS_DIRTY;
-                }
             }
         }
 
