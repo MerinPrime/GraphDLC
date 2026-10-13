@@ -588,13 +588,15 @@ impl GraphState {
             }
         }
 
-        for &node_idx in &self.break_points {
-            let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
+        if !self.break_points.is_empty() {
+            for &node_idx in &self.break_points {
+                let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
 
-            if node.signal == NODE_SIGNAL_ACTIVE && node.last_signal == NODE_SIGNAL_NONE {
-                self.break_point = true;
-                self.break_point_node = node_idx;
-                break;
+                if node.signal == NODE_SIGNAL_ACTIVE && node.last_signal == NODE_SIGNAL_NONE {
+                    self.break_point = true;
+                    self.break_point_node = node_idx;
+                    break;
+                }
             }
         }
 
