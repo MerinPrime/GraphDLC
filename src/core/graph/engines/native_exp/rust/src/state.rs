@@ -587,19 +587,25 @@ impl GraphState {
         }
 
         if !self.break_points.is_empty() {
-            for &node_idx in &self.break_points {
-                let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
-
-                if node.signal == NODE_SIGNAL_ACTIVE && node.last_signal == NODE_SIGNAL_NONE {
-                    self.break_point = true;
-                    self.break_point_node = node_idx;
-                    break;
-                }
-            }
+            self.check_breakpoints(nodes_ptr);
         }
 
         self.temp_changed_nodes.clear();
         self.tick += 1;
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn check_breakpoints(&mut self, nodes_ptr: *const Node) {
+        for &node_idx in &self.break_points {
+            let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
+
+            if node.signal == NODE_SIGNAL_ACTIVE && node.last_signal == NODE_SIGNAL_NONE {
+                self.break_point = true;
+                self.break_point_node = node_idx;
+                break;
+            }
+        }
     }
 
     #[inline(always)]
