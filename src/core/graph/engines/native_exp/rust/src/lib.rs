@@ -239,10 +239,16 @@ pub extern "C" fn run_tick() -> bool {
 #[no_mangle]
 pub extern "C" fn run_many_ticks(count: u32) -> bool {
     let state = get_state();
+    if state.break_points.is_empty() {
+        for _ in 0..count {
+            state.update_state();
+        }
+        return false;
+    }
     for _ in 0..count {
         state.update_state();
         if state.break_point {
-            return state.break_point;
+            return true;
         }
     }
     return false;
@@ -298,8 +304,34 @@ pub extern "C" fn get_node_signal_export(node_idx: u32) -> u8 {
     get_state().get_node_signal(node_idx)
 }
 
+fn collect_render_dirty_chunks() {
+    let state = get_state();
+    let count = state.nodes.len().min(state.render_signals.len());
+    let nodes_ptr = state.nodes.as_ptr();
+    let render_ptr = state.render_signals.as_mut_ptr();
+    let chunks_ptr = state.chunks.as_mut_ptr();
+    let chunks_len = state.chunks.len();
+
+    for i in 0..count {
+        let node = unsafe { &*nodes_ptr.add(i) };
+        let current_signal = node.signal;
+        let last_render_signal = unsafe { *render_ptr.add(i) };
+
+        if current_signal != last_render_signal {
+            unsafe {
+                *render_ptr.add(i) = current_signal;
+                let chunk_idx = node.chunk_idx as usize;
+                if chunk_idx < chunks_len {
+                    (*chunks_ptr.add(chunk_idx)).flags |= CHUNK_FLAG_IS_DIRTY;
+                }
+            }
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn get_dirty_chunks_count() -> u32 {
+    collect_render_dirty_chunks();
     let state = get_state();
     let mut count = 0;
     for chunk in &state.chunks {
@@ -312,6 +344,7 @@ pub extern "C" fn get_dirty_chunks_count() -> u32 {
 
 #[no_mangle]
 pub extern "C" fn copy_dirty_chunks(out_ptr: *mut u32, mark_undirty: i32) -> u32 {
+    collect_render_dirty_chunks();
     let state = get_state();
     let mut offset = 0;
     for chunk_idx in 0..state.chunks.len() {

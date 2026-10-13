@@ -141,6 +141,7 @@ pub struct GraphState {
     pub pos_hashes: Vec<u32>,
     pub in_changed_list: Vec<u64>,
     pub has_external_marks: bool,
+    pub render_signals: Vec<u8>,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -182,6 +183,7 @@ impl GraphState {
             pos_hashes: vec![0; 4096],
             in_changed_list: vec![0; 64],
             has_external_marks: false,
+            render_signals: vec![0; 4096],
         }
     }
 
@@ -204,6 +206,8 @@ impl GraphState {
         self.in_changed_list.clear();
         self.in_changed_list.resize(64, 0);
         self.has_external_marks = false;
+        self.render_signals.clear();
+        self.render_signals.resize(4096, 0);
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
@@ -227,6 +231,9 @@ impl GraphState {
                 blocked_link: u32::MAX,
                 detectors: [0u32; 4],
             });
+            if self.render_signals.len() < count {
+                self.render_signals.resize(count, 0);
+            }
             if self.back_links.len() < count {
                 self.back_links.resize(count, Vec::new());
             }
@@ -565,7 +572,6 @@ impl GraphState {
 
         let changed_nodes_ptr = self.changed_nodes.as_ptr();
         let len = self.changed_nodes.len();
-        let chunks_ptr = self.chunks.as_mut_ptr();
 
         for i in 0..len {
             let node_idx = unsafe { *changed_nodes_ptr.add(i) };
@@ -583,8 +589,6 @@ impl GraphState {
 
             if signal != NODE_SIGNAL_KEEP_SIGNAL {
                 node.signal = signal;
-                let chunk = unsafe { &mut *chunks_ptr.add(node.chunk_idx as usize) };
-                chunk.flags |= CHUNK_FLAG_IS_DIRTY;
             }
         }
 
