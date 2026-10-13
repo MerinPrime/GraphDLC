@@ -12,65 +12,110 @@ const REQUEUE_TYPES: u64 = (1u64 << (NODE_TYPE_BUTTON as u32))
     | (1u64 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
     | (1u64 << (NODE_TYPE_RANDOM as u32));
 
-const COMBINATIONAL_MASK: u32 = (1 << (NODE_TYPE_PATH as u32))
-    | (1 << (NODE_TYPE_BLOCKER as u32))
-    | (1 << (NODE_TYPE_DETECTOR as u32))
-    | (1 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
-    | (1 << (NODE_TYPE_SOURCE as u32))
-    | (1 << (NODE_TYPE_LOGIC_NOT as u32))
-    | (1 << (NODE_TYPE_LOGIC_AND as u32))
-    | (1 << (NODE_TYPE_LOGIC_XOR as u32));
-
-const fn build_combinational_lut() -> [u8; 8192] {
-    let mut lut = [NODE_SIGNAL_NONE; 8192];
+const fn build_state_lut() -> [u8; 4096] {
+    let mut lut = [NODE_SIGNAL_NONE; 4096];
     let mut t = 0usize;
     while t < 32 {
-        let mut s = 0usize;
-        while s < 256 {
-            let idx = (t << 8) | s;
-            lut[idx] = match t as u8 {
-                NODE_TYPE_PATH
-                | NODE_TYPE_BLOCKER
-                | NODE_TYPE_DETECTOR
-                | NODE_TYPE_DIRECTIONAL_BUTTON => {
-                    if s > 0 {
-                        NODE_SIGNAL_ACTIVE
-                    } else {
-                        NODE_SIGNAL_NONE
+        let mut sig = 0usize;
+        while sig < 4 {
+            let mut sc = 0usize;
+            while sc < 32 {
+                let cat = if sc == 0 {
+                    0
+                } else if sc == 1 {
+                    1
+                } else if (sc & 1) == 0 {
+                    2
+                } else {
+                    3
+                };
+                let idx = (t << 7) | (sig << 5) | sc;
+                let sig_u8 = sig as u8;
+                lut[idx] = match t as u8 {
+                    NODE_TYPE_PATH
+                    | NODE_TYPE_BLOCKER
+                    | NODE_TYPE_DETECTOR
+                    | NODE_TYPE_DIRECTIONAL_BUTTON => {
+                        if cat > 0 {
+                            NODE_SIGNAL_ACTIVE
+                        } else {
+                            NODE_SIGNAL_NONE
+                        }
                     }
-                }
-                NODE_TYPE_SOURCE => NODE_SIGNAL_ACTIVE,
-                NODE_TYPE_LOGIC_NOT => {
-                    if s == 0 {
-                        NODE_SIGNAL_ACTIVE
-                    } else {
-                        NODE_SIGNAL_NONE
+                    NODE_TYPE_SOURCE => NODE_SIGNAL_ACTIVE,
+                    NODE_TYPE_LOGIC_NOT => {
+                        if cat == 0 {
+                            NODE_SIGNAL_ACTIVE
+                        } else {
+                            NODE_SIGNAL_NONE
+                        }
                     }
-                }
-                NODE_TYPE_LOGIC_AND => {
-                    if s > 1 {
-                        NODE_SIGNAL_ACTIVE
-                    } else {
-                        NODE_SIGNAL_NONE
+                    NODE_TYPE_LOGIC_AND => {
+                        if cat >= 2 {
+                            NODE_SIGNAL_ACTIVE
+                        } else {
+                            NODE_SIGNAL_NONE
+                        }
                     }
-                }
-                NODE_TYPE_LOGIC_XOR => {
-                    if (s & 1) == 1 {
-                        NODE_SIGNAL_ACTIVE
-                    } else {
-                        NODE_SIGNAL_NONE
+                    NODE_TYPE_LOGIC_XOR => {
+                        if (cat & 1) == 1 {
+                            NODE_SIGNAL_ACTIVE
+                        } else {
+                            NODE_SIGNAL_NONE
+                        }
                     }
-                }
-                _ => NODE_SIGNAL_NONE,
-            };
-            s += 1;
+                    NODE_TYPE_DELAY => {
+                        if sig_u8 == NODE_SIGNAL_PENDING {
+                            NODE_SIGNAL_ACTIVE
+                        } else if cat > 0 {
+                            if sig_u8 == NODE_SIGNAL_NONE {
+                                NODE_SIGNAL_PENDING
+                            } else {
+                                NODE_SIGNAL_KEEP_SIGNAL
+                            }
+                        } else {
+                            NODE_SIGNAL_NONE
+                        }
+                    }
+                    NODE_TYPE_IMPULSE => {
+                        if sig_u8 == NODE_SIGNAL_NONE {
+                            NODE_SIGNAL_ACTIVE
+                        } else {
+                            NODE_SIGNAL_PENDING
+                        }
+                    }
+                    NODE_TYPE_LATCH => {
+                        if cat >= 2 {
+                            NODE_SIGNAL_ACTIVE
+                        } else if cat == 1 {
+                            NODE_SIGNAL_NONE
+                        } else {
+                            NODE_SIGNAL_KEEP_SIGNAL
+                        }
+                    }
+                    NODE_TYPE_FLIP_FLOP => {
+                        if cat > 0 {
+                            if sig_u8 == NODE_SIGNAL_ACTIVE {
+                                NODE_SIGNAL_NONE
+                            } else {
+                                NODE_SIGNAL_ACTIVE
+                            }
+                        } else {
+                            NODE_SIGNAL_KEEP_SIGNAL
+                        }
+                    }
+                    _ => NODE_SIGNAL_NONE,
+                };
+                sc += 1;
+            }
+            sig += 1;
         }
         t += 1;
     }
     lut
 }
 
-static COMBINATIONAL_LUT: [u8; 8192] = build_combinational_lut();
+static STATE_LUT: [u8; 4096] = build_state_lut();
 
 pub struct GraphState {
     pub nodes: Vec<Node>,
@@ -572,66 +617,20 @@ impl GraphState {
 
         let node_type = node.type_id();
 
-        if (COMBINATIONAL_MASK & (1 << (node_type as u32))) != 0 {
-            let lut_index = ((node_type as usize) << 8) | (signals_count as usize);
-            return unsafe { *COMBINATIONAL_LUT.get_unchecked(lut_index) };
+        if node_type == NODE_TYPE_RANDOM {
+            return if signals_count > 0
+                && random_bool(self.seed, self.pos_hashes[node_idx as usize], self.tick)
+            {
+                NODE_SIGNAL_ACTIVE
+            } else {
+                NODE_SIGNAL_NONE
+            };
         }
 
-        match node_type {
-            NODE_TYPE_DELAY => {
-                let signal = node.signal;
-                if signal == NODE_SIGNAL_PENDING {
-                    NODE_SIGNAL_ACTIVE
-                } else if signals_count > 0 {
-                    if signal == NODE_SIGNAL_NONE {
-                        NODE_SIGNAL_PENDING
-                    } else {
-                        NODE_SIGNAL_KEEP_SIGNAL
-                    }
-                } else {
-                    NODE_SIGNAL_NONE
-                }
-            }
-            NODE_TYPE_IMPULSE => {
-                let signal = node.signal;
-                if signal == NODE_SIGNAL_NONE {
-                    NODE_SIGNAL_ACTIVE
-                } else {
-                    NODE_SIGNAL_PENDING
-                }
-            }
-            NODE_TYPE_LATCH => {
-                if signals_count > 1 {
-                    NODE_SIGNAL_ACTIVE
-                } else if signals_count == 1 {
-                    NODE_SIGNAL_NONE
-                } else {
-                    NODE_SIGNAL_KEEP_SIGNAL
-                }
-            }
-            NODE_TYPE_FLIP_FLOP => {
-                if signals_count > 0 {
-                    let signal = node.signal;
-                    if signal == NODE_SIGNAL_ACTIVE {
-                        NODE_SIGNAL_NONE
-                    } else {
-                        NODE_SIGNAL_ACTIVE
-                    }
-                } else {
-                    NODE_SIGNAL_KEEP_SIGNAL
-                }
-            }
-            NODE_TYPE_RANDOM => {
-                if signals_count > 0
-                    && random_bool(self.seed, self.pos_hashes[node_idx as usize], self.tick)
-                {
-                    NODE_SIGNAL_ACTIVE
-                } else {
-                    NODE_SIGNAL_NONE
-                }
-            }
-            _ => NODE_SIGNAL_NONE,
-        }
+        let lut_index = ((node_type as usize & 31) << 7)
+            | (((node.signal & 3) as usize) << 5)
+            | (signals_count as usize & 31);
+        unsafe { *STATE_LUT.get_unchecked(lut_index) }
     }
 
     pub fn full_node_state_calculate(&mut self, node_idx: u32) {
