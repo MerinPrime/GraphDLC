@@ -643,9 +643,9 @@ impl GraphState {
             };
         }
 
-        let lut_index = ((node_type as usize & 31) << 7)
-            | (((node.signal & 3) as usize) << 5)
-            | (signals_count as usize & 31);
+        let lut_index = ((node.packed_type as usize & 0xF8) << 4)
+            | ((node.signal as usize) << 5)
+            | (signals_count as usize);
         unsafe { *STATE_LUT.get_unchecked(lut_index) }
     }
 
