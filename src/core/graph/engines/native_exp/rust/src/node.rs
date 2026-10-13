@@ -1,3 +1,5 @@
+#[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Node {
     pub flags: u8,
     pub packed_type: u8,
@@ -5,17 +7,11 @@ pub struct Node {
     pub last_signal: u8,
     pub signals_count: u8,
     pub blocked_count: u8,
-
     pub links_count: u8,
     pub detectors_count: u8,
 
     pub chunk_idx: u32,
-    pub cycle_idx: u32,
-    pub cycle_offset: u32,
-    pub blocked_link: u32,
-
     pub links: [u32; 4],
-    pub detectors: [u32; 4],
 }
 
 impl Node {

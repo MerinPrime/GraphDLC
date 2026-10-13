@@ -87,9 +87,10 @@ pub extern "C" fn update_node_state(
         flags |= FLAG_IS_ADDITIONAL_UPDATE;
     }
 
+    let cold = &mut state.cold_nodes[node_idx as usize];
     if cycle_idx >= 0 {
-        node.cycle_idx = cycle_idx as u32;
-        node.cycle_offset = cycle_offset;
+        cold.cycle_idx = cycle_idx as u32;
+        cold.cycle_offset = cycle_offset;
         node.set_head_type(head_type);
         if head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ {
             flags |= FLAG_IS_CYCLE_HEAD;
@@ -99,8 +100,8 @@ pub extern "C" fn update_node_state(
             flags |= FLAG_IS_READ_HEAD;
         }
     } else {
-        node.cycle_idx = 0;
-        node.cycle_offset = 0;
+        cold.cycle_idx = 0;
+        cold.cycle_offset = 0;
         node.set_head_type(CYCLE_HEAD_TYPE_NONE);
     }
 
@@ -111,7 +112,7 @@ pub extern "C" fn update_node_state(
         None
     };
 
-    node.blocked_link = if blocked_link >= 0 {
+    cold.blocked_link = if blocked_link >= 0 {
         blocked_link as u32
     } else {
         u32::MAX
@@ -119,12 +120,12 @@ pub extern "C" fn update_node_state(
 
     let old_links = node.links;
     let old_links_count = node.links_count.min(4) as usize;
-    let old_detectors = node.detectors;
+    let old_detectors = cold.detectors;
     let old_detectors_count = node.detectors_count.min(4) as usize;
 
     node.links = links;
     node.links_count = safe_links_count as u8;
-    node.detectors = detectors;
+    cold.detectors = detectors;
     node.detectors_count = safe_detectors_count as u8;
 
     node.flags = flags;
@@ -333,11 +334,12 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
 
     let (is_in_cycle, head_type, cycle_idx, cycle_offset, chunk_idx) = {
         let node = &state.nodes[node_idx as usize];
+        let cold = &state.cold_nodes[node_idx as usize];
         (
             (node.flags & FLAG_IS_IN_CYCLE) != 0,
             node.head_type(),
-            node.cycle_idx,
-            node.cycle_offset,
+            cold.cycle_idx,
+            cold.cycle_offset,
             node.chunk_idx,
         )
     };

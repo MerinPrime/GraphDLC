@@ -117,8 +117,16 @@ const fn build_state_lut() -> [u8; 4096] {
 
 static STATE_LUT: [u8; 4096] = build_state_lut();
 
+pub struct NodeCold {
+    pub cycle_idx: u32,
+    pub cycle_offset: u32,
+    pub blocked_link: u32,
+    pub detectors: [u32; 4],
+}
+
 pub struct GraphState {
     pub nodes: Vec<Node>,
+    pub cold_nodes: Vec<NodeCold>,
     pub chunks: Vec<Chunk>,
     pub changed_nodes: Vec<u32>,
     pub temp_changed_nodes: Vec<u32>,
@@ -159,6 +167,7 @@ impl GraphState {
     pub fn new() -> Self {
         GraphState {
             nodes: Vec::with_capacity(4096),
+            cold_nodes: Vec::with_capacity(4096),
             chunks: Vec::with_capacity(16),
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
@@ -178,6 +187,7 @@ impl GraphState {
 
     pub fn clear(&mut self) {
         self.nodes.clear();
+        self.cold_nodes.clear();
         self.chunks.clear();
         self.changed_nodes.clear();
         self.temp_changed_nodes.clear();
@@ -209,11 +219,12 @@ impl GraphState {
                 detectors_count: 0,
 
                 chunk_idx: 0,
+                links: [0u32; 4],
+            });
+            self.cold_nodes.resize_with(count, || NodeCold {
                 cycle_idx: 0,
                 cycle_offset: 0,
                 blocked_link: u32::MAX,
-
-                links: [0u32; 4],
                 detectors: [0u32; 4],
             });
             if self.back_links.len() < count {
@@ -270,8 +281,9 @@ impl GraphState {
         let head_type = node.head_type();
 
         if is_in_cycle && head_type == CYCLE_HEAD_TYPE_NONE {
-            let cycle_idx = node.cycle_idx;
-            let cycle_offset = node.cycle_offset;
+            let cold = &self.cold_nodes[node_idx as usize];
+            let cycle_idx = cold.cycle_idx;
+            let cycle_offset = cold.cycle_offset;
             if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
                 let is_active = cycle_state.get_bit(self.tick, cycle_offset);
                 if is_active {
@@ -380,6 +392,7 @@ impl GraphState {
 
         let changed_nodes_ptr = self.changed_nodes.as_ptr();
         let nodes_ptr = self.nodes.as_mut_ptr();
+        let cold_nodes_ptr = self.cold_nodes.as_mut_ptr();
         let len = self.changed_nodes.len();
 
         for i in 0..len {
@@ -402,8 +415,9 @@ impl GraphState {
 
                 let cycle_head_type = node.head_type();
 
-                let cycle_idx = node.cycle_idx;
-                let cycle_offset = node.cycle_offset;
+                let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
+                let cycle_idx = cold.cycle_idx;
+                let cycle_offset = cold.cycle_offset;
 
                 let cycle_state = unsafe {
                     self.cycles
@@ -447,7 +461,8 @@ impl GraphState {
 
                     let is_blocker = node_type == NODE_TYPE_BLOCKER;
                     if is_blocker {
-                        let blocked_link_idx = node.blocked_link;
+                        let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
+                        let blocked_link_idx = cold.blocked_link;
                         for k in 0..links_count {
                             let edge_idx = links[k] as usize;
                             let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
@@ -491,7 +506,8 @@ impl GraphState {
                 let detectors_count = node.detectors_count as usize;
 
                 if detectors_count != 0 {
-                    let detectors = &node.detectors;
+                    let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
+                    let detectors = &cold.detectors;
                     let sig_count = (signal != NODE_SIGNAL_NONE) as u8;
 
                     if detectors_count == 1 {
@@ -601,8 +617,9 @@ impl GraphState {
                 return NODE_SIGNAL_NONE;
             }
 
-            let cycle_idx = node.cycle_idx;
-            let cycle_offset = node.cycle_offset;
+            let cold = &self.cold_nodes[node_idx as usize];
+            let cycle_idx = cold.cycle_idx;
+            let cycle_offset = cold.cycle_offset;
 
             if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
                 let cycle_active = cycle_state.get_bit(self.tick, cycle_offset);
@@ -665,7 +682,8 @@ impl GraphState {
             let back_last_signal = back_node.last_signal;
             if back_last_signal == NODE_SIGNAL_ACTIVE {
                 let is_blocker = back_node.type_id() == NODE_TYPE_BLOCKER;
-                if is_blocker && back_node.blocked_link == node_idx {
+                let blocked_link = self.cold_nodes[back_idx as usize].blocked_link;
+                if is_blocker && blocked_link == node_idx {
                     blocked_count += 1;
                 } else if !is_detector {
                     signals_count += 1;
@@ -694,8 +712,9 @@ impl GraphState {
         for &node_idx in cycle_nodes {
             let (cycle_offset, chunk_idx, is_active) = {
                 let node = &self.nodes[node_idx as usize];
+                let cold = &self.cold_nodes[node_idx as usize];
                 (
-                    node.cycle_offset,
+                    cold.cycle_offset,
                     node.chunk_idx,
                     node.signal == NODE_SIGNAL_ACTIVE,
                 )
@@ -740,7 +759,8 @@ impl GraphState {
 
         for &head_idx in cycle_heads {
             let head_node = &self.nodes[head_idx as usize];
-            if head_node.cycle_idx == cycle_idx {
+            let head_cold = &self.cold_nodes[head_idx as usize];
+            if head_cold.cycle_idx == cycle_idx {
                 continue;
             }
 
@@ -779,12 +799,13 @@ impl GraphState {
         for &node_idx in cycle_nodes {
             let (cycle_offset, chunk_idx, is_active) = {
                 let node = &self.nodes[node_idx as usize];
+                let cold = &self.cold_nodes[node_idx as usize];
                 let active = if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
-                    cycle_state.get_bit(self.tick, node.cycle_offset)
+                    cycle_state.get_bit(self.tick, cold.cycle_offset)
                 } else {
                     false
                 };
-                (node.cycle_offset, node.chunk_idx, active)
+                (cold.cycle_offset, node.chunk_idx, active)
             };
             let _ = cycle_offset;
 
@@ -802,7 +823,7 @@ impl GraphState {
                 }
             }
 
-            node.cycle_offset = 0;
+            self.cold_nodes[node_idx as usize].cycle_offset = 0;
             node.flags |= FLAG_IS_UPDATED;
 
             self.make_dirty_chunk(chunk_idx);
