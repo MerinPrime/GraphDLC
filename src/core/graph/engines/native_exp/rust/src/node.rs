@@ -12,7 +12,7 @@ pub struct Node {
 
     pub chunk_idx: u32,
     pub links: [u32; 4],
-    pub _padding: u32,
+    pub pos_hash: u32,
 }
 
 impl Node {

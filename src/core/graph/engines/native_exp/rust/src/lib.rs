@@ -78,7 +78,7 @@ pub extern "C" fn update_node_state(
 
     let node = &mut state.nodes[node_idx as usize];
     node.set_type_id(node_type);
-    state.pos_hashes[node_idx as usize] = pos_hash;
+    node.pos_hash = pos_hash;
 
     if is_entry_point != 0 {
         flags |= FLAG_IS_ENTRY_POINT;

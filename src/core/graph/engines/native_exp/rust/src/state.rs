@@ -138,7 +138,6 @@ pub struct GraphState {
     pub break_point_node: u32,
     pub back_links: Vec<Vec<u32>>,
     pub detected_links: Vec<Option<u32>>,
-    pub pos_hashes: Vec<u32>,
     pub in_changed_list: Vec<u64>,
     pub has_external_marks: bool,
     pub render_signals: Vec<u8>,
@@ -180,7 +179,6 @@ impl GraphState {
             break_point_node: 0,
             back_links: vec![Vec::new(); 4096],
             detected_links: vec![None; 4096],
-            pos_hashes: vec![0; 4096],
             in_changed_list: vec![0; 64],
             has_external_marks: false,
             render_signals: vec![0; 4096],
@@ -201,8 +199,6 @@ impl GraphState {
         self.back_links.resize(4096, Vec::new());
         self.detected_links.clear();
         self.detected_links.resize(4096, None);
-        self.pos_hashes.clear();
-        self.pos_hashes.resize(4096, 0);
         self.in_changed_list.clear();
         self.in_changed_list.resize(64, 0);
         self.has_external_marks = false;
@@ -224,7 +220,7 @@ impl GraphState {
 
                 chunk_idx: 0,
                 links: [0u32; 4],
-                _padding: 0,
+                pos_hash: 0,
             });
             self.cold_nodes.resize_with(count, || NodeCold {
                 cycle_idx: 0,
@@ -240,9 +236,6 @@ impl GraphState {
             }
             if self.detected_links.len() < count {
                 self.detected_links.resize(count, None);
-            }
-            if self.pos_hashes.len() < count {
-                self.pos_hashes.resize(count, 0);
             }
             let words = (count + 63) / 64;
             if self.in_changed_list.len() < words {
@@ -642,7 +635,7 @@ impl GraphState {
 
         if node_type == NODE_TYPE_RANDOM {
             return if signals_count > 0
-                && random_bool(self.seed, self.pos_hashes[node_idx as usize], self.tick)
+                && random_bool(self.seed, node.pos_hash, self.tick)
             {
                 NODE_SIGNAL_ACTIVE
             } else {
