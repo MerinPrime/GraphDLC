@@ -571,9 +571,6 @@ impl GraphState {
             let node_idx = unsafe { *changed_nodes_ptr.add(i) };
             let node_ptr = unsafe { nodes_ptr.add(node_idx as usize) };
             let node = unsafe { &mut *node_ptr };
-
-            node.flags &= !FLAG_IS_CHANGED;
-
             let blocked_count = node.blocked_count;
             let signal = if blocked_count > 0 {
                 NODE_SIGNAL_NONE
@@ -584,6 +581,8 @@ impl GraphState {
             if signal != NODE_SIGNAL_KEEP_SIGNAL {
                 node.signal = signal;
             }
+
+            node.flags &= !FLAG_IS_CHANGED;
         }
 
         if !self.break_points.is_empty() {
