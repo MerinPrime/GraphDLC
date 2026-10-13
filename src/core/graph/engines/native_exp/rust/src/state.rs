@@ -224,6 +224,7 @@ impl GraphState {
 
                 chunk_idx: 0,
                 links: [0u32; 4],
+                _padding: 0,
             });
             self.cold_nodes.resize_with(count, || NodeCold {
                 cycle_idx: 0,
