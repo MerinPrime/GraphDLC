@@ -455,9 +455,9 @@ impl GraphState {
 
                 let last_signal = node.last_signal;
                 let is_changed = last_signal != signal;
-                let node_type = node.type_id();
 
                 if is_changed {
+                    let node_type = node.type_id();
                     let is_active = signal == NODE_SIGNAL_ACTIVE;
                     let delta = ((is_active as u8) << 1).wrapping_sub(1);
                     let is_delayed = ((signal | last_signal) & 2 != 0)
@@ -549,7 +549,7 @@ impl GraphState {
                         || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
                         || ((flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
                         || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
-                            (node_type == NODE_TYPE_RANDOM && node.signals_count > 0)
+                            (node.type_id() == NODE_TYPE_RANDOM && node.signals_count > 0)
                                 || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
                         ));
 
