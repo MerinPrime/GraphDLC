@@ -376,6 +376,15 @@ impl GraphState {
     }
 
     pub fn run_ticks_fast(&mut self, count: u32) {
+        if self.has_blockers {
+            self.run_ticks_fast_impl::<true>(count);
+        } else {
+            self.run_ticks_fast_impl::<false>(count);
+        }
+    }
+
+    #[inline(always)]
+    fn run_ticks_fast_impl<const HAS_BLOCKERS: bool>(&mut self, count: u32) {
         if self.has_external_marks {
             self.clear_external_marks();
         }
@@ -387,7 +396,6 @@ impl GraphState {
         let mut len = self.changed_nodes.len();
         let mut tick = self.tick;
         let mut swapped = false;
-        let has_blockers = self.has_blockers;
 
         for _ in 0..count {
             let mut write_ptr = next_ptr;
@@ -463,7 +471,7 @@ impl GraphState {
 
                         if links_count != 0 {
                             let links = &node.links;
-                            let is_blocker = has_blockers && node_type == NODE_TYPE_BLOCKER;
+                            let is_blocker = HAS_BLOCKERS && node_type == NODE_TYPE_BLOCKER;
                             if is_blocker {
                                 let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
                                 let blocked_link_idx = cold.blocked_link;
@@ -609,7 +617,7 @@ impl GraphState {
                     unsafe { *STATE_LUT.get_unchecked(lut_index) }
                 };
 
-                if has_blockers && node.blocked_count > 0 {
+                if HAS_BLOCKERS && node.blocked_count > 0 {
                     signal = NODE_SIGNAL_NONE;
                 }
 
