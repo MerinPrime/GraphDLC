@@ -71,7 +71,7 @@ const fn build_state_lut() -> [u8; 4096] {
                             if sig_u8 == NODE_SIGNAL_NONE {
                                 NODE_SIGNAL_PENDING
                             } else {
-                                NODE_SIGNAL_KEEP_SIGNAL
+                                sig_u8
                             }
                         } else {
                             NODE_SIGNAL_NONE
@@ -90,7 +90,7 @@ const fn build_state_lut() -> [u8; 4096] {
                         } else if cat == 1 {
                             NODE_SIGNAL_NONE
                         } else {
-                            NODE_SIGNAL_KEEP_SIGNAL
+                            sig_u8
                         }
                     }
                     NODE_TYPE_FLIP_FLOP => {
@@ -101,7 +101,7 @@ const fn build_state_lut() -> [u8; 4096] {
                                 NODE_SIGNAL_ACTIVE
                             }
                         } else {
-                            NODE_SIGNAL_KEEP_SIGNAL
+                            sig_u8
                         }
                     }
                     _ => NODE_SIGNAL_NONE,
@@ -579,10 +579,7 @@ impl GraphState {
                 signal = NODE_SIGNAL_NONE;
             }
 
-            if signal != NODE_SIGNAL_KEEP_SIGNAL {
-                node.signal = signal;
-            }
-
+            node.signal = signal;
             node.flags &= !FLAG_IS_CHANGED;
         }
 
@@ -631,7 +628,7 @@ impl GraphState {
                     NODE_SIGNAL_NONE
                 };
             }
-            return NODE_SIGNAL_KEEP_SIGNAL;
+            return node.signal;
         }
 
         let node_type = node.type_id();
