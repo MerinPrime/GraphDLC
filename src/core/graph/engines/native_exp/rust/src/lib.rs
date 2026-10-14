@@ -236,6 +236,18 @@ pub extern "C" fn run_tick() -> bool {
     return state.break_point;
 }
 
+#[cold]
+#[inline(never)]
+fn run_many_ticks_breakpoints(state: &mut state::GraphState, count: u32) -> bool {
+    for _ in 0..count {
+        state.update_state();
+        if state.break_point {
+            return true;
+        }
+    }
+    false
+}
+
 #[no_mangle]
 pub extern "C" fn run_many_ticks(count: u32) -> bool {
     let state = get_state();
@@ -245,13 +257,7 @@ pub extern "C" fn run_many_ticks(count: u32) -> bool {
         }
         return false;
     }
-    for _ in 0..count {
-        state.update_state();
-        if state.break_point {
-            return true;
-        }
-    }
-    return false;
+    run_many_ticks_breakpoints(state, count)
 }
 
 #[no_mangle]

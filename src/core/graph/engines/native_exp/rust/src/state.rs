@@ -380,6 +380,7 @@ impl GraphState {
         self.has_external_marks = false;
     }
 
+    #[inline(always)]
     pub fn update_state(&mut self) {
         let need = self.nodes.len();
         if self.temp_changed_nodes.capacity() < need {
