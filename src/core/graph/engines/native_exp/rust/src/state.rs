@@ -544,18 +544,19 @@ impl GraphState {
                 node.last_signal = signal;
             }
 
-            if ((flags & REQUEUE_FLAGS) != 0
-                || ((REQUEUE_TYPES >> (node_type as u32 & 63)) & 1) != 0)
-                && ((flags & FLAG_IS_UPDATED) != 0
+            let should_requeue = if (flags & REQUEUE_FLAGS) != 0 {
+                (flags & FLAG_IS_UPDATED) != 0
                     || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
-                    || (signal != NODE_SIGNAL_NONE
-                        && node.signals_count == 0
-                        && (node_type == NODE_TYPE_BUTTON
-                            || node_type == NODE_TYPE_DIRECTIONAL_BUTTON))
-                    || (node.signals_count > 0
-                        && (node_type == NODE_TYPE_RANDOM || (flags & FLAG_IS_READ_HEAD) != 0))
-                    || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0))
-            {
+                    || ((flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
+                    || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0)
+            } else if ((REQUEUE_TYPES >> (node_type as u32 & 63)) & 1) != 0 {
+                (node_type == NODE_TYPE_RANDOM && node.signals_count > 0)
+                    || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
+            } else {
+                false
+            };
+
+            if should_requeue {
                 node.flags &= !FLAG_IS_UPDATED;
                 if node.flags & FLAG_IS_CHANGED == 0 {
                     node.flags |= FLAG_IS_CHANGED;
