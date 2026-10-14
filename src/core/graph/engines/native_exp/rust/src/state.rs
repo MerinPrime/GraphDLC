@@ -399,6 +399,9 @@ impl GraphState {
         let cold_nodes_ptr = self.cold_nodes.as_mut_ptr();
         let len = self.changed_nodes.len();
 
+        let temp_ptr = self.temp_changed_nodes.as_mut_ptr();
+        let mut temp_len = 0usize;
+
         for i in 0..len {
             let node_idx = unsafe { *changed_nodes_ptr.add(i) };
 
@@ -443,7 +446,10 @@ impl GraphState {
 
                 if node.flags & FLAG_IS_CHANGED == 0 {
                     node.flags |= FLAG_IS_CHANGED;
-                    push_changed_unchecked(&mut self.temp_changed_nodes, node_idx);
+                    unsafe {
+                        *temp_ptr.add(temp_len) = node_idx;
+                        temp_len += 1;
+                    }
                 }
                 continue;
             }
@@ -477,16 +483,13 @@ impl GraphState {
                                 }
                                 if edge.flags & FLAG_IS_CHANGED == 0 {
                                     edge.flags |= FLAG_IS_CHANGED;
-                                    push_changed_unchecked(
-                                        &mut self.temp_changed_nodes,
-                                        edge_idx as u32,
-                                    );
+                                    unsafe {
+                                        *temp_ptr.add(temp_len) = edge_idx as u32;
+                                        temp_len += 1;
+                                    }
                                 }
                             }
                         } else {
-                            let temp_ptr = self.temp_changed_nodes.as_mut_ptr();
-                            let mut temp_len = self.temp_changed_nodes.len();
-
                             for k in 0..links_count {
                                 let edge_idx = links[k] as usize;
                                 let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
@@ -495,14 +498,10 @@ impl GraphState {
                                 if edge.flags & FLAG_IS_CHANGED == 0 {
                                     edge.flags |= FLAG_IS_CHANGED;
                                     unsafe {
-                                        temp_ptr.add(temp_len).write(edge_idx as u32);
+                                        *temp_ptr.add(temp_len) = edge_idx as u32;
                                         temp_len += 1;
                                     }
                                 }
-                            }
-
-                            unsafe {
-                                self.temp_changed_nodes.set_len(temp_len);
                             }
                         }
                     }
@@ -521,10 +520,10 @@ impl GraphState {
                         detector.signals_count = sig_count;
                         if detector.flags & FLAG_IS_CHANGED == 0 {
                             detector.flags |= FLAG_IS_CHANGED;
-                            push_changed_unchecked(
-                                &mut self.temp_changed_nodes,
-                                detector_idx as u32,
-                            );
+                            unsafe {
+                                *temp_ptr.add(temp_len) = detector_idx as u32;
+                                temp_len += 1;
+                            }
                         }
                     } else {
                         for k in 0..detectors_count {
@@ -533,10 +532,10 @@ impl GraphState {
                             detector.signals_count = sig_count;
                             if detector.flags & FLAG_IS_CHANGED == 0 {
                                 detector.flags |= FLAG_IS_CHANGED;
-                                push_changed_unchecked(
-                                    &mut self.temp_changed_nodes,
-                                    detector_idx as u32,
-                                );
+                                unsafe {
+                                    *temp_ptr.add(temp_len) = detector_idx as u32;
+                                    temp_len += 1;
+                                }
                             }
                         }
                     }
@@ -561,9 +560,16 @@ impl GraphState {
                 node.flags &= !FLAG_IS_UPDATED;
                 if node.flags & FLAG_IS_CHANGED == 0 {
                     node.flags |= FLAG_IS_CHANGED;
-                    push_changed_unchecked(&mut self.temp_changed_nodes, node_idx);
+                    unsafe {
+                        *temp_ptr.add(temp_len) = node_idx;
+                        temp_len += 1;
+                    }
                 }
             }
+        }
+
+        unsafe {
+            self.temp_changed_nodes.set_len(temp_len);
         }
 
         std::mem::swap(&mut self.changed_nodes, &mut self.temp_changed_nodes);
