@@ -593,7 +593,7 @@ impl GraphState {
                             NODE_SIGNAL_NONE
                         } else {
                             let cold = &self.cold_nodes[node_idx as usize];
-                            if let Some(ref cycle_state) = self.cycles[cold.cycle_idx as usize] {
+                            if let Some(ref cycle_state) = unsafe { self.cycles.get_unchecked(cold.cycle_idx as usize) } {
                                 if cycle_state.get_bit(tick, cold.cycle_offset) {
                                     NODE_SIGNAL_ACTIVE
                                 } else {
