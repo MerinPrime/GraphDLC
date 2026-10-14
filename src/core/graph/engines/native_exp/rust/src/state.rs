@@ -612,11 +612,7 @@ impl GraphState {
                                     .as_ref()
                                     .unwrap_unchecked()
                             };
-                            if cycle_state.get_bit(tick, cold.cycle_offset) {
-                                NODE_SIGNAL_ACTIVE
-                            } else {
-                                NODE_SIGNAL_NONE
-                            }
+                            cycle_state.get_bit(tick, cold.cycle_offset) as u8
                         }
                     } else if node.type_id() == NODE_TYPE_RANDOM {
                         if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
