@@ -556,13 +556,16 @@ impl GraphState {
                 }
 
                 if (flags & REQUEUE_MASK) != 0 {
-                    let should_requeue = (flags & FLAG_IS_UPDATED) != 0
-                        || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
-                        || (HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
-                        || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
-                            (node.type_id() == NODE_TYPE_RANDOM && node.signals_count > 0)
-                                || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
-                        ));
+                    let should_requeue = if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
+                        node.signals_count > 0
+                    } else {
+                        (flags & FLAG_IS_UPDATED) != 0
+                            || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
+                            || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
+                                (node.type_id() == NODE_TYPE_RANDOM && node.signals_count > 0)
+                                    || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
+                            ))
+                    };
 
                     if should_requeue {
                         node.flags &= !FLAG_IS_UPDATED;
