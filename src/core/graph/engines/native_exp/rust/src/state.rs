@@ -456,7 +456,7 @@ impl GraphState {
 
                 if is_changed {
                     let is_active = signal == NODE_SIGNAL_ACTIVE;
-                    let delta = if is_active { 1u8 } else { 255u8 };
+                    let delta = ((is_active as u8) << 1).wrapping_sub(1);
                     let is_delayed = (node_type == NODE_TYPE_DELAY && signal == NODE_SIGNAL_PENDING)
                         || (!is_active && last_signal == NODE_SIGNAL_PENDING);
 
