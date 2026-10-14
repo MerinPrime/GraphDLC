@@ -560,13 +560,8 @@ impl GraphState {
             self.temp_changed_nodes.set_len(temp_len);
         }
 
-        std::mem::swap(&mut self.changed_nodes, &mut self.temp_changed_nodes);
-
-        let changed_nodes_ptr = self.changed_nodes.as_ptr();
-        let len = self.changed_nodes.len();
-
-        for i in 0..len {
-            let node_idx = unsafe { *changed_nodes_ptr.add(i) };
+        for i in 0..temp_len {
+            let node_idx = unsafe { *temp_ptr.add(i) };
             let node_ptr = unsafe { nodes_ptr.add(node_idx as usize) };
             let node = unsafe { &mut *node_ptr };
             let mut signal = self.update_node_signal(node_idx, node_ptr as *const Node);
@@ -578,6 +573,7 @@ impl GraphState {
             node.flags &= !FLAG_IS_CHANGED;
         }
 
+        std::mem::swap(&mut self.changed_nodes, &mut self.temp_changed_nodes);
         self.temp_changed_nodes.clear();
         self.tick += 1;
     }
