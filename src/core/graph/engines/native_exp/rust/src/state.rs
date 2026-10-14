@@ -606,14 +606,16 @@ impl GraphState {
                             NODE_SIGNAL_NONE
                         } else {
                             let cold = &self.cold_nodes[node_idx as usize];
-                            if let Some(ref cycle_state) = unsafe { self.cycles.get_unchecked(cold.cycle_idx as usize) } {
-                                if cycle_state.get_bit(tick, cold.cycle_offset) {
-                                    NODE_SIGNAL_ACTIVE
-                                } else {
-                                    NODE_SIGNAL_NONE
-                                }
+                            let cycle_state = unsafe {
+                                self.cycles
+                                    .get_unchecked(cold.cycle_idx as usize)
+                                    .as_ref()
+                                    .unwrap_unchecked()
+                            };
+                            if cycle_state.get_bit(tick, cold.cycle_offset) {
+                                NODE_SIGNAL_ACTIVE
                             } else {
-                                node.signal
+                                NODE_SIGNAL_NONE
                             }
                         }
                     } else if node.type_id() == NODE_TYPE_RANDOM {
