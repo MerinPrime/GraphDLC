@@ -220,6 +220,7 @@ pub extern "C" fn reset_export() {
 
         let is_entry_point = (node.flags & FLAG_IS_ENTRY_POINT) != 0;
         if is_entry_point {
+            node.flags |= FLAG_IS_UPDATED;
             state.changed_nodes.push(node_idx as u32);
         }
     }

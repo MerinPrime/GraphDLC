@@ -144,6 +144,31 @@ export function runBenchmark(): void {
         });
     }
 
+    if (TARGET_ENGINE === 'all') {
+        const raw = targets.find((t) => t.name.includes('Raw'))?.engine;
+        const native = targets.find((t) => t.name.includes('Native'))?.engine;
+        if (raw && native) {
+            raw.reset();
+            native.reset();
+            for (let tick = 0; tick < 5000; tick++) {
+                raw.runTick();
+                native.runTick();
+                for (let n = 0; n < targets[0].nodes; n++) {
+                    const s1 = raw.state.getNodeSignal(n);
+                    const s2 = native.state.getNodeSignal(n);
+                    if (s1 !== s2) {
+                        throw new Error(
+                            `Equivalence mismatch at tick ${tick}, node ${n}: raw=${s1}, native=${s2}`,
+                        );
+                    }
+                }
+            }
+            console.log('✅ 5,000 ticks verified 100% equivalent with RawEngine!');
+            raw.reset();
+            native.reset();
+        }
+    }
+
     for (const item of targets) {
         item.engine.reset();
         if (WARMUP_TICKS > 0) {

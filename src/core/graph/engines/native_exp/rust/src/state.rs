@@ -6,7 +6,7 @@ use crate::rng::random_bool;
 use std::collections::HashSet;
 
 const REQUEUE_MASK: u8 =
-    FLAG_IS_UPDATED | FLAG_IS_ADDITIONAL_UPDATE | FLAG_IS_READ_HEAD | FLAG_IS_ENTRY_POINT | FLAG_IS_REQUEUE_TYPE;
+    FLAG_IS_UPDATED | FLAG_IS_ADDITIONAL_UPDATE | FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE;
 
 const fn build_state_lut() -> [u8; 512] {
     let mut lut = [NODE_SIGNAL_NONE; 512];
@@ -544,7 +544,6 @@ impl GraphState {
                     let should_requeue = (flags & FLAG_IS_UPDATED) != 0
                         || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
                         || ((flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
-                        || (tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0)
                         || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
                             (node_type == NODE_TYPE_RANDOM && node.signals_count > 0)
                                 || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
