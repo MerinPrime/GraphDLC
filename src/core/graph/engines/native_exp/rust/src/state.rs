@@ -458,49 +458,51 @@ impl GraphState {
                     || (!is_active && last_signal == NODE_SIGNAL_PENDING);
 
                 if !is_delayed {
-                    let links = &node.links;
                     let links_count = node.links_count as usize;
 
-                    let is_blocker = node_type == NODE_TYPE_BLOCKER;
-                    if is_blocker {
-                        let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
-                        let blocked_link_idx = cold.blocked_link;
-                        for k in 0..links_count {
-                            let edge_idx = links[k] as usize;
-                            let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
-                            if edge_idx as u32 == blocked_link_idx {
-                                edge.blocked_count = edge.blocked_count.wrapping_add(delta);
-                            } else {
-                                edge.signals_count = edge.signals_count.wrapping_add(delta);
-                            }
-                            if edge.flags & FLAG_IS_CHANGED == 0 {
-                                edge.flags |= FLAG_IS_CHANGED;
-                                push_changed_unchecked(
-                                    &mut self.temp_changed_nodes,
-                                    edge_idx as u32,
-                                );
-                            }
-                        }
-                    } else {
-                        let temp_ptr = self.temp_changed_nodes.as_mut_ptr();
-                        let mut temp_len = self.temp_changed_nodes.len();
-
-                        for k in 0..links_count {
-                            let edge_idx = links[k] as usize;
-                            let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
-                            edge.signals_count = edge.signals_count.wrapping_add(delta);
-
-                            if edge.flags & FLAG_IS_CHANGED == 0 {
-                                edge.flags |= FLAG_IS_CHANGED;
-                                unsafe {
-                                    temp_ptr.add(temp_len).write(edge_idx as u32);
-                                    temp_len += 1;
+                    if links_count != 0 {
+                        let links = &node.links;
+                        let is_blocker = node_type == NODE_TYPE_BLOCKER;
+                        if is_blocker {
+                            let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
+                            let blocked_link_idx = cold.blocked_link;
+                            for k in 0..links_count {
+                                let edge_idx = links[k] as usize;
+                                let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
+                                if edge_idx as u32 == blocked_link_idx {
+                                    edge.blocked_count = edge.blocked_count.wrapping_add(delta);
+                                } else {
+                                    edge.signals_count = edge.signals_count.wrapping_add(delta);
+                                }
+                                if edge.flags & FLAG_IS_CHANGED == 0 {
+                                    edge.flags |= FLAG_IS_CHANGED;
+                                    push_changed_unchecked(
+                                        &mut self.temp_changed_nodes,
+                                        edge_idx as u32,
+                                    );
                                 }
                             }
-                        }
+                        } else {
+                            let temp_ptr = self.temp_changed_nodes.as_mut_ptr();
+                            let mut temp_len = self.temp_changed_nodes.len();
 
-                        unsafe {
-                            self.temp_changed_nodes.set_len(temp_len);
+                            for k in 0..links_count {
+                                let edge_idx = links[k] as usize;
+                                let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
+                                edge.signals_count = edge.signals_count.wrapping_add(delta);
+
+                                if edge.flags & FLAG_IS_CHANGED == 0 {
+                                    edge.flags |= FLAG_IS_CHANGED;
+                                    unsafe {
+                                        temp_ptr.add(temp_len).write(edge_idx as u32);
+                                        temp_len += 1;
+                                    }
+                                }
+                            }
+
+                            unsafe {
+                                self.temp_changed_nodes.set_len(temp_len);
+                            }
                         }
                     }
                 }
