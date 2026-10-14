@@ -569,15 +569,46 @@ impl GraphState {
             while read_next < write_ptr {
                 let node_idx = unsafe { *read_next };
                 read_next = unsafe { read_next.add(1) };
-                let node_ptr = unsafe { nodes_ptr.add(node_idx as usize) };
-                let node = unsafe { &mut *node_ptr };
-                let mut signal = self.update_node_signal(node_idx, node_ptr as *const Node, tick);
+                let node = unsafe { &mut *nodes_ptr.add(node_idx as usize) };
+                let flags = node.flags;
+                let signals_count = node.signals_count;
+
+                let mut signal = if (flags & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE)) != 0 {
+                    if (flags & FLAG_IS_READ_HEAD) != 0 {
+                        if signals_count > 1 {
+                            NODE_SIGNAL_ACTIVE
+                        } else if signals_count == 0 {
+                            NODE_SIGNAL_NONE
+                        } else {
+                            let cold = &self.cold_nodes[node_idx as usize];
+                            if let Some(ref cycle_state) = self.cycles[cold.cycle_idx as usize] {
+                                if cycle_state.get_bit(tick, cold.cycle_offset) {
+                                    NODE_SIGNAL_ACTIVE
+                                } else {
+                                    NODE_SIGNAL_NONE
+                                }
+                            } else {
+                                node.signal
+                            }
+                        }
+                    } else if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    }
+                } else {
+                    let lut_index = ((node.node_type as usize) << 5)
+                        | ((node.signal as usize) << 3)
+                        | (signals_count as usize);
+                    unsafe { *STATE_LUT.get_unchecked(lut_index) }
+                };
+
                 if node.blocked_count > 0 {
                     signal = NODE_SIGNAL_NONE;
                 }
 
                 node.signal = signal;
-                node.flags &= !FLAG_IS_CHANGED;
+                node.flags = flags & !FLAG_IS_CHANGED;
             }
 
             len = unsafe { write_ptr.offset_from(next_ptr) as usize };
