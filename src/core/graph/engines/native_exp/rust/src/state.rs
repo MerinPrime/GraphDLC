@@ -587,17 +587,14 @@ impl GraphState {
             node.flags &= !FLAG_IS_CHANGED;
         }
 
-        if !self.break_points.is_empty() {
-            self.check_breakpoints(nodes_ptr);
-        }
-
         self.temp_changed_nodes.clear();
         self.tick += 1;
     }
 
     #[cold]
     #[inline(never)]
-    fn check_breakpoints(&mut self, nodes_ptr: *const Node) {
+    pub fn check_breakpoints(&mut self) {
+        let nodes_ptr = self.nodes.as_ptr();
         for &node_idx in &self.break_points {
             let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
 

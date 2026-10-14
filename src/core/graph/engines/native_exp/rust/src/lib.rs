@@ -233,6 +233,9 @@ pub extern "C" fn reset_export() {
 pub extern "C" fn run_tick() -> bool {
     let state = get_state();
     state.update_state();
+    if !state.break_points.is_empty() {
+        state.check_breakpoints();
+    }
     return state.break_point;
 }
 
@@ -241,6 +244,7 @@ pub extern "C" fn run_tick() -> bool {
 fn run_many_ticks_breakpoints(state: &mut state::GraphState, count: u32) -> bool {
     for _ in 0..count {
         state.update_state();
+        state.check_breakpoints();
         if state.break_point {
             return true;
         }
