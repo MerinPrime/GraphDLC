@@ -25,4 +25,12 @@ impl Node {
     pub fn set_type_id(&mut self, type_id: u8) {
         self.node_type = type_id;
     }
+
+    #[inline(always)]
+    pub fn type_and_signal(&self) -> u16 {
+        unsafe {
+            let ptr = (self as *const Node as *const u8).add(1) as *const u16;
+            ptr.read_unaligned()
+        }
+    }
 }

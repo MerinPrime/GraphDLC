@@ -8,8 +8,8 @@ use std::collections::HashSet;
 const REQUEUE_MASK: u8 =
     FLAG_IS_UPDATED | FLAG_IS_ADDITIONAL_UPDATE | FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE;
 
-const fn build_state_lut() -> [u8; 512] {
-    let mut lut = [NODE_SIGNAL_NONE; 512];
+const fn build_state_lut() -> [u8; 8192] {
+    let mut lut = [NODE_SIGNAL_NONE; 8192];
     let mut t = 0usize;
     while t < 16 {
         let mut sig = 0usize;
@@ -25,7 +25,8 @@ const fn build_state_lut() -> [u8; 512] {
                 } else {
                     3
                 };
-                let idx = (t << 5) | (sig << 3) | sc;
+                let type_and_sig = t | (sig << 8);
+                let idx = (type_and_sig << 3) | sc;
                 let sig_u8 = sig as u8;
                 lut[idx] = match t as u8 {
                     NODE_TYPE_PATH
@@ -111,7 +112,7 @@ const fn build_state_lut() -> [u8; 512] {
     lut
 }
 
-static STATE_LUT: [u8; 512] = build_state_lut();
+static STATE_LUT: [u8; 8192] = build_state_lut();
 
 pub struct NodeCold {
     pub cycle_idx: u32,
@@ -621,14 +622,12 @@ impl GraphState {
                             NODE_SIGNAL_NONE
                         }
                     } else {
-                        let lut_index = ((node.node_type as usize) << 5)
-                            | ((node.signal as usize) << 3)
+                        let lut_index = ((node.type_and_signal() as usize) << 3)
                             | (signals_count as usize);
                         unsafe { *STATE_LUT.get_unchecked(lut_index) }
                     }
                 } else {
-                    let lut_index = ((node.node_type as usize) << 5)
-                        | ((node.signal as usize) << 3)
+                    let lut_index = ((node.type_and_signal() as usize) << 3)
                         | (signals_count as usize);
                     unsafe { *STATE_LUT.get_unchecked(lut_index) }
                 };
@@ -709,8 +708,7 @@ impl GraphState {
             }
         }
 
-        let lut_index = ((node.node_type as usize) << 5)
-            | ((node.signal as usize) << 3)
+        let lut_index = ((node.type_and_signal() as usize) << 3)
             | (signals_count as usize);
         unsafe { *STATE_LUT.get_unchecked(lut_index) }
     }
