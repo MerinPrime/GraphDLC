@@ -397,9 +397,12 @@ impl GraphState {
 
         for _ in 0..count {
             let mut write_ptr = next_ptr;
+            let end_curr = unsafe { curr_ptr.add(len) };
+            let mut read_curr = curr_ptr;
 
-            for i in 0..len {
-                let node_idx = unsafe { *curr_ptr.add(i) };
+            while read_curr < end_curr {
+                let node_idx = unsafe { *read_curr };
+                read_curr = unsafe { read_curr.add(1) };
 
                 let node = unsafe { &mut *nodes_ptr.add(node_idx as usize) };
 
@@ -562,10 +565,10 @@ impl GraphState {
                 }
             }
 
-            let next_len = unsafe { write_ptr.offset_from(next_ptr) as usize };
-
-            for i in 0..next_len {
-                let node_idx = unsafe { *next_ptr.add(i) };
+            let mut read_next = next_ptr;
+            while read_next < write_ptr {
+                let node_idx = unsafe { *read_next };
+                read_next = unsafe { read_next.add(1) };
                 let node_ptr = unsafe { nodes_ptr.add(node_idx as usize) };
                 let node = unsafe { &mut *node_ptr };
                 let mut signal = self.update_node_signal(node_idx, node_ptr as *const Node, tick);
@@ -577,8 +580,8 @@ impl GraphState {
                 node.flags &= !FLAG_IS_CHANGED;
             }
 
+            len = unsafe { write_ptr.offset_from(next_ptr) as usize };
             std::mem::swap(&mut curr_ptr, &mut next_ptr);
-            len = next_len;
             swapped = !swapped;
             tick += 1;
         }
