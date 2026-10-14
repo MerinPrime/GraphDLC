@@ -484,9 +484,15 @@ impl GraphState {
                                 for k in 0..links_count {
                                     let edge_idx = links[k] as usize;
                                     let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
-                                    let flags = edge.flags;
+                                    let mut flags = edge.flags;
                                     if edge_idx as u32 == blocked_link_idx {
-                                        edge.blocked_count = edge.blocked_count.wrapping_add(delta);
+                                        let new_blocked = edge.blocked_count.wrapping_add(delta);
+                                        edge.blocked_count = new_blocked;
+                                        if new_blocked > 0 {
+                                            flags |= FLAG_IS_BLOCKED;
+                                        } else {
+                                            flags &= !FLAG_IS_BLOCKED;
+                                        }
                                     } else {
                                         edge.signals_count = edge.signals_count.wrapping_add(delta);
                                     }
@@ -496,6 +502,8 @@ impl GraphState {
                                             *write_ptr = edge_idx as u32;
                                             write_ptr = write_ptr.add(1);
                                         }
+                                    } else {
+                                        edge.flags = flags;
                                     }
                                 }
                             } else {
@@ -588,8 +596,10 @@ impl GraphState {
                 let flags = node.flags;
                 let signals_count = node.signals_count;
 
-                let mut signal = if (flags & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE)) != 0 {
-                    if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
+                let signal = if (flags & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE | FLAG_IS_BLOCKED)) != 0 {
+                    if (flags & FLAG_IS_BLOCKED) != 0 {
+                        NODE_SIGNAL_NONE
+                    } else if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
                         if signals_count > 1 {
                             NODE_SIGNAL_ACTIVE
                         } else if signals_count == 0 {
@@ -624,10 +634,6 @@ impl GraphState {
                         | (signals_count as usize);
                     unsafe { *STATE_LUT.get_unchecked(lut_index) }
                 };
-
-                if HAS_BLOCKERS && node.blocked_count > 0 {
-                    signal = NODE_SIGNAL_NONE;
-                }
 
                 node.signal = signal;
                 node.flags = flags & !FLAG_IS_CHANGED;
@@ -756,6 +762,11 @@ impl GraphState {
         let n = &mut self.nodes[node_idx as usize];
         n.signals_count = signals_count;
         n.blocked_count = blocked_count;
+        if blocked_count > 0 {
+            n.flags |= FLAG_IS_BLOCKED;
+        } else {
+            n.flags &= !FLAG_IS_BLOCKED;
+        }
         n.flags |= FLAG_IS_UPDATED;
 
         self.mark_node_as_changed_non_temp(node_idx);

@@ -136,6 +136,11 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
         state.nodes[node_idx].last_signal = last_signal;
         state.nodes[node_idx].signals_count = signals_count;
         state.nodes[node_idx].blocked_count = blocked_count;
+        if blocked_count > 0 {
+            state.nodes[node_idx].flags |= FLAG_IS_BLOCKED;
+        } else {
+            state.nodes[node_idx].flags &= !FLAG_IS_BLOCKED;
+        }
     }
 
     let chunks_len = reader.read_u32() as usize;

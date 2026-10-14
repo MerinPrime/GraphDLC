@@ -1,6 +1,7 @@
 pub const FLAG_IS_ENTRY_POINT: u8 = 1 << 0;
 pub const FLAG_IS_ADDITIONAL_UPDATE: u8 = 1 << 1;
-pub const FLAG_IS_BREAKPOINT: u8 = 1 << 2;
+pub const FLAG_IS_BLOCKED: u8 = 1 << 2;
+pub const FLAG_IS_BREAKPOINT: u8 = 0;
 pub const FLAG_IS_UPDATED: u8 = 1 << 3;
 pub const FLAG_IS_CHANGED: u8 = 1 << 4;
 pub const FLAG_IS_READ_HEAD: u8 = 1 << 5;

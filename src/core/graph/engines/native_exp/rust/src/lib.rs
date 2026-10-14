@@ -74,7 +74,7 @@ pub extern "C" fn update_node_state(
     state.update_node_back_links(node_idx, &links[..safe_links_count]);
 
     let existing_flags = state.nodes[node_idx as usize].flags;
-    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BREAKPOINT);
+    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BLOCKED);
 
     let node = &mut state.nodes[node_idx as usize];
     node.set_type_id(node_type);
@@ -221,8 +221,7 @@ pub extern "C" fn reset_export() {
         node.last_signal = NODE_SIGNAL_NONE;
         node.signals_count = 0;
         node.blocked_count = 0;
-        node.flags &= !FLAG_IS_CHANGED;
-        node.flags &= !FLAG_IS_UPDATED;
+        node.flags &= !(FLAG_IS_CHANGED | FLAG_IS_UPDATED | FLAG_IS_BLOCKED);
 
         let is_entry_point = (node.flags & FLAG_IS_ENTRY_POINT) != 0;
         if is_entry_point {
