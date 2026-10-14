@@ -89,6 +89,7 @@ pub extern "C" fn update_node_state(
 
     let cold = &mut state.cold_nodes[node_idx as usize];
     if cycle_idx >= 0 {
+        state.has_cycles = true;
         cold.cycle_idx = cycle_idx as u32;
         cold.cycle_offset = cycle_offset;
         cold.head_type = head_type;

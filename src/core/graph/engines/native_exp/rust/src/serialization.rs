@@ -178,6 +178,9 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
     }
 
     let cycles_len = reader.read_u32() as usize;
+    if cycles_len > 0 {
+        state.has_cycles = true;
+    }
     for _ in 0..cycles_len {
         let cycle_idx = reader.read_u32() as usize;
         let length = reader.read_u32();

@@ -139,6 +139,7 @@ pub struct GraphState {
     pub in_changed_list: Vec<u64>,
     pub has_external_marks: bool,
     pub has_blockers: bool,
+    pub has_cycles: bool,
     pub render_signals: Vec<u8>,
 }
 
@@ -181,6 +182,7 @@ impl GraphState {
             in_changed_list: vec![0; 64],
             has_external_marks: false,
             has_blockers: false,
+            has_cycles: false,
             render_signals: vec![0; 4096],
         }
     }
@@ -203,6 +205,7 @@ impl GraphState {
         self.in_changed_list.resize(64, 0);
         self.has_external_marks = false;
         self.has_blockers = false;
+        self.has_cycles = false;
         self.render_signals.clear();
         self.render_signals.resize(4096, 0);
     }
@@ -298,6 +301,7 @@ impl GraphState {
     }
 
     pub fn add_cycle(&mut self, cycle_idx: u32, length: u32) {
+        self.has_cycles = true;
         let idx = cycle_idx as usize;
         if idx >= self.cycles.len() {
             self.cycles.resize_with(idx + 1, || None);
@@ -311,6 +315,7 @@ impl GraphState {
         let idx = cycle_idx as usize;
         if idx < self.cycles.len() {
             self.cycles[idx] = None;
+            self.has_cycles = self.cycles.iter().any(|c| c.is_some());
         }
     }
 
@@ -376,15 +381,16 @@ impl GraphState {
     }
 
     pub fn run_ticks_fast(&mut self, count: u32) {
-        if self.has_blockers {
-            self.run_ticks_fast_impl::<true>(count);
-        } else {
-            self.run_ticks_fast_impl::<false>(count);
+        match (self.has_blockers, self.has_cycles) {
+            (false, false) => self.run_ticks_fast_impl::<false, false>(count),
+            (true, false) => self.run_ticks_fast_impl::<true, false>(count),
+            (false, true) => self.run_ticks_fast_impl::<false, true>(count),
+            (true, true) => self.run_ticks_fast_impl::<true, true>(count),
         }
     }
 
     #[inline(always)]
-    fn run_ticks_fast_impl<const HAS_BLOCKERS: bool>(&mut self, count: u32) {
+    fn run_ticks_fast_impl<const HAS_BLOCKERS: bool, const HAS_CYCLES: bool>(&mut self, count: u32) {
         if self.has_external_marks {
             self.clear_external_marks();
         }
@@ -411,7 +417,7 @@ impl GraphState {
                 let signal = node.signal;
                 let flags = node.flags;
 
-                let is_cycle_head = (flags & FLAG_IS_CYCLE_HEAD) != 0;
+                let is_cycle_head = HAS_CYCLES && (flags & FLAG_IS_CYCLE_HEAD) != 0;
 
                 if is_cycle_head {
                     let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
@@ -553,7 +559,7 @@ impl GraphState {
                 if (flags & REQUEUE_MASK) != 0 {
                     let should_requeue = (flags & FLAG_IS_UPDATED) != 0
                         || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
-                        || ((flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
+                        || (HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
                         || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
                             (node.type_id() == NODE_TYPE_RANDOM && node.signals_count > 0)
                                 || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
@@ -581,7 +587,7 @@ impl GraphState {
                 let signals_count = node.signals_count;
 
                 let mut signal = if (flags & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE)) != 0 {
-                    if (flags & FLAG_IS_READ_HEAD) != 0 {
+                    if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
                         if signals_count > 1 {
                             NODE_SIGNAL_ACTIVE
                         } else if signals_count == 0 {
