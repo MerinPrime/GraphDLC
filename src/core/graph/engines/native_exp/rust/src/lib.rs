@@ -410,7 +410,11 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
             cycle_state.write_bit(tick, cycle_offset);
         }
     } else {
-        state.nodes[node_idx as usize].signal = signal;
+        let n = &mut state.nodes[node_idx as usize];
+        n.signal = signal;
+        if signal == NODE_SIGNAL_ACTIVE && n.last_signal == NODE_SIGNAL_ACTIVE {
+            n.last_signal = NODE_SIGNAL_NONE;
+        }
         state.mark_node_as_changed_non_temp(node_idx);
     }
 
@@ -572,6 +576,159 @@ mod tests {
         run_tick();
         assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
         assert_eq!(get_node_signal_export(1), NODE_SIGNAL_ACTIVE);
+    }
+
+    #[test]
+    fn test_button_activation() {
+        init();
+        ensure_node_capacity_export(10);
+        ensure_chunk_capacity_export(1);
+
+        // Place wire (node 1)
+        update_node_state(
+            1,
+            22222,
+            NODE_TYPE_PATH,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            -1,
+            -1,
+        );
+
+        // Place button (node 0) linking to node 1
+        unsafe {
+            let staging = STAGING_BUFFER.as_mut_ptr();
+            *staging = 1; // links[0] = 1
+        }
+        update_node_state(
+            0,
+            11111,
+            NODE_TYPE_BUTTON,
+            0, // is_entry_point = 0
+            0,
+            -1,
+            0,
+            0,
+            0,
+            1, // links_count = 1
+            0,
+            -1,
+            -1,
+        );
+
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
+
+        // Press button
+        set_node_signal_export(0, NODE_SIGNAL_ACTIVE);
+        println!("After press: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
+
+        // Tick 1
+        run_tick();
+        println!("After tick 1: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
+
+        // Tick 2: Wire turns off because button pulse was 1 tick
+        run_tick();
+        println!("After tick 2: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
+
+        // Tick 3: Everything remains off
+        run_tick();
+        println!("After tick 3: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
+    }
+
+    #[test]
+    fn test_directional_button_signal_passthrough() {
+        init();
+        ensure_node_capacity_export(10);
+        ensure_chunk_capacity_export(1);
+
+        // Node 0: Source
+        // Node 1: Directional Button
+        // Node 2: Wire
+        unsafe {
+            let staging = STAGING_BUFFER.as_mut_ptr();
+            *staging = 1; // source -> dir_btn
+            *staging.add(1) = 2; // dir_btn -> wire
+        }
+
+        // Place wire (node 2)
+        update_node_state(
+            2,
+            33333,
+            NODE_TYPE_PATH,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            -1,
+            -1,
+        );
+
+        // Place directional button (node 1) linking to node 2
+        unsafe {
+            let staging = STAGING_BUFFER.as_mut_ptr();
+            *staging = 2;
+        }
+        update_node_state(
+            1,
+            22222,
+            NODE_TYPE_DIRECTIONAL_BUTTON,
+            0,
+            0,
+            -1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            -1,
+            -1,
+        );
+
+        // Place source (node 0) linking to node 1
+        unsafe {
+            let staging = STAGING_BUFFER.as_mut_ptr();
+            *staging = 1;
+        }
+        update_node_state(
+            0,
+            11111,
+            NODE_TYPE_SOURCE,
+            1,
+            0,
+            -1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            -1,
+            -1,
+        );
+
+        // Run ticks: source -> dir_btn -> wire
+        // Directional button MUST NOT flicker randomly! It must stay ACTIVE consistently.
+        for _ in 0..10 {
+            run_tick();
+        }
+
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_ACTIVE);
+        assert_eq!(get_node_signal_export(2), NODE_SIGNAL_ACTIVE);
     }
 }
 

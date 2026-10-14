@@ -590,10 +590,17 @@ impl GraphState {
                                 node.signal
                             }
                         }
-                    } else if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
-                        NODE_SIGNAL_ACTIVE
+                    } else if node.type_id() == NODE_TYPE_RANDOM {
+                        if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
+                            NODE_SIGNAL_ACTIVE
+                        } else {
+                            NODE_SIGNAL_NONE
+                        }
                     } else {
-                        NODE_SIGNAL_NONE
+                        let lut_index = ((node.node_type as usize) << 5)
+                            | ((node.signal as usize) << 3)
+                            | (signals_count as usize);
+                        unsafe { *STATE_LUT.get_unchecked(lut_index) }
                     }
                 } else {
                     let lut_index = ((node.node_type as usize) << 5)
