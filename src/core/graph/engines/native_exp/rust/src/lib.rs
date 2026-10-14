@@ -264,9 +264,7 @@ fn run_many_ticks_breakpoints(state: &mut state::GraphState, count: u32) -> bool
 pub extern "C" fn run_many_ticks(count: u32) -> bool {
     let state = get_state();
     if state.break_points.is_empty() {
-        for _ in 0..count {
-            state.update_state();
-        }
+        state.run_ticks_fast(count);
         return false;
     }
     run_many_ticks_breakpoints(state, count)
