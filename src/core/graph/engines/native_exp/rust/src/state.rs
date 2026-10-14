@@ -603,39 +603,39 @@ impl GraphState {
         let signals_count = node.signals_count;
         let flags = node.flags;
 
-        if (flags & FLAG_IS_READ_HEAD) != 0 {
-            if signals_count > 1 {
-                return NODE_SIGNAL_ACTIVE;
-            }
-            if signals_count == 0 {
-                return NODE_SIGNAL_NONE;
+        if (flags & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE)) != 0 {
+            if (flags & FLAG_IS_READ_HEAD) != 0 {
+                if signals_count > 1 {
+                    return NODE_SIGNAL_ACTIVE;
+                }
+                if signals_count == 0 {
+                    return NODE_SIGNAL_NONE;
+                }
+
+                let cold = &self.cold_nodes[node_idx as usize];
+                let cycle_idx = cold.cycle_idx;
+                let cycle_offset = cold.cycle_offset;
+
+                if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
+                    let cycle_active = cycle_state.get_bit(self.tick, cycle_offset);
+                    return if cycle_active {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    };
+                }
+                return node.signal;
             }
 
-            let cold = &self.cold_nodes[node_idx as usize];
-            let cycle_idx = cold.cycle_idx;
-            let cycle_offset = cold.cycle_offset;
-
-            if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
-                let cycle_active = cycle_state.get_bit(self.tick, cycle_offset);
-                return if cycle_active {
+            if node.node_type == NODE_TYPE_RANDOM {
+                return if signals_count > 0
+                    && random_bool(self.seed, node.pos_hash, self.tick)
+                {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
                 };
             }
-            return node.signal;
-        }
-
-        let node_type = node.type_id();
-
-        if node_type == NODE_TYPE_RANDOM {
-            return if signals_count > 0
-                && random_bool(self.seed, node.pos_hash, self.tick)
-            {
-                NODE_SIGNAL_ACTIVE
-            } else {
-                NODE_SIGNAL_NONE
-            };
         }
 
         let lut_index = ((node.node_type as usize) << 5)
