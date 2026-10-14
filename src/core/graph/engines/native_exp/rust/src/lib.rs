@@ -91,7 +91,7 @@ pub extern "C" fn update_node_state(
     if cycle_idx >= 0 {
         cold.cycle_idx = cycle_idx as u32;
         cold.cycle_offset = cycle_offset;
-        node.set_head_type(head_type);
+        cold.head_type = head_type;
         if head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ {
             flags |= FLAG_IS_CYCLE_HEAD;
         }
@@ -102,7 +102,7 @@ pub extern "C" fn update_node_state(
     } else {
         cold.cycle_idx = 0;
         cold.cycle_offset = 0;
-        node.set_head_type(CYCLE_HEAD_TYPE_NONE);
+        cold.head_type = CYCLE_HEAD_TYPE_NONE;
     }
 
     node.chunk_idx = chunk_idx;
@@ -380,7 +380,7 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
         let cold = &state.cold_nodes[node_idx as usize];
         (
             (node.flags & FLAG_IS_IN_CYCLE) != 0,
-            node.head_type(),
+            cold.head_type,
             cold.cycle_idx,
             cold.cycle_offset,
             node.chunk_idx,

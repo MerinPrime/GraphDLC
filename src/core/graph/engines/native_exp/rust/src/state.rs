@@ -122,6 +122,7 @@ pub struct NodeCold {
     pub cycle_offset: u32,
     pub blocked_link: u32,
     pub detectors: [u32; 4],
+    pub head_type: u8,
 }
 
 pub struct GraphState {
@@ -209,7 +210,7 @@ impl GraphState {
     pub fn ensure_node_capacity(&mut self, count: usize) {
         if self.nodes.len() < count {
             self.nodes.resize_with(count, || Node {
-                packed_type: 0,
+                node_type: 0,
                 flags: 0,
                 signal: 0,
                 last_signal: 0,
@@ -227,6 +228,7 @@ impl GraphState {
                 cycle_offset: 0,
                 blocked_link: u32::MAX,
                 detectors: [0u32; 4],
+                head_type: 0,
             });
             if self.render_signals.len() < count {
                 self.render_signals.resize(count, 0);
@@ -279,7 +281,7 @@ impl GraphState {
         }
         let node = &self.nodes[node_idx as usize];
         let is_in_cycle = (node.flags & FLAG_IS_IN_CYCLE) != 0;
-        let head_type = node.head_type();
+        let head_type = self.cold_nodes[node_idx as usize].head_type;
 
         if is_in_cycle && head_type == CYCLE_HEAD_TYPE_NONE {
             let cold = &self.cold_nodes[node_idx as usize];
@@ -408,16 +410,15 @@ impl GraphState {
             let is_cycle_head = (flags & FLAG_IS_CYCLE_HEAD) != 0;
 
             if is_cycle_head {
+                let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
+                let cycle_head_type = cold.head_type;
                 let blocked_count = node.blocked_count;
                 let is_active = signal == NODE_SIGNAL_ACTIVE;
 
-                if !is_active && (blocked_count == 0 || node.head_type() != CYCLE_HEAD_TYPE_CLEAR) {
+                if !is_active && (blocked_count == 0 || cycle_head_type != CYCLE_HEAD_TYPE_CLEAR) {
                     continue;
                 }
 
-                let cycle_head_type = node.head_type();
-
-                let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
                 let cycle_idx = cold.cycle_idx;
                 let cycle_offset = cold.cycle_offset;
 
@@ -643,7 +644,7 @@ impl GraphState {
             };
         }
 
-        let lut_index = ((node.packed_type as usize & 0xF8) << 4)
+        let lut_index = ((node.node_type as usize) << 7)
             | ((node.signal as usize) << 5)
             | (signals_count as usize);
         unsafe { *STATE_LUT.get_unchecked(lut_index) }
@@ -671,8 +672,9 @@ impl GraphState {
 
         for &back_idx in back_links {
             let back_node = &self.nodes[back_idx as usize];
-            let is_bypassed_head = back_node.head_type() != CYCLE_HEAD_TYPE_NONE
-                && back_node.head_type() != CYCLE_HEAD_TYPE_READ;
+            let head_type = self.cold_nodes[back_idx as usize].head_type;
+            let is_bypassed_head = head_type != CYCLE_HEAD_TYPE_NONE
+                && head_type != CYCLE_HEAD_TYPE_READ;
 
             if is_bypassed_head {
                 continue;
@@ -734,10 +736,8 @@ impl GraphState {
         let mut removed: HashSet<u32> = HashSet::new();
 
         for &node_idx in cycle_nodes {
-            let is_head = {
-                let node = &self.nodes[node_idx as usize];
-                node.head_type() != CYCLE_HEAD_TYPE_NONE && node.head_type() != CYCLE_HEAD_TYPE_READ
-            };
+            let head_type = self.cold_nodes[node_idx as usize].head_type;
+            let is_head = head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ;
 
             if is_head {
                 self.mark_node_as_changed_non_temp(node_idx);
@@ -757,13 +757,12 @@ impl GraphState {
         }
 
         for &head_idx in cycle_heads {
-            let head_node = &self.nodes[head_idx as usize];
             let head_cold = &self.cold_nodes[head_idx as usize];
             if head_cold.cycle_idx == cycle_idx {
                 continue;
             }
 
-            if head_node.head_type() != CYCLE_HEAD_TYPE_NONE {
+            if head_cold.head_type != CYCLE_HEAD_TYPE_NONE {
                 self.mark_node_as_changed_non_temp(head_idx);
                 self.mark_node_as_changed(head_idx);
             }
