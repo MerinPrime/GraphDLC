@@ -476,13 +476,14 @@ impl GraphState {
                                 for k in 0..links_count {
                                     let edge_idx = links[k] as usize;
                                     let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
+                                    let flags = edge.flags;
                                     if edge_idx as u32 == blocked_link_idx {
                                         edge.blocked_count = edge.blocked_count.wrapping_add(delta);
                                     } else {
                                         edge.signals_count = edge.signals_count.wrapping_add(delta);
                                     }
-                                    if edge.flags & FLAG_IS_CHANGED == 0 {
-                                        edge.flags |= FLAG_IS_CHANGED;
+                                    if flags & FLAG_IS_CHANGED == 0 {
+                                        edge.flags = flags | FLAG_IS_CHANGED;
                                         unsafe {
                                             *write_ptr = edge_idx as u32;
                                             write_ptr = write_ptr.add(1);
@@ -493,10 +494,11 @@ impl GraphState {
                                 for k in 0..links_count {
                                     let edge_idx = links[k] as usize;
                                     let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
+                                    let flags = edge.flags;
                                     edge.signals_count = edge.signals_count.wrapping_add(delta);
 
-                                    if edge.flags & FLAG_IS_CHANGED == 0 {
-                                        edge.flags |= FLAG_IS_CHANGED;
+                                    if flags & FLAG_IS_CHANGED == 0 {
+                                        edge.flags = flags | FLAG_IS_CHANGED;
                                         unsafe {
                                             *write_ptr = edge_idx as u32;
                                             write_ptr = write_ptr.add(1);
@@ -517,9 +519,10 @@ impl GraphState {
                         if detectors_count == 1 {
                             let detector_idx = unsafe { *detectors.get_unchecked(0) } as usize;
                             let detector = unsafe { &mut *nodes_ptr.add(detector_idx) };
+                            let flags = detector.flags;
                             detector.signals_count = sig_count;
-                            if detector.flags & FLAG_IS_CHANGED == 0 {
-                                detector.flags |= FLAG_IS_CHANGED;
+                            if flags & FLAG_IS_CHANGED == 0 {
+                                detector.flags = flags | FLAG_IS_CHANGED;
                                 unsafe {
                                     *write_ptr = detector_idx as u32;
                                     write_ptr = write_ptr.add(1);
@@ -529,9 +532,10 @@ impl GraphState {
                             for k in 0..detectors_count {
                                 let detector_idx = detectors[k] as usize;
                                 let detector = unsafe { &mut *nodes_ptr.add(detector_idx) };
+                                let flags = detector.flags;
                                 detector.signals_count = sig_count;
-                                if detector.flags & FLAG_IS_CHANGED == 0 {
-                                    detector.flags |= FLAG_IS_CHANGED;
+                                if flags & FLAG_IS_CHANGED == 0 {
+                                    detector.flags = flags | FLAG_IS_CHANGED;
                                     unsafe {
                                         *write_ptr = detector_idx as u32;
                                         write_ptr = write_ptr.add(1);
