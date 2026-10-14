@@ -512,6 +512,14 @@ export class Graph {
         return cycle;
     }
 
+    public flushCycles(): void {
+        this.cycleManager.flushSync();
+    }
+
+    public getCycles(): (GraphCycle | null)[] {
+        return this.cycles;
+    }
+
     public removeCycle(cycle: GraphCycle) {
         this.engine.removeCycle(cycle);
 
