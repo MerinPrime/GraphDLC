@@ -5,7 +5,7 @@ pub const FLAG_IS_UPDATED: u8 = 1 << 3;
 pub const FLAG_IS_CHANGED: u8 = 1 << 4;
 pub const FLAG_IS_READ_HEAD: u8 = 1 << 5;
 pub const FLAG_IS_CYCLE_HEAD: u8 = 1 << 6;
-pub const FLAG_IS_IN_CYCLE: u8 = 1 << 7;
+pub const FLAG_IS_REQUEUE_TYPE: u8 = 1 << 7;
 
 pub const NODE_TYPE_EMPTY: u8 = 0;
 pub const NODE_TYPE_PATH: u8 = 1;

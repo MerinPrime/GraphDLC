@@ -92,10 +92,10 @@ pub extern "C" fn update_node_state(
         cold.cycle_idx = cycle_idx as u32;
         cold.cycle_offset = cycle_offset;
         cold.head_type = head_type;
+        cold.is_in_cycle = true;
         if head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ {
             flags |= FLAG_IS_CYCLE_HEAD;
         }
-        flags |= FLAG_IS_IN_CYCLE;
         if head_type == CYCLE_HEAD_TYPE_READ {
             flags |= FLAG_IS_READ_HEAD;
         }
@@ -103,6 +103,14 @@ pub extern "C" fn update_node_state(
         cold.cycle_idx = 0;
         cold.cycle_offset = 0;
         cold.head_type = CYCLE_HEAD_TYPE_NONE;
+        cold.is_in_cycle = false;
+    }
+
+    if node_type == NODE_TYPE_RANDOM
+        || node_type == NODE_TYPE_BUTTON
+        || node_type == NODE_TYPE_DIRECTIONAL_BUTTON
+    {
+        flags |= FLAG_IS_REQUEUE_TYPE;
     }
 
     node.chunk_idx = chunk_idx;
@@ -379,7 +387,7 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
         let node = &state.nodes[node_idx as usize];
         let cold = &state.cold_nodes[node_idx as usize];
         (
-            (node.flags & FLAG_IS_IN_CYCLE) != 0,
+            cold.is_in_cycle,
             cold.head_type,
             cold.cycle_idx,
             cold.cycle_offset,

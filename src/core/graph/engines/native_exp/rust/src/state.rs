@@ -5,12 +5,8 @@ use crate::node::Node;
 use crate::rng::random_bool;
 use std::collections::HashSet;
 
-const REQUEUE_FLAGS: u8 =
-    FLAG_IS_UPDATED | FLAG_IS_ADDITIONAL_UPDATE | FLAG_IS_READ_HEAD | FLAG_IS_ENTRY_POINT;
-
-const REQUEUE_TYPES: u64 = (1u64 << (NODE_TYPE_BUTTON as u32))
-    | (1u64 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
-    | (1u64 << (NODE_TYPE_RANDOM as u32));
+const REQUEUE_MASK: u8 =
+    FLAG_IS_UPDATED | FLAG_IS_ADDITIONAL_UPDATE | FLAG_IS_READ_HEAD | FLAG_IS_ENTRY_POINT | FLAG_IS_REQUEUE_TYPE;
 
 const fn build_state_lut() -> [u8; 512] {
     let mut lut = [NODE_SIGNAL_NONE; 512];
@@ -123,6 +119,7 @@ pub struct NodeCold {
     pub blocked_link: u32,
     pub detectors: [u32; 4],
     pub head_type: u8,
+    pub is_in_cycle: bool,
 }
 
 pub struct GraphState {
@@ -229,6 +226,7 @@ impl GraphState {
                 blocked_link: u32::MAX,
                 detectors: [0u32; 4],
                 head_type: 0,
+                is_in_cycle: false,
             });
             if self.render_signals.len() < count {
                 self.render_signals.resize(count, 0);
@@ -280,11 +278,8 @@ impl GraphState {
             return NODE_SIGNAL_NONE;
         }
         let node = &self.nodes[node_idx as usize];
-        let is_in_cycle = (node.flags & FLAG_IS_IN_CYCLE) != 0;
-        let head_type = self.cold_nodes[node_idx as usize].head_type;
-
-        if is_in_cycle && head_type == CYCLE_HEAD_TYPE_NONE {
-            let cold = &self.cold_nodes[node_idx as usize];
+        let cold = &self.cold_nodes[node_idx as usize];
+        if cold.is_in_cycle && cold.head_type == CYCLE_HEAD_TYPE_NONE {
             let cycle_idx = cold.cycle_idx;
             let cycle_offset = cold.cycle_offset;
             if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
@@ -538,25 +533,24 @@ impl GraphState {
                 node.last_signal = signal;
             }
 
-            let should_requeue = if (flags & REQUEUE_FLAGS) != 0 {
-                (flags & FLAG_IS_UPDATED) != 0
+            if (flags & REQUEUE_MASK) != 0 {
+                let should_requeue = (flags & FLAG_IS_UPDATED) != 0
                     || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
                     || ((flags & FLAG_IS_READ_HEAD) != 0 && node.signals_count > 0)
                     || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0)
-            } else if ((REQUEUE_TYPES >> (node_type as u32 & 63)) & 1) != 0 {
-                (node_type == NODE_TYPE_RANDOM && node.signals_count > 0)
-                    || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
-            } else {
-                false
-            };
+                    || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
+                        (node_type == NODE_TYPE_RANDOM && node.signals_count > 0)
+                            || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
+                    ));
 
-            if should_requeue {
-                node.flags &= !FLAG_IS_UPDATED;
-                if node.flags & FLAG_IS_CHANGED == 0 {
-                    node.flags |= FLAG_IS_CHANGED;
-                    unsafe {
-                        *temp_ptr.add(temp_len) = node_idx;
-                        temp_len += 1;
+                if should_requeue {
+                    node.flags &= !FLAG_IS_UPDATED;
+                    if node.flags & FLAG_IS_CHANGED == 0 {
+                        node.flags |= FLAG_IS_CHANGED;
+                        unsafe {
+                            *temp_ptr.add(temp_len) = node_idx;
+                            temp_len += 1;
+                        }
                     }
                 }
             }
