@@ -467,7 +467,6 @@ impl GraphState {
                 if is_changed {
                     let node_type = node.type_id();
                     let is_active = signal == NODE_SIGNAL_ACTIVE;
-                    let delta = ((is_active as u8) << 1).wrapping_sub(1);
                     let is_delayed = ((signal | last_signal) & 2 != 0)
                         && (((node_type == NODE_TYPE_DELAY) & (signal == NODE_SIGNAL_PENDING))
                             | ((!is_active) & (last_signal == NODE_SIGNAL_PENDING)));
@@ -476,6 +475,7 @@ impl GraphState {
                         let links_count = node.links_count as usize;
 
                         if links_count != 0 {
+                            let delta = ((is_active as u8) << 1).wrapping_sub(1);
                             let links = &node.links;
                             let is_blocker = HAS_BLOCKERS && node_type == NODE_TYPE_BLOCKER;
                             if is_blocker {
@@ -503,8 +503,6 @@ impl GraphState {
                                     let edge_idx = links[k] as usize;
                                     let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
                                     let flags = edge.flags;
-                                    edge.signals_count = edge.signals_count.wrapping_add(delta);
-
                                     if flags & FLAG_IS_CHANGED == 0 {
                                         edge.flags = flags | FLAG_IS_CHANGED;
                                         unsafe {
@@ -512,6 +510,7 @@ impl GraphState {
                                             write_ptr = write_ptr.add(1);
                                         }
                                     }
+                                    edge.signals_count = edge.signals_count.wrapping_add(delta);
                                 }
                             }
                         }
