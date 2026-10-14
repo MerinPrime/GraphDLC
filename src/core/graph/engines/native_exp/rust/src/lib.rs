@@ -121,10 +121,15 @@ pub extern "C" fn update_node_state(
     };
 
     cold.blocked_link = if blocked_link >= 0 {
+        state.has_blockers = true;
         blocked_link as u32
     } else {
         u32::MAX
     };
+
+    if node_type == NODE_TYPE_BLOCKER {
+        state.has_blockers = true;
+    }
 
     let old_links = node.links;
     let old_links_count = node.links_count.min(4) as usize;

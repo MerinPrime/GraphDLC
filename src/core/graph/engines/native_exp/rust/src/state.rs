@@ -138,6 +138,7 @@ pub struct GraphState {
     pub detected_links: Vec<Option<u32>>,
     pub in_changed_list: Vec<u64>,
     pub has_external_marks: bool,
+    pub has_blockers: bool,
     pub render_signals: Vec<u8>,
 }
 
@@ -179,6 +180,7 @@ impl GraphState {
             detected_links: vec![None; 4096],
             in_changed_list: vec![0; 64],
             has_external_marks: false,
+            has_blockers: false,
             render_signals: vec![0; 4096],
         }
     }
@@ -200,6 +202,7 @@ impl GraphState {
         self.in_changed_list.clear();
         self.in_changed_list.resize(64, 0);
         self.has_external_marks = false;
+        self.has_blockers = false;
         self.render_signals.clear();
         self.render_signals.resize(4096, 0);
     }
@@ -394,6 +397,7 @@ impl GraphState {
         let mut len = self.changed_nodes.len();
         let mut tick = self.tick;
         let mut swapped = false;
+        let has_blockers = self.has_blockers;
 
         for _ in 0..count {
             let mut write_ptr = next_ptr;
@@ -469,7 +473,7 @@ impl GraphState {
 
                         if links_count != 0 {
                             let links = &node.links;
-                            let is_blocker = node_type == NODE_TYPE_BLOCKER;
+                            let is_blocker = has_blockers && node_type == NODE_TYPE_BLOCKER;
                             if is_blocker {
                                 let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
                                 let blocked_link_idx = cold.blocked_link;
@@ -608,7 +612,7 @@ impl GraphState {
                     unsafe { *STATE_LUT.get_unchecked(lut_index) }
                 };
 
-                if node.blocked_count > 0 {
+                if has_blockers && node.blocked_count > 0 {
                     signal = NODE_SIGNAL_NONE;
                 }
 
