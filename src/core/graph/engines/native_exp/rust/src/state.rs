@@ -12,14 +12,14 @@ const REQUEUE_TYPES: u64 = (1u64 << (NODE_TYPE_BUTTON as u32))
     | (1u64 << (NODE_TYPE_DIRECTIONAL_BUTTON as u32))
     | (1u64 << (NODE_TYPE_RANDOM as u32));
 
-const fn build_state_lut() -> [u8; 4096] {
-    let mut lut = [NODE_SIGNAL_NONE; 4096];
+const fn build_state_lut() -> [u8; 512] {
+    let mut lut = [NODE_SIGNAL_NONE; 512];
     let mut t = 0usize;
-    while t < 32 {
+    while t < 16 {
         let mut sig = 0usize;
         while sig < 4 {
             let mut sc = 0usize;
-            while sc < 32 {
+            while sc < 8 {
                 let cat = if sc == 0 {
                     0
                 } else if sc == 1 {
@@ -29,7 +29,7 @@ const fn build_state_lut() -> [u8; 4096] {
                 } else {
                     3
                 };
-                let idx = (t << 7) | (sig << 5) | sc;
+                let idx = (t << 5) | (sig << 3) | sc;
                 let sig_u8 = sig as u8;
                 lut[idx] = match t as u8 {
                     NODE_TYPE_PATH
@@ -115,7 +115,7 @@ const fn build_state_lut() -> [u8; 4096] {
     lut
 }
 
-static STATE_LUT: [u8; 4096] = build_state_lut();
+static STATE_LUT: [u8; 512] = build_state_lut();
 
 pub struct NodeCold {
     pub cycle_idx: u32,
@@ -644,8 +644,8 @@ impl GraphState {
             };
         }
 
-        let lut_index = ((node.node_type as usize) << 7)
-            | ((node.signal as usize) << 5)
+        let lut_index = ((node.node_type as usize) << 5)
+            | ((node.signal as usize) << 3)
             | (signals_count as usize);
         unsafe { *STATE_LUT.get_unchecked(lut_index) }
     }
