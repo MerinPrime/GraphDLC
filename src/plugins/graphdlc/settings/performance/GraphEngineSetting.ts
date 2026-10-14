@@ -8,6 +8,7 @@ export const enum GraphEngine {
     STANDARD = 1,
     ENHANCED = 2,
     NATIVE = 3,
+    NATIVE_EXP = 4,
 }
 
 const NameLocale = new I18nText(
@@ -58,6 +59,14 @@ const NativeLocale = new I18nText(
     'Natif',
 );
 
+const NativeExpLocale = new I18nText(
+    'Native (Experimental)',
+    'Нативный (Экспериментальный)',
+    'Нативний (Експериментальний)',
+    'Натыўны (Эксперыментальны)',
+    'Natif (Expérimental)',
+);
+
 const DefaultEngine = IS_WASM_SUPPORTED
     ? GraphEngine.NATIVE
     : GraphEngine.STANDARD;
@@ -88,6 +97,11 @@ export const GraphEngineSetting = new SelectSetting<GraphEngine>(
         {
             value: GraphEngine.NATIVE,
             label: NativeLocale,
+            disabled: !IS_WASM_SUPPORTED,
+        },
+        {
+            value: GraphEngine.NATIVE_EXP,
+            label: NativeExpLocale,
             disabled: !IS_WASM_SUPPORTED,
         },
     ],

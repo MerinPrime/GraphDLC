@@ -6,6 +6,7 @@ import {
 import type { Graph } from '../ast/Graph';
 import { DefaultEngine } from './default/DefaultEngine';
 import { NativeEngine } from './native/NativeEngine';
+import { NativeExpEngine } from './native_exp/NativeExpEngine';
 import { RawEngine } from './raw/RawEngine';
 
 export namespace EngineFactory {
@@ -22,6 +23,8 @@ export namespace EngineFactory {
                 return new RawEngine();
             case GraphEngine.NATIVE:
                 return new NativeEngine();
+            case GraphEngine.NATIVE_EXP:
+                return new NativeExpEngine();
         }
     }
 }
