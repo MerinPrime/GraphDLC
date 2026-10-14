@@ -577,7 +577,9 @@ impl GraphState {
                     };
 
                     if should_requeue {
-                        node.flags &= !FLAG_IS_UPDATED;
+                        if (flags & FLAG_IS_UPDATED) != 0 {
+                            node.flags &= !FLAG_IS_UPDATED;
+                        }
                         if node.flags & FLAG_IS_CHANGED == 0 {
                             node.flags |= FLAG_IS_CHANGED;
                             unsafe {
