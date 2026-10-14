@@ -168,12 +168,12 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
     for _ in 0..snapshot_temp_changed_len {
         let node_idx = reader.read_u32();
         if visited_changed.insert(node_idx) {
-            state.mark_node_as_changed(node_idx);
+            state.mark_node_as_changed_non_temp(node_idx);
         }
     }
     for node_idx in updated_temp_nodes {
         if visited_changed.insert(node_idx) {
-            state.mark_node_as_changed(node_idx);
+            state.mark_node_as_changed_non_temp(node_idx);
         }
     }
 

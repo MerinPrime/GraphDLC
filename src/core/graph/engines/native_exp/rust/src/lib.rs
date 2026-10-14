@@ -74,14 +74,14 @@ pub extern "C" fn update_node_state(
     state.update_node_back_links(node_idx, &links[..safe_links_count]);
 
     let existing_flags = state.nodes[node_idx as usize].flags;
-    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_CHANGED | FLAG_IS_BREAKPOINT);
+    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BREAKPOINT);
 
     let node = &mut state.nodes[node_idx as usize];
     node.set_type_id(node_type);
     node.pos_hash = pos_hash;
 
     if is_entry_point != 0 {
-        flags |= FLAG_IS_ENTRY_POINT;
+        flags |= FLAG_IS_ENTRY_POINT | FLAG_IS_UPDATED;
     }
     if is_additional_update != 0 {
         flags |= FLAG_IS_ADDITIONAL_UPDATE;
@@ -412,7 +412,6 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     } else {
         state.nodes[node_idx as usize].signal = signal;
         state.mark_node_as_changed_non_temp(node_idx);
-        state.mark_node_as_changed(node_idx);
     }
 
     state.make_dirty_chunk(chunk_idx);
@@ -483,3 +482,97 @@ pub extern "C" fn deserialize_state_export(len: u32) {
         deserialize_state(state, data);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_runtime_source_placement() {
+        init();
+        ensure_node_capacity_export(10);
+        ensure_chunk_capacity_export(1);
+
+        // Place a source arrow (node 0)
+        update_node_state(
+            0,
+            12345,
+            NODE_TYPE_SOURCE,
+            1, // is_entry_point
+            0, // is_additional_update
+            -1, // cycle_idx
+            0,
+            0,
+            0, // chunk_idx
+            0, // links_count
+            0, // detectors_count
+            -1,
+            -1,
+        );
+
+        println!("Before run_tick: signal = {}", get_node_signal_export(0));
+        let changed = run_tick();
+        println!("After run_tick: signal = {}, changed = {}", get_node_signal_export(0), changed);
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
+    }
+
+    #[test]
+    fn test_runtime_source_propagation() {
+        init();
+        ensure_node_capacity_export(10);
+        ensure_chunk_capacity_export(1);
+
+        // Place wire (node 1)
+        update_node_state(
+            1,
+            22222,
+            NODE_TYPE_PATH,
+            0, // not entry point
+            0,
+            -1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            -1,
+            -1,
+        );
+
+        // Place source (node 0) linking to node 1
+        unsafe {
+            let staging = STAGING_BUFFER.as_mut_ptr();
+            *staging = 1; // links[0] = 1
+        }
+        update_node_state(
+            0,
+            11111,
+            NODE_TYPE_SOURCE,
+            1, // is_entry_point
+            0,
+            -1,
+            0,
+            0,
+            0,
+            1, // links_count = 1
+            0,
+            -1,
+            -1,
+        );
+
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
+
+        // Tick 1: Source should turn on
+        run_tick();
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
+
+        // Tick 2: Signal should propagate to wire (node 1)
+        run_tick();
+        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
+        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_ACTIVE);
+    }
+}
+
+

@@ -315,16 +315,6 @@ impl GraphState {
     }
 
     #[inline(always)]
-    pub fn mark_node_as_changed(&mut self, node_idx: u32) {
-        let node = &mut self.nodes[node_idx as usize];
-        if node.flags & FLAG_IS_CHANGED != 0 {
-            return;
-        }
-        node.flags |= FLAG_IS_CHANGED;
-        self.temp_changed_nodes.push(node_idx);
-    }
-
-    #[inline(always)]
     pub fn mark_node_as_changed_non_temp(&mut self, node_idx: u32) {
         if !self.has_external_marks {
             for &idx in &self.changed_nodes {
@@ -746,8 +736,8 @@ impl GraphState {
         n.flags |= FLAG_IS_UPDATED;
 
         self.mark_node_as_changed_non_temp(node_idx);
-        self.mark_node_as_changed(node_idx);
     }
+
 
     pub fn on_cycle_build(
         &mut self,
@@ -789,7 +779,6 @@ impl GraphState {
 
             if is_head {
                 self.mark_node_as_changed_non_temp(node_idx);
-                self.mark_node_as_changed(node_idx);
             } else {
                 removed.insert(node_idx);
             }
@@ -812,7 +801,6 @@ impl GraphState {
 
             if head_cold.head_type != CYCLE_HEAD_TYPE_NONE {
                 self.mark_node_as_changed_non_temp(head_idx);
-                self.mark_node_as_changed(head_idx);
             }
         }
 
@@ -874,7 +862,6 @@ impl GraphState {
 
             self.make_dirty_chunk(chunk_idx);
             self.mark_node_as_changed_non_temp(node_idx);
-            self.mark_node_as_changed(node_idx);
         }
 
         let mut affected_nodes = HashSet::new();
