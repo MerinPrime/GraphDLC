@@ -457,8 +457,8 @@ impl GraphState {
                 if is_changed {
                     let is_active = signal == NODE_SIGNAL_ACTIVE;
                     let delta = ((is_active as u8) << 1).wrapping_sub(1);
-                    let is_delayed = (node_type == NODE_TYPE_DELAY && signal == NODE_SIGNAL_PENDING)
-                        || (!is_active && last_signal == NODE_SIGNAL_PENDING);
+                    let is_delayed = ((node_type == NODE_TYPE_DELAY) & (signal == NODE_SIGNAL_PENDING))
+                        | ((!is_active) & (last_signal == NODE_SIGNAL_PENDING));
 
                     if !is_delayed {
                         let links_count = node.links_count as usize;
