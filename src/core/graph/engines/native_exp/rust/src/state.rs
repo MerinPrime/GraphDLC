@@ -541,16 +541,15 @@ impl GraphState {
                 node.last_signal = signal;
             }
 
-            let signals_count = node.signals_count;
             if ((flags & REQUEUE_FLAGS) != 0
                 || ((REQUEUE_TYPES >> (node_type as u32 & 63)) & 1) != 0)
                 && ((flags & FLAG_IS_UPDATED) != 0
                     || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
                     || (signal != NODE_SIGNAL_NONE
-                        && signals_count == 0
+                        && node.signals_count == 0
                         && (node_type == NODE_TYPE_BUTTON
                             || node_type == NODE_TYPE_DIRECTIONAL_BUTTON))
-                    || (signals_count > 0
+                    || (node.signals_count > 0
                         && (node_type == NODE_TYPE_RANDOM || (flags & FLAG_IS_READ_HEAD) != 0))
                     || (self.tick == 0 && (flags & FLAG_IS_ENTRY_POINT) != 0))
             {
