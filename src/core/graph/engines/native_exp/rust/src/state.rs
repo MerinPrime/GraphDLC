@@ -396,7 +396,7 @@ impl GraphState {
         let mut swapped = false;
 
         for _ in 0..count {
-            let mut next_len = 0usize;
+            let mut write_ptr = next_ptr;
 
             for i in 0..len {
                 let node_idx = unsafe { *curr_ptr.add(i) };
@@ -443,8 +443,8 @@ impl GraphState {
                     if node.flags & FLAG_IS_CHANGED == 0 {
                         node.flags |= FLAG_IS_CHANGED;
                         unsafe {
-                            *next_ptr.add(next_len) = node_idx;
-                            next_len += 1;
+                            *write_ptr = node_idx;
+                            write_ptr = write_ptr.add(1);
                         }
                     }
                     continue;
@@ -480,8 +480,8 @@ impl GraphState {
                                     if edge.flags & FLAG_IS_CHANGED == 0 {
                                         edge.flags |= FLAG_IS_CHANGED;
                                         unsafe {
-                                            *next_ptr.add(next_len) = edge_idx as u32;
-                                            next_len += 1;
+                                            *write_ptr = edge_idx as u32;
+                                            write_ptr = write_ptr.add(1);
                                         }
                                     }
                                 }
@@ -494,8 +494,8 @@ impl GraphState {
                                     if edge.flags & FLAG_IS_CHANGED == 0 {
                                         edge.flags |= FLAG_IS_CHANGED;
                                         unsafe {
-                                            *next_ptr.add(next_len) = edge_idx as u32;
-                                            next_len += 1;
+                                            *write_ptr = edge_idx as u32;
+                                            write_ptr = write_ptr.add(1);
                                         }
                                     }
                                 }
@@ -517,8 +517,8 @@ impl GraphState {
                             if detector.flags & FLAG_IS_CHANGED == 0 {
                                 detector.flags |= FLAG_IS_CHANGED;
                                 unsafe {
-                                    *next_ptr.add(next_len) = detector_idx as u32;
-                                    next_len += 1;
+                                    *write_ptr = detector_idx as u32;
+                                    write_ptr = write_ptr.add(1);
                                 }
                             }
                         } else {
@@ -529,8 +529,8 @@ impl GraphState {
                                 if detector.flags & FLAG_IS_CHANGED == 0 {
                                     detector.flags |= FLAG_IS_CHANGED;
                                     unsafe {
-                                        *next_ptr.add(next_len) = detector_idx as u32;
-                                        next_len += 1;
+                                        *write_ptr = detector_idx as u32;
+                                        write_ptr = write_ptr.add(1);
                                     }
                                 }
                             }
@@ -554,13 +554,15 @@ impl GraphState {
                         if node.flags & FLAG_IS_CHANGED == 0 {
                             node.flags |= FLAG_IS_CHANGED;
                             unsafe {
-                                *next_ptr.add(next_len) = node_idx;
-                                next_len += 1;
+                                *write_ptr = node_idx;
+                                write_ptr = write_ptr.add(1);
                             }
                         }
                     }
                 }
             }
+
+            let next_len = unsafe { write_ptr.offset_from(next_ptr) as usize };
 
             for i in 0..next_len {
                 let node_idx = unsafe { *next_ptr.add(i) };
