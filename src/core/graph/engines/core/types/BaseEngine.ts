@@ -1,6 +1,8 @@
+import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import type { Bounds } from 'src/core/utils/Bounds';
 import { StaticSeedSetting } from 'src/plugins/graphdlc/settings/tools/StaticSeedSetting';
 import type { NodeSignal } from '../NodeSignal';
 import { StateRewinder } from '../StateRewinder';
@@ -167,8 +169,35 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         return this.state.isChanged();
     }
 
-    public getDirtyChunks(markUndirty: boolean): ReadonlyArray<number> {
+    public getDirtyChunks(
+        markUndirty: boolean,
+        bounds?: Bounds,
+    ): ReadonlyArray<number> {
+        if (bounds) {
+            const minChunkX = Math.floor(bounds.minX / CHUNK_SIZE);
+            const minChunkY = Math.floor(bounds.minY / CHUNK_SIZE);
+            const maxChunkX = Math.floor(bounds.maxX / CHUNK_SIZE);
+            const maxChunkY = Math.floor(bounds.maxY / CHUNK_SIZE);
+
+            const state = this.state as any;
+            if (typeof state.getDirtyChunksInViewport === 'function') {
+                return state.getDirtyChunksInViewport(
+                    markUndirty,
+                    minChunkX,
+                    minChunkY,
+                    maxChunkX,
+                    maxChunkY,
+                );
+            }
+        }
         return this.state.getDirtyChunks(markUndirty);
+    }
+
+    public registerChunk(chunkIdx: number, x: number, y: number): void {
+        const state = this.state as any;
+        if (typeof state.registerChunk === 'function') {
+            state.registerChunk(chunkIdx, x, y);
+        }
     }
 
     public makeDirtyChunk(chunkIdx: number): void {

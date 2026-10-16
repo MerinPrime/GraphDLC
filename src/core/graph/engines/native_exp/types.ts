@@ -6,6 +6,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     clear(): void;
     set_seed(seed: number): void;
     reset_node_signal(node_idx: number): void;
+    register_chunk_export(chunk_idx: number, x: number, y: number): void;
     update_node_state(
         node_idx: number,
         pos_hash: number,
@@ -16,6 +17,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
         cycle_offset: number,
         head_type: number,
         chunk_idx: number,
+        local_idx: number,
         links_count: number,
         detectors_count: number,
         detected_link: number,
@@ -37,6 +39,14 @@ export interface RustEngineExports extends WebAssembly.Exports {
     get_nodes_signals_bulk_export(count: number): void;
     get_dirty_chunks_count(): number;
     copy_dirty_chunks(out_ptr: number, mark_undirty: number): number;
+    copy_dirty_chunks_in_viewport(
+        out_ptr: number,
+        mark_undirty: number,
+        min_x: number,
+        min_y: number,
+        max_x: number,
+        max_y: number,
+    ): number;
     set_node_signal_export(node_idx: number, signal: number): void;
     on_cycle_build_export(
         cycle_idx: number,

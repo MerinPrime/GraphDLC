@@ -1,6 +1,7 @@
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import type { Bounds } from 'src/core/utils/Bounds';
 import type { NodeSignal } from '../NodeSignal';
 
 export interface IEngine {
@@ -12,11 +13,15 @@ export interface IEngine {
     getBreakpoint(doReset?: boolean): number | false;
     isChanged(): boolean;
 
-    getDirtyChunks(markUndirty: boolean): ReadonlyArray<number>;
+    getDirtyChunks(
+        markUndirty: boolean,
+        bounds?: Bounds,
+    ): ReadonlyArray<number>;
     makeDirtyChunk(chunkIdx: number): void;
     makeUndirtyChunk(chunkIdx: number): void;
     getNodeSignal(nodeIdx: number): NodeSignal;
     fillNodeSignalsBulk?(nodeIndices: Uint32Array): Uint8Array;
+    registerChunk?(chunkIdx: number, x: number, y: number): void;
 
     reset(): void;
 

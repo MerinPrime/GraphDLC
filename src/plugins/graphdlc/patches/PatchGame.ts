@@ -86,18 +86,13 @@ export const PatchGame: IPatcher = (
 
                 graph.markCyclesChunksDirty();
 
-                const dirtyChunksIdx = engine.getDirtyChunks(false);
+                const dirtyChunksIdx = engine.getDirtyChunks(false, bounds);
                 const visibleChunks: Array<{ chunk: Chunk; idx: number }> = [];
 
                 for (let i = 0; i < dirtyChunksIdx.length; i++) {
                     const dirtyChunkIdx = dirtyChunksIdx[i];
                     const chunk = graph.getChunkByIdx(dirtyChunkIdx);
-                    if (
-                        bounds.InBounds(
-                            chunk.x * CHUNK_SIZE,
-                            chunk.y * CHUNK_SIZE,
-                        )
-                    ) {
+                    if (chunk) {
                         visibleChunks.push({ chunk, idx: dirtyChunkIdx });
                     }
                 }
