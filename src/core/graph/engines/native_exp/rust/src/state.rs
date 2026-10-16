@@ -565,27 +565,28 @@ impl GraphState {
                 }
 
                 if (flags & REQUEUE_MASK) != 0 {
-                    let should_requeue = if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
+                    let should_requeue = if (flags & FLAG_IS_UPDATED) != 0 {
+                        node.flags &= !FLAG_IS_UPDATED;
+                        true
+                    } else if is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0 {
+                        true
+                    } else if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
                         node.signals_count > 0
+                    } else if (flags & FLAG_IS_REQUEUE_TYPE) != 0 {
+                        if node.type_id() == NODE_TYPE_RANDOM {
+                            node.signals_count > 0
+                        } else {
+                            signal != NODE_SIGNAL_NONE && node.signals_count == 0
+                        }
                     } else {
-                        (flags & FLAG_IS_UPDATED) != 0
-                            || (is_changed && (flags & FLAG_IS_ADDITIONAL_UPDATE) != 0)
-                            || ((flags & FLAG_IS_REQUEUE_TYPE) != 0 && (
-                                (node.type_id() == NODE_TYPE_RANDOM && node.signals_count > 0)
-                                    || (signal != NODE_SIGNAL_NONE && node.signals_count == 0)
-                            ))
+                        false
                     };
 
-                    if should_requeue {
-                        if (flags & FLAG_IS_UPDATED) != 0 {
-                            node.flags &= !FLAG_IS_UPDATED;
-                        }
-                        if node.flags & FLAG_IS_CHANGED == 0 {
-                            node.flags |= FLAG_IS_CHANGED;
-                            unsafe {
-                                *write_ptr = node_idx;
-                                write_ptr = write_ptr.add(1);
-                            }
+                    if should_requeue && (node.flags & FLAG_IS_CHANGED) == 0 {
+                        node.flags |= FLAG_IS_CHANGED;
+                        unsafe {
+                            *write_ptr = node_idx;
+                            write_ptr = write_ptr.add(1);
                         }
                     }
                 }
