@@ -32,7 +32,7 @@ function zipDirectory(sourceDir: string, outPath: string): Promise<void> {
     });
 }
 
-let cachedWasmBase64: string | null = null;
+const cachedWasmBase64 = new Map<string, string>();
 
 const rustWasmPlugin = (): RolldownPlugin => ({
     name: 'rust-wasm-plugin',
@@ -50,8 +50,9 @@ const rustWasmPlugin = (): RolldownPlugin => ({
     load(id) {
         if (!id.endsWith('Cargo.toml')) return null;
 
-        if (cachedWasmBase64) {
-            return `export default ${JSON.stringify(cachedWasmBase64)};`;
+        const cached = cachedWasmBase64.get(id);
+        if (cached) {
+            return `export default ${JSON.stringify(cached)};`;
         }
 
         const rustDir = path.dirname(id);
@@ -85,7 +86,7 @@ const rustWasmPlugin = (): RolldownPlugin => ({
             const cargoToml = fs.readFileSync(id, 'utf8');
             let libName = 'graph';
 
-            const libMatch = cargoToml.match(/\[lib\].*?name\s*=\s*"([^"]+)"/s);
+            const libMatch = cargoToml.match(/\[lib\][^\[]*?name\s*=\s*"([^"]+)"/);
             if (libMatch) {
                 libName = libMatch[1].replace(/-/g, '_');
             } else {
@@ -127,13 +128,14 @@ const rustWasmPlugin = (): RolldownPlugin => ({
             }
 
             const wasmBuffer = fs.readFileSync(wasmPath);
-            cachedWasmBase64 = wasmBuffer.toString('base64');
+            const base64 = wasmBuffer.toString('base64');
+            cachedWasmBase64.set(id, base64);
 
             console.log(
-                `[Rolldown] Rust compiled. WASM: ${(wasmBuffer.length / 1024).toFixed(2)} KB, Base64: ${(cachedWasmBase64.length / 1024).toFixed(2)} KB\n`,
+                `[Rolldown] Rust compiled. WASM: ${(wasmBuffer.length / 1024).toFixed(2)} KB, Base64: ${(base64.length / 1024).toFixed(2)} KB\n`,
             );
 
-            return `export default ${JSON.stringify(cachedWasmBase64)};`;
+            return `export default ${JSON.stringify(base64)};`;
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : String(err);
             this.error(`Rust compilation failed: ${message}`);

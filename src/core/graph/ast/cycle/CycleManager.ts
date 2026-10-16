@@ -377,6 +377,20 @@ export class CycleManager implements IGraphListener {
         this.flush();
     }
 
+    public flushSync(): void {
+        while (
+            this.dirtyNodes.size > 0 ||
+            this.dirtyInternals.size > 0 ||
+            this.activeTask !== null
+        ) {
+            this.flush(Infinity);
+            if (this.activeTask !== null) {
+                this.scheduler.forceComplete(this);
+            }
+            this.flush(Infinity);
+        }
+    }
+
     private revalidateDirty(graph: Graph, deadline: number): void {
         let count = 0;
         for (const internal of this.dirtyInternals) {
