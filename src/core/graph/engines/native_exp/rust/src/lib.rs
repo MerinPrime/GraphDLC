@@ -326,6 +326,24 @@ pub extern "C" fn get_node_signal_export(node_idx: u32) -> u8 {
     get_state().get_node_signal(node_idx)
 }
 
+#[no_mangle]
+pub extern "C" fn get_nodes_signals_bulk_export(count: u32) {
+    let state = get_state();
+    let ptr = unsafe { STAGING_BUFFER.as_mut_ptr() };
+    let out_ptr = ptr as *mut u8;
+    for i in 0..count as usize {
+        let node_idx = unsafe { *ptr.add(i) };
+        let sig = if node_idx == u32::MAX {
+            NODE_SIGNAL_NONE
+        } else {
+            state.get_node_signal(node_idx)
+        };
+        unsafe {
+            *out_ptr.add(i) = sig;
+        }
+    }
+}
+
 fn collect_render_dirty_chunks() {
     let state = get_state();
     let count = state.nodes.len().min(state.render_signals.len());
@@ -729,6 +747,23 @@ mod tests {
         assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
         assert_eq!(get_node_signal_export(1), NODE_SIGNAL_ACTIVE);
         assert_eq!(get_node_signal_export(2), NODE_SIGNAL_ACTIVE);
+
+        // Test bulk export
+        unsafe {
+            let staging = STAGING_BUFFER.as_mut_ptr();
+            *staging = 0;
+            *staging.add(1) = 1;
+            *staging.add(2) = 2;
+            *staging.add(3) = u32::MAX;
+        }
+        get_nodes_signals_bulk_export(4);
+        unsafe {
+            let out = STAGING_BUFFER.as_ptr() as *const u8;
+            assert_eq!(*out, NODE_SIGNAL_ACTIVE);
+            assert_eq!(*out.add(1), NODE_SIGNAL_ACTIVE);
+            assert_eq!(*out.add(2), NODE_SIGNAL_ACTIVE);
+            assert_eq!(*out.add(3), NODE_SIGNAL_NONE);
+        }
     }
 }
 

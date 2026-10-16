@@ -34,6 +34,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     make_dirty_chunk_export(chunk_idx: number): void;
     make_undirty_chunk_export(chunk_idx: number): void;
     get_node_signal_export(node_idx: number): number;
+    get_nodes_signals_bulk_export(count: number): void;
     get_dirty_chunks_count(): number;
     copy_dirty_chunks(out_ptr: number, mark_undirty: number): number;
     set_node_signal_export(node_idx: number, signal: number): void;

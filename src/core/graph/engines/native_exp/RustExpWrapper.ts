@@ -159,6 +159,14 @@ export class RustExpWrapper {
         return this.exports.get_node_signal_export(nodeIdx) as NodeSignal;
     }
 
+    public fillNodeSignalsBulk(nodeIndices: Uint32Array): Uint8Array {
+        const count = nodeIndices.length;
+        const staging32 = this.getStagingUint32View(count);
+        staging32.set(nodeIndices);
+        this.exports.get_nodes_signals_bulk_export(count);
+        return this.getStagingUint8View(count);
+    }
+
     public getDirtyChunksCount(): number {
         return this.exports.get_dirty_chunks_count();
     }

@@ -46,4 +46,8 @@ export class NativeExpEngine extends BaseEngine<NativeExpEngineTypes> {
     public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
         this.wrapper.setNodeBreakpoint(nodeIdx, isBreakpoint);
     }
+
+    public override fillNodeSignalsBulk(nodeIndices: Uint32Array): Uint8Array {
+        return this.wrapper.fillNodeSignalsBulk(nodeIndices);
+    }
 }

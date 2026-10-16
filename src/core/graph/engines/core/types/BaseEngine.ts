@@ -179,6 +179,8 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         this.state.makeUndirtyChunk(chunkIdx);
     }
 
+    public fillNodeSignalsBulk?(nodeIndices: Uint32Array): Uint8Array;
+
     public abstract addCycle(cycle: GraphCycle): void;
     public abstract removeCycle(cycle: GraphCycle): void;
     public abstract updateNodeState(graph: Graph, node: GraphNode): void;

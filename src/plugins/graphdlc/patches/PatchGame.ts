@@ -1,5 +1,10 @@
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
-import { CELL_SIZE, CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
+import type { Chunk } from '@logic-arrows/game-logic/chunk';
+import {
+    CELL_SIZE,
+    CHUNK_AREA,
+    CHUNK_SIZE,
+} from '@logic-arrows/game-logic/game-constants';
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { GameRender } from '@logic-arrows/game-render/game-render';
 import type { Game } from '@logic-arrows/player/game';
@@ -15,6 +20,8 @@ interface PrivateGame {
     gameMap: GameMap;
     readonly render: GameRender;
 }
+
+let bulkIndicesBuffer = new Uint32Array(1024);
 
 export const PatchGame: IPatcher = (
     patchLoader: PatchLoader,
@@ -80,33 +87,96 @@ export const PatchGame: IPatcher = (
                 graph.markCyclesChunksDirty();
 
                 const dirtyChunksIdx = engine.getDirtyChunks(false);
-                dirtyChunksIdx.forEach((dirtyChunkIdx) => {
+                const visibleChunks: Array<{ chunk: Chunk; idx: number }> = [];
+
+                for (let i = 0; i < dirtyChunksIdx.length; i++) {
+                    const dirtyChunkIdx = dirtyChunksIdx[i];
                     const chunk = graph.getChunkByIdx(dirtyChunkIdx);
                     if (
-                        !bounds.InBounds(
+                        bounds.InBounds(
                             chunk.x * CHUNK_SIZE,
                             chunk.y * CHUNK_SIZE,
                         )
-                    )
-                        return;
-                    chunk.getArrows().forEach((arrow) => {
-                        if (
-                            arrow.astIndex == null ||
-                            arrow.type === ArrowType.EMPTY
-                        ) {
-                            arrow.signal = ArrowSignal.NONE;
-                            return;
+                    ) {
+                        visibleChunks.push({ chunk, idx: dirtyChunkIdx });
+                    }
+                }
+
+                if (visibleChunks.length > 0) {
+                    if (engine.fillNodeSignalsBulk) {
+                        const totalArrows = visibleChunks.length * CHUNK_AREA;
+                        if (bulkIndicesBuffer.length < totalArrows) {
+                            bulkIndicesBuffer = new Uint32Array(
+                                Math.max(totalArrows, bulkIndicesBuffer.length * 2),
+                            );
                         }
-                        const signal = engine.getNodeSignal(arrow.astIndex);
-                        if (signal === NodeSignal.ACTIVE)
-                            arrow.signal = ACTIVE_SIGNALS[arrow.type];
-                        else if (signal === NodeSignal.PENDING)
-                            arrow.signal = ArrowSignal.BLUE;
-                        else arrow.signal = ArrowSignal.NONE;
-                    });
-                    engine.makeUndirtyChunk(dirtyChunkIdx);
-                    chunk.markRenderDirty();
-                });
+
+                        let offset = 0;
+                        for (let i = 0; i < visibleChunks.length; i++) {
+                            const chunk = visibleChunks[i].chunk;
+                            const arrows = chunk.getArrows();
+                            for (let j = 0; j < CHUNK_AREA; j++) {
+                                const arrow = arrows[j];
+                                const astIndex = arrow.astIndex;
+                                bulkIndicesBuffer[offset++] =
+                                    astIndex != null && arrow.type !== ArrowType.EMPTY
+                                        ? astIndex
+                                        : 0xffffffff;
+                            }
+                        }
+
+                        const signals = engine.fillNodeSignalsBulk(
+                            bulkIndicesBuffer.subarray(0, totalArrows),
+                        );
+
+                        offset = 0;
+                        for (let i = 0; i < visibleChunks.length; i++) {
+                            const { chunk, idx: dirtyChunkIdx } = visibleChunks[i];
+                            const arrows = chunk.getArrows();
+                            for (let j = 0; j < CHUNK_AREA; j++) {
+                                const arrow = arrows[j];
+                                if (
+                                    arrow.astIndex == null ||
+                                    arrow.type === ArrowType.EMPTY
+                                ) {
+                                    arrow.signal = ArrowSignal.NONE;
+                                } else {
+                                    const signal = signals[offset];
+                                    if (signal === NodeSignal.ACTIVE) {
+                                        arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                                    } else if (signal === NodeSignal.PENDING) {
+                                        arrow.signal = ArrowSignal.BLUE;
+                                    } else {
+                                        arrow.signal = ArrowSignal.NONE;
+                                    }
+                                }
+                                offset++;
+                            }
+                            engine.makeUndirtyChunk(dirtyChunkIdx);
+                            chunk.markRenderDirty();
+                        }
+                    } else {
+                        visibleChunks.forEach(({ chunk, idx: dirtyChunkIdx }) => {
+                            chunk.getArrows().forEach((arrow) => {
+                                if (
+                                    arrow.astIndex == null ||
+                                    arrow.type === ArrowType.EMPTY
+                                ) {
+                                    arrow.signal = ArrowSignal.NONE;
+                                    return;
+                                }
+                                const signal = engine.getNodeSignal(arrow.astIndex);
+                                if (signal === NodeSignal.ACTIVE)
+                                    arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                                else if (signal === NodeSignal.PENDING)
+                                    arrow.signal = ArrowSignal.BLUE;
+                                else arrow.signal = ArrowSignal.NONE;
+                            });
+                            engine.makeUndirtyChunk(dirtyChunkIdx);
+                            chunk.markRenderDirty();
+                        });
+                    }
+                }
 
                 super.draw();
 
