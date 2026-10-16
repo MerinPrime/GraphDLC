@@ -68,7 +68,7 @@ const NativeExpLocale = new I18nText(
 );
 
 const DefaultEngine = IS_WASM_SUPPORTED
-    ? GraphEngine.NATIVE
+    ? GraphEngine.NATIVE_EXP
     : GraphEngine.STANDARD;
 
 export const GraphEngineSetting = new SelectSetting<GraphEngine>(
