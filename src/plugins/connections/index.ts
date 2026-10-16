@@ -1,4 +1,5 @@
 import { I18nText } from '@logic-arrows/lang/i18n-text';
+import { LmbLocale } from '../core/KeybindsLocales';
 import { type KeyBindHint, Plugin, PluginPriority } from '../core/Plugin';
 import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
@@ -18,11 +19,24 @@ export const HighlightPathLocale = new I18nText(
     'surligner le chemin',
 );
 
+export const PinPathLocale = new I18nText(
+    'pin path',
+    'зафиксировать путь',
+    'зафіксувати шлях',
+    'зафіксаваць шлях',
+    'épingler le chemin',
+);
+
 const KeyBindHints: KeyBindHint[] = [
     {
         keys: ['Alt'],
         showOn: ['free'],
         description: HighlightPathLocale,
+    },
+    {
+        keys: ['Alt', LmbLocale],
+        showOn: ['free'],
+        description: PinPathLocale,
     },
 ];
 

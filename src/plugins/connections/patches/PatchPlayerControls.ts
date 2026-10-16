@@ -25,32 +25,149 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             return class PlayerControls extends _module {
                 private highlightPathData: HighlightPathData | null = null;
+                private pinnedNode: GraphNode | null = null;
+                private isPinned: boolean = false;
+                private wasAltPressed: boolean = false;
+                private pinnedThisAltPress: boolean = false;
+                private cleanupListeners?: () => void;
+
+                public constructor(...args: any[]) {
+                    // @ts-expect-error
+                    super(...args);
+
+                    const _this = this as any as PrivatePlayerControls;
+                    let justHandledOnMouseDown = false;
+
+                    const onMouseDown = (e: MouseEvent) => {
+                        if (e.button !== 0) return;
+                        const isAlt =
+                            _this.keyboardHandler.getKeyPressed('AltLeft') ||
+                            _this.keyboardHandler.getKeyPressed('AltRight');
+
+                        if (!isAlt) return;
+
+                        const arrow = _this.getArrowByMousePosition();
+                        if (arrow?.astIndex != null) {
+                            const graph = _this.game.gameMap.graph;
+                            const node = graph.getNode(arrow.astIndex);
+                            if (node && node.type !== NodeType.EMPTY) {
+                                this.isPinned = true;
+                                this.pinnedNode = node;
+                                this.pinnedThisAltPress = true;
+                                this.updatePathData(node);
+                                justHandledOnMouseDown = true;
+                                e.stopPropagation();
+                                e.preventDefault();
+                                return;
+                            }
+                        }
+
+                        if (this.isPinned) {
+                            this.isPinned = false;
+                            this.pinnedNode = null;
+                            this.resetPathData();
+                            justHandledOnMouseDown = true;
+                            e.stopPropagation();
+                            e.preventDefault();
+                        }
+                    };
+
+                    const onClick = (e: MouseEvent) => {
+                        if (e.button !== 0) return;
+                        const isAlt =
+                            _this.keyboardHandler.getKeyPressed('AltLeft') ||
+                            _this.keyboardHandler.getKeyPressed('AltRight');
+
+                        if (isAlt || justHandledOnMouseDown) {
+                            justHandledOnMouseDown = false;
+                            e.stopPropagation();
+                            e.preventDefault();
+                        }
+                    };
+
+                    const onKeyDown = (e: KeyboardEvent) => {
+                        if (e.code === 'Escape' && this.isPinned) {
+                            this.isPinned = false;
+                            this.pinnedNode = null;
+                            this.resetPathData();
+                        }
+                    };
+
+                    document.addEventListener('mousedown', onMouseDown, true);
+                    document.addEventListener('click', onClick, true);
+                    document.addEventListener('keydown', onKeyDown, true);
+
+                    this.cleanupListeners = () => {
+                        document.removeEventListener(
+                            'mousedown',
+                            onMouseDown,
+                            true,
+                        );
+                        document.removeEventListener('click', onClick, true);
+                        document.removeEventListener(
+                            'keydown',
+                            onKeyDown,
+                            true,
+                        );
+                    };
+                }
+
+                public override dispose(): void {
+                    this.cleanupListeners?.();
+                    super.dispose();
+                }
 
                 public update(): void {
                     super.update();
 
                     const _this = this as any as PrivatePlayerControls;
+                    const graph = _this.game.gameMap.graph;
+
+                    const isAlt =
+                        _this.keyboardHandler.getKeyPressed('AltLeft') ||
+                        _this.keyboardHandler.getKeyPressed('AltRight');
+
+                    const isAltFreshPress = isAlt && !this.wasAltPressed;
+                    this.wasAltPressed = isAlt;
+
+                    if (!isAlt) {
+                        this.pinnedThisAltPress = false;
+                    }
 
                     if (
-                        _this.keyboardHandler.getKeyPressed('AltLeft') ||
-                        _this.keyboardHandler.getKeyPressed('AltRight')
+                        isAltFreshPress &&
+                        this.isPinned &&
+                        !this.pinnedThisAltPress
                     ) {
+                        this.isPinned = false;
+                        this.pinnedNode = null;
+                    }
+
+                    if (this.isPinned && this.pinnedNode) {
+                        if (this.pinnedNode.type === NodeType.EMPTY) {
+                            this.isPinned = false;
+                            this.pinnedNode = null;
+                            this.resetPathData();
+                            return;
+                        }
+
+                        const lastGraphUpdate = graph.lastUpdate;
+                        if (
+                            this.highlightPathData?.lastGraphUpdate !==
+                            lastGraphUpdate
+                        ) {
+                            this.updatePathData(this.pinnedNode);
+                        }
+                    } else if (isAlt) {
                         const arrow: Arrow | undefined =
                             _this.getArrowByMousePosition();
-                        if (!arrow) {
+                        if (!arrow || arrow.astIndex == null) {
                             this.resetPathData();
                             return;
                         }
 
-                        const nodeIdx = arrow.astIndex;
-                        if (nodeIdx === undefined || nodeIdx === null) {
-                            this.resetPathData();
-                            return;
-                        }
-
-                        const graph = _this.game.gameMap.graph;
-                        const node = graph.getNode(nodeIdx);
-                        if (!node) {
+                        const node = graph.getNode(arrow.astIndex);
+                        if (!node || node.type === NodeType.EMPTY) {
                             this.resetPathData();
                             return;
                         }
@@ -65,8 +182,6 @@ export const PatchPlayerControls: IPatcher = (
 
                         if (this.highlightPathData?.node === node) {
                             return;
-                        } else if (node.type === NodeType.EMPTY) {
-                            this.resetPathData();
                         } else {
                             this.updatePathData(node);
                         }

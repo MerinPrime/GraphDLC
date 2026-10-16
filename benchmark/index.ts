@@ -169,7 +169,9 @@ export function runBenchmark(): void {
                     }
                 }
             }
-            console.log('✅ 5,000 ticks verified 100% equivalent with RawEngine!');
+            console.log(
+                '✅ 5,000 ticks verified 100% equivalent with RawEngine!',
+            );
             raw.reset();
             native.reset();
         }
