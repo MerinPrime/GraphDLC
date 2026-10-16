@@ -88,6 +88,7 @@ export class RustExpWrapper {
         this.writeNodesToStaging(links, detectors);
 
         const cycleRef = node.cycleRef;
+        const localIdx = (node.localY << 4) | node.localX;
 
         this.exports.update_node_state(
             nodeIdx,
@@ -99,11 +100,16 @@ export class RustExpWrapper {
             cycleRef ? node.cycleOffset : 0,
             cycleRef ? node.headType : 0,
             node.chunkIdx,
+            localIdx,
             links.length,
             detectors.length,
             node.detectedLink ? node.detectedLink.nodeIdx : -1,
             node.blockedLink ? node.blockedLink.nodeIdx : -1,
         );
+    }
+
+    public registerChunk(chunkIdx: number, x: number, y: number): void {
+        this.exports.register_chunk_export(chunkIdx, x, y);
     }
 
     public setNodeBreakpoint(nodeIdx: number, isBreakpoint: boolean): void {
@@ -157,6 +163,24 @@ export class RustExpWrapper {
 
     public getNodeSignal(nodeIdx: number): NodeSignal {
         return this.exports.get_node_signal_export(nodeIdx) as NodeSignal;
+    }
+
+    public fillNodeSignalsBulk(nodeIndices: Uint32Array): Uint8Array {
+        const count = nodeIndices.length;
+        const staging32 = this.getStagingUint32View(count);
+        staging32.set(nodeIndices);
+        this.exports.get_nodes_signals_bulk_export(count);
+        return this.getStagingUint8View(count);
+    }
+
+    public fillChunksSignalsBulk(
+        chunkIndices: Uint32Array | number[],
+    ): Uint8Array {
+        const count = chunkIndices.length;
+        const staging32 = this.getStagingUint32View(count);
+        staging32.set(chunkIndices);
+        this.exports.get_chunks_signals_bulk_export(count);
+        return this.getStagingUint8View(count * 256);
     }
 
     public getDirtyChunksCount(): number {
@@ -225,6 +249,30 @@ export class RustExpWrapper {
 
         const view = this.getStagingUint32View(count);
 
+        return Array.from(view);
+    }
+
+    public getDirtyChunksInViewport(
+        markUndirty: boolean,
+        minChunkX: number,
+        minChunkY: number,
+        maxChunkX: number,
+        maxChunkY: number,
+    ): number[] {
+        const count = this.exports.copy_dirty_chunks_in_viewport(
+            this.stagingBufferPtr,
+            markUndirty ? 1 : 0,
+            minChunkX,
+            minChunkY,
+            maxChunkX,
+            maxChunkY,
+        );
+
+        if (count === 0) {
+            return [];
+        }
+
+        const view = this.getStagingUint32View(count);
         return Array.from(view);
     }
 

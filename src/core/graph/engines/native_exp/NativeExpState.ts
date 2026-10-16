@@ -62,8 +62,28 @@ export class NativeExpState implements IState<NativeExpSnapshot> {
         this.wrapper.makeUndirtyChunk(chunkIdx);
     }
 
+    public registerChunk(chunkIdx: number, x: number, y: number): void {
+        this.wrapper.registerChunk(chunkIdx, x, y);
+    }
+
     public getDirtyChunks(markUndirty: boolean): number[] {
         return this.wrapper.getDirtyChunks(markUndirty);
+    }
+
+    public getDirtyChunksInViewport(
+        markUndirty: boolean,
+        minChunkX: number,
+        minChunkY: number,
+        maxChunkX: number,
+        maxChunkY: number,
+    ): number[] {
+        return this.wrapper.getDirtyChunksInViewport(
+            markUndirty,
+            minChunkX,
+            minChunkY,
+            maxChunkX,
+            maxChunkY,
+        );
     }
 
     public markAllChunksDirty(): void {

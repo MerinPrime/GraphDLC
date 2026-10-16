@@ -290,6 +290,13 @@ export class RawGraphUpdater {
         const nodeState = state.getNode(node.nodeIdx);
 
         nodeState.chunkIdx = node.chunkIdx;
+        const localIdx = (node.localY << 4) | node.localX;
+        state.ensureChunkCapacity(node.chunkIdx + 1);
+        const chunk = state.getChunk(node.chunkIdx);
+        if (chunk) {
+            chunk.nodes[localIdx] =
+                node.type === NodeType.EMPTY ? 0xffffffff : node.nodeIdx;
+        }
         nodeState.posHash = node.posHash;
         nodeState.type = node.type;
         nodeState.links = node.links

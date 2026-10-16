@@ -259,8 +259,16 @@ impl GraphState {
 
     pub fn ensure_chunk_capacity(&mut self, count: usize) {
         if self.chunks.len() < count {
-            self.chunks.resize_with(count, || Chunk { flags: 0 });
+            self.chunks.resize_with(count, Chunk::new);
         }
+    }
+
+    pub fn register_chunk(&mut self, chunk_idx: u32, x: i32, y: i32) {
+        self.ensure_chunk_capacity((chunk_idx + 1) as usize);
+        let chunk = &mut self.chunks[chunk_idx as usize];
+        chunk.x = x;
+        chunk.y = y;
+        chunk.flags |= CHUNK_FLAG_IS_DIRTY;
     }
 
     #[inline(always)]

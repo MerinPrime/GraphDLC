@@ -43,6 +43,9 @@ export class RawNodeState {
 
 export class RawChunkState {
     public isDirty: boolean = false;
+    public x: number = 0;
+    public y: number = 0;
+    public nodes: Uint32Array = new Uint32Array(256).fill(0xffffffff);
 
     public constructor(public readonly chunkIdx: number) {}
 }
@@ -54,6 +57,7 @@ export class RawGraphState implements IState<RawSnapshot> {
     private nodes: RawNodeState[] = [];
     private chunks: RawChunkState[] = [];
 
+    public renderSignals: Uint8Array = new Uint8Array(4096);
     public cycles: (RawCycleState | null)[] = [];
 
     public seed: number = 0;
@@ -73,6 +77,7 @@ export class RawGraphState implements IState<RawSnapshot> {
         this.breakPoints.length = 0;
         this.breakPoint = false;
         this.breakPointNode = 0;
+        this.renderSignals.fill(0);
     }
 
     public setSeed(seed: number): void {
@@ -95,12 +100,19 @@ export class RawGraphState implements IState<RawSnapshot> {
     }
 
     public ensureNodeCapacity(nodesCount: number) {
-        if (this.nodes.length >= nodesCount) return;
-
-        for (let i = 0; i < nodesCount; i++) {
-            if (this.nodes[i] === undefined) {
-                this.nodes[i] = new RawNodeState(i);
+        if (this.nodes.length < nodesCount) {
+            for (let i = 0; i < nodesCount; i++) {
+                if (this.nodes[i] === undefined) {
+                    this.nodes[i] = new RawNodeState(i);
+                }
             }
+        }
+        if (this.renderSignals.length < nodesCount) {
+            const newSignals = new Uint8Array(
+                Math.max(nodesCount, this.renderSignals.length * 2),
+            );
+            newSignals.set(this.renderSignals);
+            this.renderSignals = newSignals;
         }
     }
 
@@ -112,6 +124,10 @@ export class RawGraphState implements IState<RawSnapshot> {
                 this.chunks[i] = new RawChunkState(i);
             }
         }
+    }
+
+    public getChunk(chunkIdx: number): RawChunkState | undefined {
+        return this.chunks[chunkIdx];
     }
 
     public reset() {
@@ -339,6 +355,50 @@ export class RawGraphState implements IState<RawSnapshot> {
                 dirtyChunks.push(chunk.chunkIdx);
             }
         });
+        return dirtyChunks;
+    }
+
+    public registerChunk(chunkIdx: number, x: number, y: number): void {
+        this.ensureChunkCapacity(chunkIdx + 1);
+        const chunk = this.chunks[chunkIdx];
+        chunk.x = x;
+        chunk.y = y;
+    }
+
+    public getDirtyChunksInViewport(
+        markUndirty: boolean,
+        minChunkX: number,
+        minChunkY: number,
+        maxChunkX: number,
+        maxChunkY: number,
+    ): number[] {
+        const dirtyChunks: number[] = [];
+        for (let i = 0; i < this.chunks.length; i++) {
+            const chunk = this.chunks[i];
+            if (!chunk) continue;
+            if (
+                chunk.x >= minChunkX &&
+                chunk.x <= maxChunkX &&
+                chunk.y >= minChunkY &&
+                chunk.y <= maxChunkY
+            ) {
+                let isDirty = chunk.isDirty;
+                const nodes = chunk.nodes;
+                for (let j = 0; j < 256; j++) {
+                    const nodeIdx = nodes[j];
+                    if (nodeIdx === 0xffffffff) continue;
+                    const currentSignal = this.getNodeSignal(nodeIdx);
+                    if (currentSignal !== this.renderSignals[nodeIdx]) {
+                        this.renderSignals[nodeIdx] = currentSignal;
+                        isDirty = true;
+                    }
+                }
+                if (isDirty) {
+                    if (markUndirty) chunk.isDirty = false;
+                    dirtyChunks.push(chunk.chunkIdx);
+                }
+            }
+        }
         return dirtyChunks;
     }
 

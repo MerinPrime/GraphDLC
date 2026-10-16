@@ -269,6 +269,7 @@ export class Graph {
                 chunkIdx,
             );
             this.engine.ensureChunkCapacity(chunkIdx + 1);
+            this.engine.registerChunk?.(chunkIdx, chunk.x, chunk.y);
         }
 
         const chunkIdx = chunk.astIndex;
@@ -315,6 +316,7 @@ export class Graph {
         EnableSnapshotsSetting.onChange.remove(this.handleSnapshotsChange);
 
         this.nodes.length = 0;
+        this.chunks.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
         this.engine.clear();

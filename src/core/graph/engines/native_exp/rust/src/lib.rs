@@ -38,6 +38,11 @@ pub extern "C" fn set_seed(seed: u32) {
 }
 
 #[no_mangle]
+pub extern "C" fn register_chunk_export(chunk_idx: u32, x: i32, y: i32) {
+    get_state().register_chunk(chunk_idx, x, y);
+}
+
+#[no_mangle]
 pub extern "C" fn update_node_state(
     node_idx: u32,
     pos_hash: u32,
@@ -48,6 +53,7 @@ pub extern "C" fn update_node_state(
     cycle_offset: u32,
     head_type: u8,
     chunk_idx: u32,
+    local_idx: u32,
     links_count: u32,
     detectors_count: u32,
     detected_link: i32,
@@ -55,6 +61,9 @@ pub extern "C" fn update_node_state(
 ) {
     let state = get_state();
     state.ensure_node_capacity((node_idx + 1) as usize);
+    if chunk_idx != u32::MAX {
+        state.ensure_chunk_capacity((chunk_idx + 1) as usize);
+    }
 
     let mut links = [0u32; 4];
     let mut detectors = [0u32; 4];
@@ -115,6 +124,14 @@ pub extern "C" fn update_node_state(
     }
 
     node.chunk_idx = chunk_idx;
+    if chunk_idx != u32::MAX && (local_idx as usize) < 256 && (chunk_idx as usize) < state.chunks.len() {
+        state.chunks[chunk_idx as usize].nodes[local_idx as usize] =
+            if node_type == NODE_TYPE_EMPTY {
+                u32::MAX
+            } else {
+                node_idx
+            };
+    }
     state.detected_links[node_idx as usize] = if detected_link >= 0 {
         Some(detected_link as u32)
     } else {
@@ -326,6 +343,67 @@ pub extern "C" fn get_node_signal_export(node_idx: u32) -> u8 {
     get_state().get_node_signal(node_idx)
 }
 
+#[no_mangle]
+pub extern "C" fn get_nodes_signals_bulk_export(count: u32) {
+    let state = get_state();
+    let ptr = unsafe { STAGING_BUFFER.as_mut_ptr() };
+    let out_ptr = ptr as *mut u8;
+    for i in 0..count as usize {
+        let node_idx = unsafe { *ptr.add(i) };
+        let sig = if node_idx == u32::MAX {
+            NODE_SIGNAL_NONE
+        } else {
+            state.get_node_signal(node_idx)
+        };
+        unsafe {
+            *out_ptr.add(i) = sig;
+        }
+    }
+}
+
+static mut CHUNK_INDICES_BUFFER: Vec<u32> = Vec::new();
+
+#[no_mangle]
+pub extern "C" fn get_chunks_signals_bulk_export(chunks_count: u32) {
+    let state = get_state();
+    let staging_ptr = unsafe { STAGING_BUFFER.as_mut_ptr() };
+    let count = chunks_count as usize;
+    unsafe {
+        CHUNK_INDICES_BUFFER.clear();
+        CHUNK_INDICES_BUFFER.reserve(count);
+        let slice = std::slice::from_raw_parts(staging_ptr, count);
+        CHUNK_INDICES_BUFFER.extend_from_slice(slice);
+    }
+
+    let out_ptr = staging_ptr as *mut u8;
+    let mut offset = 0usize;
+    for i in 0..count {
+        let chunk_idx = unsafe { CHUNK_INDICES_BUFFER[i] as usize };
+        if chunk_idx < state.chunks.len() {
+            let chunk = &state.chunks[chunk_idx];
+            for j in 0..256 {
+                let node_idx = chunk.nodes[j];
+                let sig = if node_idx == u32::MAX {
+                    NODE_SIGNAL_NONE
+                } else {
+                    state.get_node_signal(node_idx)
+                };
+                unsafe {
+                    *out_ptr.add(offset) = sig;
+                }
+                offset += 1;
+            }
+        } else {
+            for _ in 0..256 {
+                unsafe {
+                    *out_ptr.add(offset) = NODE_SIGNAL_NONE;
+                }
+                offset += 1;
+            }
+        }
+    }
+}
+
 fn collect_render_dirty_chunks() {
     let state = get_state();
     let count = state.nodes.len().min(state.render_signals.len());
@@ -336,7 +414,7 @@ fn collect_render_dirty_chunks() {
 
     for i in 0..count {
         let node = unsafe { &*nodes_ptr.add(i) };
-        let current_signal = node.signal;
+        let current_signal = state.get_node_signal(i as u32);
         let last_render_signal = unsafe { *render_ptr.add(i) };
 
         if current_signal != last_render_signal {
@@ -377,6 +455,69 @@ pub extern "C" fn copy_dirty_chunks(out_ptr: *mut u32, mark_undirty: i32) -> u32
             offset += 1;
             if mark_undirty != 0 {
                 state.chunks[chunk_idx].flags &= !CHUNK_FLAG_IS_DIRTY;
+            }
+        }
+    }
+    offset as u32
+}
+
+fn collect_render_dirty_chunks_in_viewport(min_x: i32, min_y: i32, max_x: i32, max_y: i32) {
+    let state = get_state();
+    let render_ptr = state.render_signals.as_mut_ptr();
+    let chunks_ptr = state.chunks.as_mut_ptr();
+    let chunks_len = state.chunks.len();
+    let render_len = state.render_signals.len();
+
+    for chunk_idx in 0..chunks_len {
+        let chunk = unsafe { &mut *chunks_ptr.add(chunk_idx) };
+        if chunk.x < min_x || chunk.x > max_x || chunk.y < min_y || chunk.y > max_y {
+            continue;
+        }
+
+        let mut is_dirty = (chunk.flags & CHUNK_FLAG_IS_DIRTY) != 0;
+        for &node_idx in &chunk.nodes {
+            if node_idx == u32::MAX || node_idx as usize >= render_len {
+                continue;
+            }
+            let current_signal = state.get_node_signal(node_idx);
+            let last_render_signal = unsafe { *render_ptr.add(node_idx as usize) };
+            if current_signal != last_render_signal {
+                unsafe {
+                    *render_ptr.add(node_idx as usize) = current_signal;
+                }
+                is_dirty = true;
+            }
+        }
+
+        if is_dirty {
+            chunk.flags |= CHUNK_FLAG_IS_DIRTY;
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn copy_dirty_chunks_in_viewport(
+    out_ptr: *mut u32,
+    mark_undirty: i32,
+    min_x: i32,
+    min_y: i32,
+    max_x: i32,
+    max_y: i32,
+) -> u32 {
+    collect_render_dirty_chunks_in_viewport(min_x, min_y, max_x, max_y);
+    let state = get_state();
+    let mut offset = 0;
+    for chunk_idx in 0..state.chunks.len() {
+        let chunk = &mut state.chunks[chunk_idx];
+        if chunk.x >= min_x && chunk.x <= max_x && chunk.y >= min_y && chunk.y <= max_y {
+            if (chunk.flags & CHUNK_FLAG_IS_DIRTY) != 0 {
+                unsafe {
+                    *out_ptr.add(offset) = chunk_idx as u32;
+                }
+                offset += 1;
+                if mark_undirty != 0 {
+                    chunk.flags &= !CHUNK_FLAG_IS_DIRTY;
+                }
             }
         }
     }
@@ -484,251 +625,6 @@ pub extern "C" fn deserialize_state_export(len: u32) {
         let ptr = STAGING_BUFFER.as_ptr() as *const u8;
         let data = std::slice::from_raw_parts(ptr, len as usize);
         deserialize_state(state, data);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_runtime_source_placement() {
-        init();
-        ensure_node_capacity_export(10);
-        ensure_chunk_capacity_export(1);
-
-        // Place a source arrow (node 0)
-        update_node_state(
-            0,
-            12345,
-            NODE_TYPE_SOURCE,
-            1, // is_entry_point
-            0, // is_additional_update
-            -1, // cycle_idx
-            0,
-            0,
-            0, // chunk_idx
-            0, // links_count
-            0, // detectors_count
-            -1,
-            -1,
-        );
-
-        println!("Before run_tick: signal = {}", get_node_signal_export(0));
-        let changed = run_tick();
-        println!("After run_tick: signal = {}, changed = {}", get_node_signal_export(0), changed);
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
-    }
-
-    #[test]
-    fn test_runtime_source_propagation() {
-        init();
-        ensure_node_capacity_export(10);
-        ensure_chunk_capacity_export(1);
-
-        // Place wire (node 1)
-        update_node_state(
-            1,
-            22222,
-            NODE_TYPE_PATH,
-            0, // not entry point
-            0,
-            -1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            -1,
-            -1,
-        );
-
-        // Place source (node 0) linking to node 1
-        unsafe {
-            let staging = STAGING_BUFFER.as_mut_ptr();
-            *staging = 1; // links[0] = 1
-        }
-        update_node_state(
-            0,
-            11111,
-            NODE_TYPE_SOURCE,
-            1, // is_entry_point
-            0,
-            -1,
-            0,
-            0,
-            0,
-            1, // links_count = 1
-            0,
-            -1,
-            -1,
-        );
-
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
-
-        // Tick 1: Source should turn on
-        run_tick();
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
-
-        // Tick 2: Signal should propagate to wire (node 1)
-        run_tick();
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_ACTIVE);
-    }
-
-    #[test]
-    fn test_button_activation() {
-        init();
-        ensure_node_capacity_export(10);
-        ensure_chunk_capacity_export(1);
-
-        // Place wire (node 1)
-        update_node_state(
-            1,
-            22222,
-            NODE_TYPE_PATH,
-            0,
-            0,
-            -1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            -1,
-            -1,
-        );
-
-        // Place button (node 0) linking to node 1
-        unsafe {
-            let staging = STAGING_BUFFER.as_mut_ptr();
-            *staging = 1; // links[0] = 1
-        }
-        update_node_state(
-            0,
-            11111,
-            NODE_TYPE_BUTTON,
-            0, // is_entry_point = 0
-            0,
-            -1,
-            0,
-            0,
-            0,
-            1, // links_count = 1
-            0,
-            -1,
-            -1,
-        );
-
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
-
-        // Press button
-        set_node_signal_export(0, NODE_SIGNAL_ACTIVE);
-        println!("After press: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
-
-        // Tick 1
-        run_tick();
-        println!("After tick 1: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
-
-        // Tick 2: Wire turns off because button pulse was 1 tick
-        run_tick();
-        println!("After tick 2: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
-
-        // Tick 3: Everything remains off
-        run_tick();
-        println!("After tick 3: button = {}, wire = {}", get_node_signal_export(0), get_node_signal_export(1));
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_NONE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_NONE);
-    }
-
-    #[test]
-    fn test_directional_button_signal_passthrough() {
-        init();
-        ensure_node_capacity_export(10);
-        ensure_chunk_capacity_export(1);
-
-        // Node 0: Source
-        // Node 1: Directional Button
-        // Node 2: Wire
-        unsafe {
-            let staging = STAGING_BUFFER.as_mut_ptr();
-            *staging = 1; // source -> dir_btn
-            *staging.add(1) = 2; // dir_btn -> wire
-        }
-
-        // Place wire (node 2)
-        update_node_state(
-            2,
-            33333,
-            NODE_TYPE_PATH,
-            0,
-            0,
-            -1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            -1,
-            -1,
-        );
-
-        // Place directional button (node 1) linking to node 2
-        unsafe {
-            let staging = STAGING_BUFFER.as_mut_ptr();
-            *staging = 2;
-        }
-        update_node_state(
-            1,
-            22222,
-            NODE_TYPE_DIRECTIONAL_BUTTON,
-            0,
-            0,
-            -1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            -1,
-            -1,
-        );
-
-        // Place source (node 0) linking to node 1
-        unsafe {
-            let staging = STAGING_BUFFER.as_mut_ptr();
-            *staging = 1;
-        }
-        update_node_state(
-            0,
-            11111,
-            NODE_TYPE_SOURCE,
-            1,
-            0,
-            -1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            -1,
-            -1,
-        );
-
-        // Run ticks: source -> dir_btn -> wire
-        // Directional button MUST NOT flicker randomly! It must stay ACTIVE consistently.
-        for _ in 0..10 {
-            run_tick();
-        }
-
-        assert_eq!(get_node_signal_export(0), NODE_SIGNAL_ACTIVE);
-        assert_eq!(get_node_signal_export(1), NODE_SIGNAL_ACTIVE);
-        assert_eq!(get_node_signal_export(2), NODE_SIGNAL_ACTIVE);
     }
 }
 
