@@ -21,6 +21,7 @@ export interface IEngine {
     makeUndirtyChunk(chunkIdx: number): void;
     getNodeSignal(nodeIdx: number): NodeSignal;
     fillNodeSignalsBulk?(nodeIndices: Uint32Array): Uint8Array;
+    fillChunksSignalsBulk?(chunkIndices: Uint32Array | number[]): Uint8Array;
     registerChunk?(chunkIdx: number, x: number, y: number): void;
 
     reset(): void;

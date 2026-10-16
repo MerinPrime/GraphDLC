@@ -173,6 +173,16 @@ export class RustExpWrapper {
         return this.getStagingUint8View(count);
     }
 
+    public fillChunksSignalsBulk(
+        chunkIndices: Uint32Array | number[],
+    ): Uint8Array {
+        const count = chunkIndices.length;
+        const staging32 = this.getStagingUint32View(count);
+        staging32.set(chunkIndices);
+        this.exports.get_chunks_signals_bulk_export(count);
+        return this.getStagingUint8View(count * 256);
+    }
+
     public getDirtyChunksCount(): number {
         return this.exports.get_dirty_chunks_count();
     }

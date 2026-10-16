@@ -22,6 +22,7 @@ interface PrivateGame {
 }
 
 let bulkIndicesBuffer = new Uint32Array(1024);
+let bulkChunksBuffer = new Uint32Array(256);
 
 export const PatchGame: IPatcher = (
     patchLoader: PatchLoader,
@@ -84,9 +85,7 @@ export const PatchGame: IPatcher = (
 
                 const bounds = this.getViewportBounds();
 
-                graph.markCyclesChunksDirty();
-
-                const dirtyChunksIdx = engine.getDirtyChunks(false, bounds);
+                const dirtyChunksIdx = engine.getDirtyChunks(true, bounds);
                 const visibleChunks: Array<{ chunk: Chunk; idx: number }> = [];
 
                 for (let i = 0; i < dirtyChunksIdx.length; i++) {
@@ -98,11 +97,46 @@ export const PatchGame: IPatcher = (
                 }
 
                 if (visibleChunks.length > 0) {
-                    if (engine.fillNodeSignalsBulk) {
+                    if (engine.fillChunksSignalsBulk) {
+                        const count = visibleChunks.length;
+                        if (bulkChunksBuffer.length < count) {
+                            bulkChunksBuffer = new Uint32Array(
+                                Math.max(count, bulkChunksBuffer.length * 2),
+                            );
+                        }
+                        for (let i = 0; i < count; i++) {
+                            bulkChunksBuffer[i] = visibleChunks[i].idx;
+                        }
+
+                        const signals = engine.fillChunksSignalsBulk(
+                            bulkChunksBuffer.subarray(0, count),
+                        );
+
+                        let offset = 0;
+                        for (let i = 0; i < count; i++) {
+                            const chunk = visibleChunks[i].chunk;
+                            const arrows = chunk.getArrows();
+                            for (let j = 0; j < CHUNK_AREA; j++) {
+                                const arrow = arrows[j];
+                                const signal = signals[offset++];
+                                if (signal === NodeSignal.ACTIVE) {
+                                    arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                                } else if (signal === NodeSignal.PENDING) {
+                                    arrow.signal = ArrowSignal.BLUE;
+                                } else {
+                                    arrow.signal = ArrowSignal.NONE;
+                                }
+                            }
+                            chunk.markRenderDirty();
+                        }
+                    } else if (engine.fillNodeSignalsBulk) {
                         const totalArrows = visibleChunks.length * CHUNK_AREA;
                         if (bulkIndicesBuffer.length < totalArrows) {
                             bulkIndicesBuffer = new Uint32Array(
-                                Math.max(totalArrows, bulkIndicesBuffer.length * 2),
+                                Math.max(
+                                    totalArrows,
+                                    bulkIndicesBuffer.length * 2,
+                                ),
                             );
                         }
 
@@ -114,7 +148,8 @@ export const PatchGame: IPatcher = (
                                 const arrow = arrows[j];
                                 const astIndex = arrow.astIndex;
                                 bulkIndicesBuffer[offset++] =
-                                    astIndex != null && arrow.type !== ArrowType.EMPTY
+                                    astIndex != null &&
+                                    arrow.type !== ArrowType.EMPTY
                                         ? astIndex
                                         : 0xffffffff;
                             }
@@ -126,7 +161,7 @@ export const PatchGame: IPatcher = (
 
                         offset = 0;
                         for (let i = 0; i < visibleChunks.length; i++) {
-                            const { chunk, idx: dirtyChunkIdx } = visibleChunks[i];
+                            const chunk = visibleChunks[i].chunk;
                             const arrows = chunk.getArrows();
                             for (let j = 0; j < CHUNK_AREA; j++) {
                                 const arrow = arrows[j];
@@ -138,7 +173,8 @@ export const PatchGame: IPatcher = (
                                 } else {
                                     const signal = signals[offset];
                                     if (signal === NodeSignal.ACTIVE) {
-                                        arrow.signal = ACTIVE_SIGNALS[arrow.type];
+                                        arrow.signal =
+                                            ACTIVE_SIGNALS[arrow.type];
                                     } else if (signal === NodeSignal.PENDING) {
                                         arrow.signal = ArrowSignal.BLUE;
                                     } else {
@@ -147,11 +183,10 @@ export const PatchGame: IPatcher = (
                                 }
                                 offset++;
                             }
-                            engine.makeUndirtyChunk(dirtyChunkIdx);
                             chunk.markRenderDirty();
                         }
                     } else {
-                        visibleChunks.forEach(({ chunk, idx: dirtyChunkIdx }) => {
+                        visibleChunks.forEach(({ chunk }) => {
                             chunk.getArrows().forEach((arrow) => {
                                 if (
                                     arrow.astIndex == null ||
@@ -160,14 +195,15 @@ export const PatchGame: IPatcher = (
                                     arrow.signal = ArrowSignal.NONE;
                                     return;
                                 }
-                                const signal = engine.getNodeSignal(arrow.astIndex);
+                                const signal = engine.getNodeSignal(
+                                    arrow.astIndex,
+                                );
                                 if (signal === NodeSignal.ACTIVE)
                                     arrow.signal = ACTIVE_SIGNALS[arrow.type];
                                 else if (signal === NodeSignal.PENDING)
                                     arrow.signal = ArrowSignal.BLUE;
                                 else arrow.signal = ArrowSignal.NONE;
                             });
-                            engine.makeUndirtyChunk(dirtyChunkIdx);
                             chunk.markRenderDirty();
                         });
                     }

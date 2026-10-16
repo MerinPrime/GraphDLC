@@ -361,6 +361,49 @@ pub extern "C" fn get_nodes_signals_bulk_export(count: u32) {
     }
 }
 
+static mut CHUNK_INDICES_BUFFER: Vec<u32> = Vec::new();
+
+#[no_mangle]
+pub extern "C" fn get_chunks_signals_bulk_export(chunks_count: u32) {
+    let state = get_state();
+    let staging_ptr = unsafe { STAGING_BUFFER.as_mut_ptr() };
+    let count = chunks_count as usize;
+    unsafe {
+        CHUNK_INDICES_BUFFER.clear();
+        CHUNK_INDICES_BUFFER.reserve(count);
+        let slice = std::slice::from_raw_parts(staging_ptr, count);
+        CHUNK_INDICES_BUFFER.extend_from_slice(slice);
+    }
+
+    let out_ptr = staging_ptr as *mut u8;
+    let mut offset = 0usize;
+    for i in 0..count {
+        let chunk_idx = unsafe { CHUNK_INDICES_BUFFER[i] as usize };
+        if chunk_idx < state.chunks.len() {
+            let chunk = &state.chunks[chunk_idx];
+            for j in 0..256 {
+                let node_idx = chunk.nodes[j];
+                let sig = if node_idx == u32::MAX {
+                    NODE_SIGNAL_NONE
+                } else {
+                    state.get_node_signal(node_idx)
+                };
+                unsafe {
+                    *out_ptr.add(offset) = sig;
+                }
+                offset += 1;
+            }
+        } else {
+            for _ in 0..256 {
+                unsafe {
+                    *out_ptr.add(offset) = NODE_SIGNAL_NONE;
+                }
+                offset += 1;
+            }
+        }
+    }
+}
+
 fn collect_render_dirty_chunks() {
     let state = get_state();
     let count = state.nodes.len().min(state.render_signals.len());
@@ -371,7 +414,7 @@ fn collect_render_dirty_chunks() {
 
     for i in 0..count {
         let node = unsafe { &*nodes_ptr.add(i) };
-        let current_signal = node.signal;
+        let current_signal = state.get_node_signal(i as u32);
         let last_render_signal = unsafe { *render_ptr.add(i) };
 
         if current_signal != last_render_signal {
@@ -420,7 +463,6 @@ pub extern "C" fn copy_dirty_chunks(out_ptr: *mut u32, mark_undirty: i32) -> u32
 
 fn collect_render_dirty_chunks_in_viewport(min_x: i32, min_y: i32, max_x: i32, max_y: i32) {
     let state = get_state();
-    let nodes_ptr = state.nodes.as_ptr();
     let render_ptr = state.render_signals.as_mut_ptr();
     let chunks_ptr = state.chunks.as_mut_ptr();
     let chunks_len = state.chunks.len();
@@ -437,8 +479,7 @@ fn collect_render_dirty_chunks_in_viewport(min_x: i32, min_y: i32, max_x: i32, m
             if node_idx == u32::MAX || node_idx as usize >= render_len {
                 continue;
             }
-            let node = unsafe { &*nodes_ptr.add(node_idx as usize) };
-            let current_signal = node.signal;
+            let current_signal = state.get_node_signal(node_idx);
             let last_render_signal = unsafe { *render_ptr.add(node_idx as usize) };
             if current_signal != last_render_signal {
                 unsafe {

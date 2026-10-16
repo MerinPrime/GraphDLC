@@ -209,6 +209,9 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     }
 
     public fillNodeSignalsBulk?(nodeIndices: Uint32Array): Uint8Array;
+    public fillChunksSignalsBulk?(
+        chunkIndices: Uint32Array | number[],
+    ): Uint8Array;
 
     public abstract addCycle(cycle: GraphCycle): void;
     public abstract removeCycle(cycle: GraphCycle): void;

@@ -50,4 +50,10 @@ export class NativeExpEngine extends BaseEngine<NativeExpEngineTypes> {
     public override fillNodeSignalsBulk(nodeIndices: Uint32Array): Uint8Array {
         return this.wrapper.fillNodeSignalsBulk(nodeIndices);
     }
+
+    public override fillChunksSignalsBulk(
+        chunkIndices: Uint32Array | number[],
+    ): Uint8Array {
+        return this.wrapper.fillChunksSignalsBulk(chunkIndices);
+    }
 }
