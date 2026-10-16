@@ -41,6 +41,7 @@ export namespace SaveTitleHook {
     export function tryUnhook() {
         if (isHooked) {
             delete (document as any).title;
+            originalTitle = null;
         }
     }
 
