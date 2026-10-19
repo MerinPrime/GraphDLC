@@ -552,11 +552,11 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
         }
     } else {
         let n = &mut state.nodes[node_idx as usize];
-        n.signal = signal;
-        if signal == NODE_SIGNAL_ACTIVE && n.last_signal == NODE_SIGNAL_ACTIVE {
-            n.last_signal = NODE_SIGNAL_NONE;
+        if n.signal != signal {
+            n.signal = signal;
+            n.flags |= FLAG_IS_UPDATED;
+            state.mark_node_as_changed_non_temp(node_idx);
         }
-        state.mark_node_as_changed_non_temp(node_idx);
     }
 
     state.make_dirty_chunk(chunk_idx);
@@ -627,5 +627,3 @@ pub extern "C" fn deserialize_state_export(len: u32) {
         deserialize_state(state, data);
     }
 }
-
-
