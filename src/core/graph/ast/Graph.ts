@@ -269,6 +269,7 @@ export class Graph {
                 chunkIdx,
             );
             this.engine.ensureChunkCapacity(chunkIdx + 1);
+            this.engine.registerChunk?.(chunkIdx, chunk.x, chunk.y);
         }
 
         const chunkIdx = chunk.astIndex;
@@ -315,6 +316,7 @@ export class Graph {
         EnableSnapshotsSetting.onChange.remove(this.handleSnapshotsChange);
 
         this.nodes.length = 0;
+        this.chunks.length = 0;
         this.cycles.length = 0;
         this.freeCycleIndices.length = 0;
         this.engine.clear();
@@ -380,7 +382,10 @@ export class Graph {
         applyMutation();
         this.updateNodeRelations(node);
 
-        if (isTypeChange && oldType !== node.type) {
+        if (
+            (isTypeChange && oldType !== node.type) ||
+            node.type === NodeType.DETECTOR
+        ) {
             this.eventDispatcher.dispatch('onNodeTypeChanged', this, node);
 
             const backNodes = node.backLinksList.nodes;
@@ -507,6 +512,14 @@ export class Graph {
         this.eventDispatcher.dispatch('onCycleAdded', this, cycle);
 
         return cycle;
+    }
+
+    public flushCycles(): void {
+        this.cycleManager.flushSync();
+    }
+
+    public getCycles(): (GraphCycle | null)[] {
+        return this.cycles;
     }
 
     public removeCycle(cycle: GraphCycle) {

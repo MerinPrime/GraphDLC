@@ -1,0 +1,187 @@
+.ui-record-progress-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  box-sizing: border-box;
+  width: min(340px, calc(100vw - 32px));
+
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+
+  padding: 14px 16px;
+
+  background: var(--bg-base);
+  color: var(--text-primary);
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  font-family: var(--font, monospace);
+  font-size: 13px;
+
+  z-index: 10000;
+
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.25);
+
+  transition: border-color 0.2s ease;
+
+  &.active {
+    display: flex;
+    animation: ui-record-banner-enter 0.22s ease-out;
+  }
+
+  .ui-record-progress-banner-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .ui-record-progress-text {
+    min-width: 0;
+
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+    font-family: inherit;
+
+    overflow-wrap: anywhere;
+    transition: color 0.2s ease;
+  }
+
+  .ui-record-progress-track {
+    width: 100%;
+    height: 6px;
+
+    background: var(--bg-surface);
+
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .ui-record-progress-bar {
+    width: 0%;
+    height: 100%;
+
+    background: var(--btn-blue);
+
+    border-radius: inherit;
+
+    transition:
+      width 0.1s linear,
+      background-color 0.2s ease;
+  }
+
+  .ui-record-btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+
+    background: var(--btn-blue);
+    color: var(--text-primary);
+    border: 2px solid var(--btn-blue-hover);
+    border-radius: 6px;
+
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--btn-blue);
+      color: #fff;
+      border-color: var(--btn-blue);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+  }
+
+  .ui-record-btn-cancel {
+    flex-shrink: 0;
+
+    padding: 2px 6px;
+
+    background: transparent;
+    color: var(--text-muted);
+
+    border: none;
+
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+      color 0.15s ease,
+      transform 0.1s ease;
+
+    &:hover {
+      color: var(--text-red);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    &:focus-visible {
+      outline: 1px solid var(--btn-blue);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  &.completed {
+    border-color: var(--text-green);
+
+    .ui-record-progress-bar {
+      background: #4ade80;
+    }
+
+    .ui-record-progress-text {
+      color: #4ade80;
+    }
+  }
+
+  &.error {
+    border-color: var(--text-red);
+
+    .ui-record-progress-bar {
+      background: var(--text-red);
+    }
+
+    .ui-record-progress-text {
+      color: var(--text-red);
+    }
+  }
+}
+
+@keyframes ui-record-banner-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-record-progress-banner,
+  .ui-record-progress-banner * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -5,9 +5,11 @@ import { CorePlugin } from '../graphdlc';
 import { MoveSelectionPlugin } from '../move_selection';
 import { NewSavePlugin } from '../new_save';
 import { OptimizeSelectionPlugin } from '../opt_selection';
+import { PasteFormatsPlugin } from '../paste_formats';
 import { PathPlugin } from '../path';
 import { PluginsPlugin } from '../plugins';
 import { PowerPlugin } from '../power';
+import { ScreenshotPlugin } from '../screenshot_region';
 import { SelectionTipPlugin } from '../selection_tip';
 import { SettingsPlugin } from '../settings';
 import { TPSPlugin } from '../tps';
@@ -26,8 +28,10 @@ export const PluginRegistry: Plugin[] = [
     SelectionTipPlugin,
     SettingsPlugin,
     NewSavePlugin,
+    PasteFormatsPlugin,
 
     OptimizeSelectionPlugin,
     MoveSelectionPlugin,
     VisualSelectionPlugin,
+    ScreenshotPlugin,
 ];

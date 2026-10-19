@@ -11,11 +11,11 @@ const NameLocale = new I18nText(
 );
 
 const DescriptionLocale = new I18nText(
-    'Enable snapshot history for tick rewinding (may significantly reduce performance)',
-    'Включить сохранение истории для отката тиков (может сильно снизить производительность)',
-    'Увімкнути збереження історії для відкату тіків (може сильно знизити продуктивність)',
-    'Уключыць захаванне гісторыі для адкату цікаў (можа моцна знізіць прадукцыйнасць)',
-    "Activer l'historique des instantanés pour l'annulation des tics (peut réduire considérablement les performances)",
+    'Enable snapshot history for tick rewinding (may hurt performance; rewinds may be unstable)',
+    'Включить сохранение истории для отката тиков (может снизить производительность; откат может работать некорректно)',
+    'Увімкнути збереження історії для відкату тіків (може знизити продуктивність; відкат може працювати некоректно)',
+    'Уключыць захаванне гісторыі для адкату цікаў (можа знізіць прадукцыйнасць; адкат можа працаваць некарэктна)',
+    "Activer l'historique des instantanés pour revenir en arrière dans les ticks (peut réduire les performances ; le retour en arrière peut être instable)",
 );
 
 export const EnableSnapshotsSetting = new BoolSetting(

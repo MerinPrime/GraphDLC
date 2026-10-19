@@ -5,6 +5,15 @@ import type { Graph } from './core/graph/ast/Graph';
 import { HighlightPathData } from './plugins/connections/patches/types';
 import { RenderMoveContext } from './plugins/move_selection/patches/types';
 import { PathData } from './plugins/path/patches/types';
+import type {
+    AnyRecordOptions,
+    AreaBounds,
+    RenderOptions,
+} from './plugins/screenshot_region/patches/types';
+import {
+    Mp4Options,
+    VideoOptions,
+} from './plugins/screenshot_region/patches/types';
 
 declare global {
     declare const __CURRENT_VERSION__: string;
@@ -85,6 +94,24 @@ declare module '@logic-arrows/player/game' {
 
         getArrowAtCursor(): Arrow | undefined;
         getDrawOffsets(): { offsetX: number; offsetY: number };
+
+        getSelectionBounds(): {
+            area: AreaBounds;
+            selectedSet: Set<string>;
+        } | null;
+
+        renderRegionToCanvas(
+            area: AreaBounds,
+            selectedSet?: Set<string>,
+            options: RenderOptions = {},
+        ): HTMLCanvasElement | null;
+
+        renderGif(options: VideoOptions): Promise<Blob | null>;
+        renderApng(options: VideoOptions): Promise<Blob | null>;
+        renderMp4(options: Mp4Options): Promise<Blob | null>;
+        focusOnCell(x: number, y: number, speed: number = 1): void;
+
+        captureScreenshot(options?: RenderOptions): Promise<Blob | null>;
     }
 }
 
@@ -110,6 +137,16 @@ declare module '@logic-arrows/ui/components/ui-speed-controller' {
 declare module '@logic-arrows/player/player-ui' {
     export interface PlayerUI {
         startTickFrom: number;
+        get isRecordModalOpen(): boolean;
+
+        showVideoModal(
+            onStartRecord: (options: AnyRecordOptions) => void,
+            onCancel?: () => void,
+        ): void;
+        tryHideVideoModal(): boolean;
+        stopGifRecording(): void;
+        cancelGifRecording(): void;
+        isGifRecording(): boolean;
     }
 }
 
