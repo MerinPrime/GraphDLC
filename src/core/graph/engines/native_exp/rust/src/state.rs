@@ -315,9 +315,7 @@ impl GraphState {
         if idx >= self.cycles.len() {
             self.cycles.resize_with(idx + 1, || None);
         }
-        if self.cycles[idx].is_none() {
-            self.cycles[idx] = Some(CycleState::new(cycle_idx, length));
-        }
+        self.cycles[idx] = Some(CycleState::new(cycle_idx, length));
     }
 
     pub fn remove_cycle(&mut self, cycle_idx: u32) {
@@ -399,7 +397,10 @@ impl GraphState {
     }
 
     #[inline(always)]
-    fn run_ticks_fast_impl<const HAS_BLOCKERS: bool, const HAS_CYCLES: bool>(&mut self, count: u32) {
+    fn run_ticks_fast_impl<const HAS_BLOCKERS: bool, const HAS_CYCLES: bool>(
+        &mut self,
+        count: u32,
+    ) {
         if self.has_external_marks {
             self.clear_external_marks();
         }
@@ -434,7 +435,9 @@ impl GraphState {
                     let blocked_count = node.blocked_count;
                     let is_active = signal == NODE_SIGNAL_ACTIVE;
 
-                    if !is_active && (blocked_count == 0 || cycle_head_type != CYCLE_HEAD_TYPE_CLEAR) {
+                    if !is_active
+                        && (blocked_count == 0 || cycle_head_type != CYCLE_HEAD_TYPE_CLEAR)
+                    {
                         continue;
                     }
 
@@ -608,7 +611,10 @@ impl GraphState {
                 let flags = node.flags;
                 let signals_count = node.signals_count;
 
-                let signal = if (flags & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE | FLAG_IS_BLOCKED)) != 0 {
+                let signal = if (flags
+                    & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE | FLAG_IS_BLOCKED))
+                    != 0
+                {
                     if (flags & FLAG_IS_BLOCKED) != 0 {
                         NODE_SIGNAL_NONE
                     } else if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
@@ -633,13 +639,13 @@ impl GraphState {
                             NODE_SIGNAL_NONE
                         }
                     } else {
-                        let lut_index = ((node.type_and_signal() as usize) << 3)
-                            | (signals_count as usize);
+                        let lut_index =
+                            ((node.type_and_signal() as usize) << 3) | (signals_count as usize);
                         unsafe { *STATE_LUT.get_unchecked(lut_index) }
                     }
                 } else {
-                    let lut_index = ((node.type_and_signal() as usize) << 3)
-                        | (signals_count as usize);
+                    let lut_index =
+                        ((node.type_and_signal() as usize) << 3) | (signals_count as usize);
                     unsafe { *STATE_LUT.get_unchecked(lut_index) }
                 };
 
@@ -709,9 +715,7 @@ impl GraphState {
             }
 
             if node.node_type == NODE_TYPE_RANDOM {
-                return if signals_count > 0
-                    && random_bool(self.seed, node.pos_hash, tick)
-                {
+                return if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
@@ -719,8 +723,7 @@ impl GraphState {
             }
         }
 
-        let lut_index = ((node.type_and_signal() as usize) << 3)
-            | (signals_count as usize);
+        let lut_index = ((node.type_and_signal() as usize) << 3) | (signals_count as usize);
         unsafe { *STATE_LUT.get_unchecked(lut_index) }
     }
 
@@ -747,8 +750,8 @@ impl GraphState {
         for &back_idx in back_links {
             let back_node = &self.nodes[back_idx as usize];
             let head_type = self.cold_nodes[back_idx as usize].head_type;
-            let is_bypassed_head = head_type != CYCLE_HEAD_TYPE_NONE
-                && head_type != CYCLE_HEAD_TYPE_READ;
+            let is_bypassed_head =
+                head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ;
 
             if is_bypassed_head {
                 continue;
@@ -779,7 +782,6 @@ impl GraphState {
         self.mark_node_as_changed_non_temp(node_idx);
     }
 
-
     pub fn on_cycle_build(
         &mut self,
         cycle_idx: u32,
@@ -788,6 +790,9 @@ impl GraphState {
         cycle_heads: &[u32],
     ) {
         self.add_cycle(cycle_idx, cycle_length);
+        if let Some(ref mut cycle_state) = self.cycles[cycle_idx as usize] {
+            cycle_state.clear();
+        }
 
         for &node_idx in cycle_nodes {
             let (cycle_offset, chunk_idx, is_active) = {
@@ -796,7 +801,7 @@ impl GraphState {
                 (
                     cold.cycle_offset,
                     node.chunk_idx,
-                    node.signal == NODE_SIGNAL_ACTIVE,
+                    node.signal == NODE_SIGNAL_ACTIVE || node.last_signal == NODE_SIGNAL_ACTIVE,
                 )
             };
 
@@ -809,15 +814,15 @@ impl GraphState {
             let node = &mut self.nodes[node_idx as usize];
             node.signal = NODE_SIGNAL_NONE;
             node.last_signal = NODE_SIGNAL_NONE;
+            node.flags &= !FLAG_IS_UPDATED;
             self.make_dirty_chunk(chunk_idx);
         }
 
         let mut removed: HashSet<u32> = HashSet::new();
-
         for &node_idx in cycle_nodes {
-            let head_type = self.cold_nodes[node_idx as usize].head_type;
-            let is_head = head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ;
-
+            let cold = &self.cold_nodes[node_idx as usize];
+            let is_head =
+                cold.head_type != CYCLE_HEAD_TYPE_NONE && cold.head_type != CYCLE_HEAD_TYPE_READ;
             if is_head {
                 self.mark_node_as_changed_non_temp(node_idx);
             } else {
@@ -839,79 +844,85 @@ impl GraphState {
             if head_cold.cycle_idx == cycle_idx {
                 continue;
             }
-
             if head_cold.head_type != CYCLE_HEAD_TYPE_NONE {
                 self.mark_node_as_changed_non_temp(head_idx);
             }
         }
 
-        let mut affected_nodes = HashSet::new();
+        let mut external_affected = HashSet::new();
+        let cycle_nodes_set: HashSet<u32> = cycle_nodes.iter().copied().collect();
+
         for &node_idx in cycle_nodes {
-            affected_nodes.insert(node_idx);
             let node = &self.nodes[node_idx as usize];
             let count = node.links_count as usize;
-            let links = &node.links[..count];
-            for &link_idx in links {
-                affected_nodes.insert(link_idx);
-            }
-        }
-        for &head_idx in cycle_heads {
-            affected_nodes.insert(head_idx);
-            let node = &self.nodes[head_idx as usize];
-            let count = node.links_count as usize;
-            let links = &node.links[..count];
-            for &link_idx in links {
-                affected_nodes.insert(link_idx);
+            for &link_idx in &node.links[..count] {
+                if !cycle_nodes_set.contains(&link_idx) {
+                    external_affected.insert(link_idx);
+                }
             }
         }
 
-        for affected_idx in affected_nodes {
+        for &head_idx in cycle_heads {
+            external_affected.insert(head_idx);
+            let node = &self.nodes[head_idx as usize];
+            let count = node.links_count as usize;
+            for &link_idx in &node.links[..count] {
+                external_affected.insert(link_idx);
+            }
+        }
+
+        for affected_idx in external_affected {
             self.full_node_state_calculate(affected_idx);
         }
     }
 
     pub fn on_cycle_dismantle(&mut self, cycle_idx: u32, cycle_nodes: &[u32], cycle_heads: &[u32]) {
         for &node_idx in cycle_nodes {
-            let (cycle_offset, chunk_idx, is_active) = {
-                let node = &self.nodes[node_idx as usize];
-                let cold = &self.cold_nodes[node_idx as usize];
-                let active = if let Some(ref cycle_state) = self.cycles[cycle_idx as usize] {
-                    cycle_state.get_bit(self.tick, cold.cycle_offset)
-                } else {
-                    false
-                };
-                (cold.cycle_offset, node.chunk_idx, active)
-            };
-            let _ = cycle_offset;
+            let idx = node_idx as usize;
+            let chunk_idx = self.nodes[idx].chunk_idx;
+            let cycle_offset = self.cold_nodes[idx].cycle_offset;
 
-            let has_cycle_state = self.cycles[cycle_idx as usize].is_some();
-            let node = &mut self.nodes[node_idx as usize];
-            if has_cycle_state {
-                if is_active {
-                    node.signal = NODE_SIGNAL_ACTIVE;
-                    node.last_signal = NODE_SIGNAL_ACTIVE;
-                } else {
-                    if node.signal != NODE_SIGNAL_ACTIVE {
-                        node.signal = NODE_SIGNAL_NONE;
-                    }
-                    node.last_signal = node.signal;
-                }
+            let is_active = if let Some(Some(ref cycle_state)) = self.cycles.get(cycle_idx as usize)
+            {
+                cycle_state.get_bit(self.tick, cycle_offset)
+            } else {
+                false
+            };
+
+            let node = &mut self.nodes[idx];
+            if is_active {
+                node.signal = NODE_SIGNAL_ACTIVE;
+                node.last_signal = NODE_SIGNAL_NONE;
+            } else {
+                node.signal = NODE_SIGNAL_NONE;
+                node.last_signal = NODE_SIGNAL_NONE;
             }
 
-            self.cold_nodes[node_idx as usize].cycle_offset = 0;
-            node.flags |= FLAG_IS_UPDATED;
+            let cold = &mut self.cold_nodes[idx];
+            cold.is_in_cycle = false;
+            cold.cycle_idx = 0;
+            cold.cycle_offset = 0;
 
             self.make_dirty_chunk(chunk_idx);
             self.mark_node_as_changed_non_temp(node_idx);
         }
 
+        for &head_idx in cycle_heads {
+            let cold = &mut self.cold_nodes[head_idx as usize];
+            if cold.cycle_idx == cycle_idx {
+                cold.cycle_idx = 0;
+                cold.cycle_offset = 0;
+                self.nodes[head_idx as usize].flags &= !(FLAG_IS_CYCLE_HEAD | FLAG_IS_READ_HEAD);
+            }
+        }
+
+        self.remove_cycle(cycle_idx);
+
         let mut affected_nodes = HashSet::new();
         for &node_idx in cycle_nodes {
-            affected_nodes.insert(node_idx);
             let node = &self.nodes[node_idx as usize];
             let count = node.links_count as usize;
-            let links = &node.links[..count];
-            for &link_idx in links {
+            for &link_idx in &node.links[..count] {
                 affected_nodes.insert(link_idx);
             }
         }
@@ -919,8 +930,7 @@ impl GraphState {
             affected_nodes.insert(head_idx);
             let node = &self.nodes[head_idx as usize];
             let count = node.links_count as usize;
-            let links = &node.links[..count];
-            for &link_idx in links {
+            for &link_idx in &node.links[..count] {
                 affected_nodes.insert(link_idx);
             }
         }
@@ -928,7 +938,5 @@ impl GraphState {
         for affected_idx in affected_nodes {
             self.full_node_state_calculate(affected_idx);
         }
-
-        self.remove_cycle(cycle_idx);
     }
 }

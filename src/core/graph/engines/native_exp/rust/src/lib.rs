@@ -83,7 +83,7 @@ pub extern "C" fn update_node_state(
     state.update_node_back_links(node_idx, &links[..safe_links_count]);
 
     let existing_flags = state.nodes[node_idx as usize].flags;
-    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BLOCKED);
+    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BLOCKED | FLAG_IS_BREAKPOINT);
 
     let node = &mut state.nodes[node_idx as usize];
     node.set_type_id(node_type);
@@ -124,13 +124,16 @@ pub extern "C" fn update_node_state(
     }
 
     node.chunk_idx = chunk_idx;
-    if chunk_idx != u32::MAX && (local_idx as usize) < 256 && (chunk_idx as usize) < state.chunks.len() {
-        state.chunks[chunk_idx as usize].nodes[local_idx as usize] =
-            if node_type == NODE_TYPE_EMPTY {
-                u32::MAX
-            } else {
-                node_idx
-            };
+    if chunk_idx != u32::MAX
+        && (local_idx as usize) < 256
+        && (chunk_idx as usize) < state.chunks.len()
+    {
+        state.chunks[chunk_idx as usize].nodes[local_idx as usize] = if node_type == NODE_TYPE_EMPTY
+        {
+            u32::MAX
+        } else {
+            node_idx
+        };
     }
     state.detected_links[node_idx as usize] = if detected_link >= 0 {
         Some(detected_link as u32)
