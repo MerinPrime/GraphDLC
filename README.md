@@ -1,66 +1,66 @@
 # GraphDLC
 
-**Делает стрелочки блейзинг фаст 😱 😱 ( проверено чубриком и онигири )** \
-**Поддержка:** Chromium〡Firefox〡Tampermonkey〡Via.
+[English](README.md)〡[Русский](README.ru.md)
 
-## Возможности
+**Makes Logic Arrows blazing fast 😱 😱 (tested by Chubrik and Onigiri)**  
+**Supported:** Chromium〡Firefox〡Tampermonkey〡Via.
 
-- **Тёмная тема**
-- **Оптимизация кольцевого ОЗУ**
-- **Новые режимы скорости**
-- **Фикс разного тпс при разном фпс**
-- **Показ текущего тика рядом с фпс**
-- **Улучшенная система сохранения**
-- **Дебаг режимы** \[Можно увидеть неиспользуемые стрелочки\]
-- **Вкл/выкл стрелочки** \[P/Shift+P\]
-- **Прокладка пути** \[ПКМ\]
-- **Подсветка/фиксация пути** \[Alt/Alt+ЛКМ\]
-- **Двигать выделенную схему** \[Ctrl+ЛКМ\]
-- **Откат тиков** \[Shift+Enter\]
-- **Брейкпоинты** \[2 блокера направленных друг на друга\]
-- **Скриншот/Видео** \[L/Shift+L\]
-- **Относительный счётчик тиков** \[Переключается нажатием на фпс дисплей\]
+## Features
 
-## Бенчмарки ( 20 фпс〡нативный движок )
+- **Dark theme**
+- **Ring-based RAM optimization**
+- **New speed modes**
+- **Consistent TPS regardless of FPS**
+- **Current tick display next to FPS**
+- **Improved save system**
+- **Debug modes** \[View unused arrows\]
+- **Toggle arrows on/off** \[P / Shift+P\]
+- **Path drawing** \[RMB\]
+- **Path highlighting/pinning** \[Alt / Alt+LMB\]
+- **Move selected circuit** \[Ctrl+LMB\]
+- **Tick rollback** \[Shift+Enter\]
+- **Breakpoints** \[Two blockers facing each other\]
+- **Screenshot/Video recording** \[L / Shift+L\]
+- **Relative tick counter** \[Toggle by clicking the FPS display\]
 
-| Карта                                                                  | Было        | Стало          | Буст      |
-| ---------------------------------------------------------------------- | ----------- | -------------- | --------- |
-| [Компьютер чубрика в игре Жизнь](https://logic-arrows.io/map-computer) | ~570 TPS    | ~3 750 000 TPS | **x6600** |
-| [Бенчмарк](https://logic-arrows.io/map-cz9Xil8p)                       | ~40 000 TPS | ~1 125 000 TPS | **x28**   |
+## Benchmarks (20 FPS〡Experimental native engine)
 
-# Установка
+| Map                                                                             | Before      | After          | Speedup    |
+| ------------------------------------------------------------------------------- | ----------- | -------------- | ---------- |
+| [Chubrik's Computer Running Game of Life](https://logic-arrows.io/map-computer) | ~570 TPS    | ~3,750,000 TPS | **x6,600** |
+| [Benchmark](https://logic-arrows.io/map-cz9Xil8p)                               | ~40,000 TPS | ~1,125,000 TPS | **x28**    |
 
-Все актуальные сборки всегда лежат на странице [GitHub Releases](https://github.com/MerinPrime/GraphDLC/releases).
+# Installation
 
----
-
-### ПК (Chrome / Edge / Brave / Opera)
-
-1. **Скачай архив** с релизов:
-
-- `newchrome.zip` — для современных браузеров (Manifest V3).
-- `oldchrome.zip` — для старых версий браузеров с поддержкой Manifest V2.
-
-2. **Распакуй** архив в любую постоянную папку _(не удаляй её после установки)_.
-3. Перейди на страницу расширений: `chrome://extensions` (или `edge://extensions`).
-4. Включи **Режим разработчика**.
-5. Нажми **Загрузить распакованное расширение** и выбери папку с разархивированным скриптом.
-
-> **Как обновить:** Замени файлы в папке на новые и нажми кнопку обновить на странице `chrome://extensions`. Если что-то пошло не так — удали старую версию и загрузи заново.
+All the latest builds are available on the [GitHub Releases](https://github.com/MerinPrime/GraphDLC/releases) page.
 
 ---
 
-### Телефон (Via Browser)
+### PC (Chrome / Edge / Brave / Opera)
 
-1. Скачай `viamobile.zip` с релизов и распакуй его.
-2. Открой Via Browser и перейди: **Настройки** ➔ **Скрипты**.
-3. Нажми **`+`** ➔ **Загрузить из файла**.
-4. Выбери распакованный `.js` файл.
+1. **Download the archive** from Releases:
+   - `newchrome.zip` — for modern browsers (Manifest V3).
+   - `oldchrome.zip` — for older browser versions that support Manifest V2.
+2. **Extract** the archive to a permanent folder _(do not delete this folder after installation)_.
+3. Open the extensions page: `chrome://extensions` (or `edge://extensions`).
+4. Enable **Developer mode**.
+5. Click **Load unpacked** and select the folder containing the extracted extension files.
+
+> **How to update:** Replace the files in the folder with the new ones and click the refresh button on the `chrome://extensions` page. If anything goes wrong, remove the old version and load it again.
+
+---
+
+### Mobile (Via Browser)
+
+1. Download `viamobile.zip` from Releases and extract it.
+2. Open Via Browser and go to **Settings** ➔ **Scripts**.
+3. Tap **`\+`** ➔ **Import from file**.
+4. Select the extracted `.js` file.
 
 ---
 
 ### Tampermonkey / Violentmonkey
 
-1. Скачай `tampermonkey.zip` с релизов и распакуй.
-2. Открой расширение Tampermonkey и нажми **Создать новый скрипт**.
-3. Вставь содержимое файла `tampermonkey.js` в редактор и сохрани (**Ctrl + S** / **Cmd + S**).
+1. Download `tampermonkey.zip` from Releases and extract it.
+2. Open Tampermonkey and click **Create a new script**.
+3. Paste the contents of `tampermonkey.js` into the editor and save (**Ctrl+S** / **Cmd+S**).
