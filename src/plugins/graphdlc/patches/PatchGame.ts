@@ -79,6 +79,20 @@ export const PatchGame: IPatcher = (
                 );
             }
 
+            public focusOnCell(x: number, y: number, speed: number = 1): void {
+                const boxWidth: number =
+                    this.width / 40 / window.devicePixelRatio;
+                const boxHeight: number =
+                    this.height / 40 / window.devicePixelRatio;
+
+                const x0 = x - boxWidth / 2;
+                const x1 = x + boxWidth / 2;
+                const y0 = y - boxHeight / 2;
+                const y1 = y + boxHeight / 2;
+
+                this.focusOnBox(x0, y0, x1, y1, 0, speed);
+            }
+
             public draw() {
                 const graph = this.gameMap.graph;
                 const engine = graph.engine;
