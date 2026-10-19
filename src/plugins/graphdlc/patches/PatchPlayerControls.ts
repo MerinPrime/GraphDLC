@@ -85,7 +85,8 @@ export const PatchPlayerControls: IPatcher = (
                     ) => {
                         if (
                             _this.keyboardHandler.getShiftPressed() &&
-                            code === 'Enter'
+                            code === 'Enter' &&
+                            !_this.game.playing
                         ) {
                             const engine = _this.game.gameMap.graph.engine;
                             engine.rewindToTick(
