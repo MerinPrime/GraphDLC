@@ -4,6 +4,7 @@
 
 **Makes Logic Arrows blazing fast 😱 😱 (tested by Chubrik and Onigiri)**  
 **Supported:** Chromium〡Firefox〡Tampermonkey〡Via.
+**Mod settings are available in the in-game Settings menu!**
 
 ## Features
 
@@ -13,6 +14,7 @@
 - **Consistent TPS regardless of FPS**
 - **Current tick display next to FPS**
 - **Improved save system**
+- **Steam save paste support**
 - **Debug modes** \[View unused arrows\]
 - **Toggle arrows on/off** \[P / Shift+P\]
 - **Path drawing** \[RMB\]
