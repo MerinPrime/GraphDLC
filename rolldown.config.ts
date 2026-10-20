@@ -236,6 +236,12 @@ const chromeExtensionPlugin = (
             fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2));
         }
 
+        const backgroundSrc = path.join(templateDir, 'background.js');
+        const backgroundDest = path.join(outDir, 'background.js');
+        if (fs.existsSync(backgroundSrc)) {
+            fs.copyFileSync(backgroundSrc, backgroundDest);
+        }
+
         const imagesSrc = path.join(templateDir, 'images');
         const imagesDest = path.join(outDir, 'images');
         if (fs.existsSync(imagesSrc)) {

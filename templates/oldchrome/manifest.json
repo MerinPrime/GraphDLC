@@ -17,5 +17,9 @@
             "all_frames": true
         }
     ],
-    "web_accessible_resources": ["index.js"]
+    "web_accessible_resources": ["index.js"],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "browser_action": {}
 }
