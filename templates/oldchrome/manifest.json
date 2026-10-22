@@ -1,6 +1,6 @@
 {
     "manifest_version": 2,
-    "name": "GraphDLC",
+    "name": "name",
     "version": "x.y.z.w",
     "description": "GraphDLC для стрелочек...",
     "icons": {

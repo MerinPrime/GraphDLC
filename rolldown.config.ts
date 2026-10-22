@@ -233,6 +233,10 @@ const chromeExtensionPlugin = (
         if (fs.existsSync(manifestSrc)) {
             const manifest = JSON.parse(fs.readFileSync(manifestSrc, 'utf8'));
             manifest.version = pkg.version.replace(/-test\d+$/i, '');
+            const testMatch = pkg.version.match(/-test(\d+)$/i);
+            manifest.name = testMatch
+                ? `${pkg.displayName} Test ${testMatch[1]}`
+                : pkg.displayName;
             fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2));
         }
 
@@ -242,11 +246,17 @@ const chromeExtensionPlugin = (
             fs.copyFileSync(backgroundSrc, backgroundDest);
         }
 
-        const imagesSrc = path.join(templateDir, 'images');
         const imagesDest = path.join(outDir, 'images');
-        if (fs.existsSync(imagesSrc)) {
-            fs.cpSync(imagesSrc, imagesDest, { recursive: true });
-        }
+        fs.mkdirSync(imagesDest, { recursive: true });
+
+        const isTest = /-test\d+$/i.test(pkg.version);
+        const iconSrc = path.join(
+            templateDir,
+            'images',
+            isTest ? 'test-icon128.png' : 'icon128.png',
+        );
+
+        fs.copyFileSync(iconSrc, path.join(imagesDest, 'icon128.png'));
 
         if (target === 'oldchrome') {
             const injectorSrc = path.join(templateDir, 'injector.js');
@@ -281,8 +291,12 @@ const userscriptPlugin = (
             const bundleContent = fs.readFileSync(filePath, 'utf8');
             let template = fs.readFileSync(templatePath, 'utf8');
 
+            const testMatch = pkg.version.match(/-test(\d+)$/i);
+            const displayName = testMatch
+                ? `${pkg.displayName} Test ${testMatch[1]}`
+                : pkg.displayName;
             template = template
-                .replace('{{name}}', pkg.displayName)
+                .replace('{{name}}', displayName)
                 .replace('{{version}}', pkg.version.replace(/-test$/i, ''))
                 .replace('{{description}}', pkg.description)
                 .replace('{{author}}', pkg.author);
