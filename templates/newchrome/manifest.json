@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "name",
     "version": "x.y.z.w",
-    "description": "GraphDLC для стрелочек...",
+    "description": "description",
     "action": {
         "default_icon": "images/icon128.png",
         "default_title": "GraphDLC"

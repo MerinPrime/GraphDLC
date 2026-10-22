@@ -237,6 +237,7 @@ const chromeExtensionPlugin = (
             manifest.name = testMatch
                 ? `${pkg.displayName} Test ${testMatch[1]}`
                 : pkg.displayName;
+            manifest.description = pkg.description;
             fs.writeFileSync(manifestDest, JSON.stringify(manifest, null, 2));
         }
 
