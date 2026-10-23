@@ -1,6 +1,7 @@
 import type { KeyboardHandler } from '@logic-arrows/controls/keyboard-handler';
 import type { MouseHandler } from '@logic-arrows/controls/mouse-handler';
 import type { Arrow } from '@logic-arrows/game-logic/arrow';
+import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
 import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actions';
@@ -104,6 +105,36 @@ export const PatchPlayerControls: IPatcher = (
                     super.clearSignals();
                     const _this = this as any as PrivatePlayerControls;
                     _this.playerUI.startTickFrom = 0;
+                }
+
+                public update(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    const keyboard = _this.keyboardHandler;
+
+                    if (
+                        keyboard.getCtrlPressed() &&
+                        keyboard.getKeyPressed('KeyA')
+                    ) {
+                        for (const chunk of _this.game.gameMap.chunks.values()) {
+                            for (let x: number = 0; x < CHUNK_SIZE; x++) {
+                                for (let y: number = 0; y < CHUNK_SIZE; y++) {
+                                    if (
+                                        chunk.getArrow(x, y).type ===
+                                        ArrowType.EMPTY
+                                    )
+                                        continue;
+                                    _this.game.selectedMap.select(
+                                        chunk.x * CHUNK_SIZE + x,
+                                        chunk.y * CHUNK_SIZE + y,
+                                    );
+                                }
+                            }
+                        }
+                        _this.game.selectedMap.updateSelectionFromCurrentSelection();
+                        return;
+                    }
+
+                    super.update();
                 }
             };
         },

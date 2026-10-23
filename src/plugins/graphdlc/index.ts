@@ -54,11 +54,24 @@ export const TickRewindLocale = new I18nText(
     'retour du tick',
 );
 
+export const SelectAllLocale = new I18nText(
+    'select all',
+    'выделить всё',
+    'виділити все',
+    'вылучыць усё',
+    'tout sélectionner',
+);
+
 const KeyBindHints: KeyBindHint[] = [
     {
         keys: ['Shift', 'Enter'],
         showOn: ['free'],
         description: TickRewindLocale,
+    },
+    {
+        keys: ['Ctrl', 'A'],
+        showOn: ['free'],
+        description: SelectAllLocale,
     },
 ];
 
