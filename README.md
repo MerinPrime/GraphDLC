@@ -20,6 +20,7 @@
 - **Path drawing** \[RMB\]
 - **Path highlighting/pinning** \[Alt / Alt+LMB\]
 - **Move selected circuit** \[Ctrl+LMB\]
+- **Select all arrows** \[Ctrl+A\]
 - **Tick rollback** \[Shift+Enter\]
 - **Breakpoints** \[Two blockers facing each other\]
 - **Screenshot/Video recording** \[L / Shift+L\]
