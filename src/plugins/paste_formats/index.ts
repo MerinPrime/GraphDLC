@@ -1,8 +1,9 @@
 import { Plugin, PluginPriority } from '../core/Plugin';
 import { CorePlugin } from '../graphdlc';
+import { PatchNavigation } from './patches/PatchNavigation';
 import { PatchSelectedMap } from './patches/PatchSelectedMap';
 
-const Patches = [PatchSelectedMap];
+const Patches = [PatchSelectedMap, PatchNavigation];
 
 export const PasteFormatsPlugin = new Plugin(
     'graphdlc-paste-formats',
