@@ -4,6 +4,7 @@ import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
+import type { PlayerAccess } from '@logic-arrows/player/player-access';
 import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actions';
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
@@ -19,6 +20,7 @@ interface PrivatePlayerControls {
     readonly keyboardHandler: KeyboardHandler;
     readonly mouseHandler: MouseHandler;
     readonly arrowActions: PlayerArrowActions;
+    readonly playerAccess: PlayerAccess;
 
     getArrowByMousePosition(): Arrow | undefined;
 }
@@ -35,6 +37,10 @@ export const PatchPlayerControls: IPatcher = (
                 private _rewindActive = false;
                 private _rewindStartTime = 0;
                 private _lastRewindTime = 0;
+
+                private _stepForwardActive = false;
+                private _stepForwardStartTime = 0;
+                private _lastStepForwardTime = 0;
 
                 public constructor(
                     cnv: HTMLCanvasElement,
@@ -88,11 +94,7 @@ export const PatchPlayerControls: IPatcher = (
                         code: string,
                         key: string,
                     ) => {
-                        if (
-                            _this.keyboardHandler.getShiftPressed() &&
-                            (code === 'Enter' || code === 'NumpadEnter') &&
-                            !_this.game.playing
-                        ) {
+                        if (code === 'Enter' || code === 'NumpadEnter') {
                             return;
                         }
                         if (oldKeyDownCallback) oldKeyDownCallback(code, key);
@@ -101,12 +103,21 @@ export const PatchPlayerControls: IPatcher = (
 
                 private stepRewind(): void {
                     const _this = this as any as PrivatePlayerControls;
+                    if (_this.game.playing) return;
+                    if (!_this.playerAccess.canRunOneTick) return;
                     const engine = _this.game.gameMap.graph.engine;
                     const tick = engine.getTick();
                     if (tick > 0) {
                         engine.rewindToTick(tick - 1);
                         _this.playerUI.updateFpsDisplay();
                     }
+                }
+
+                private stepForward(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    if (_this.game.playing) return;
+                    if (!_this.playerAccess.canRunOneTick) return;
+                    _this.game.updateTick();
                 }
 
                 public clearSignals() {
@@ -125,27 +136,55 @@ export const PatchPlayerControls: IPatcher = (
                         keyboard.getKeyPressed('NumpadEnter');
                     const isShift = keyboard.getShiftPressed();
 
-                    if (isShift && isEnter && !_this.game.playing) {
+                    if (isEnter) {
                         const now = performance.now();
                         const INITIAL_DELAY = 400;
                         const REPEAT_INTERVAL = 50;
 
-                        if (!this._rewindActive) {
-                            this._rewindActive = true;
-                            this._rewindStartTime = now;
-                            this._lastRewindTime = now;
-                            this.stepRewind();
-                        } else if (
-                            now - this._rewindStartTime >=
-                            INITIAL_DELAY
-                        ) {
-                            if (now - this._lastRewindTime >= REPEAT_INTERVAL) {
+                        if (isShift) {
+                            this._stepForwardActive = false;
+
+                            if (!this._rewindActive) {
+                                this._rewindActive = true;
+                                this._rewindStartTime = now;
                                 this._lastRewindTime = now;
                                 this.stepRewind();
+                            } else if (
+                                now - this._rewindStartTime >=
+                                INITIAL_DELAY
+                            ) {
+                                if (
+                                    now - this._lastRewindTime >=
+                                    REPEAT_INTERVAL
+                                ) {
+                                    this._lastRewindTime = now;
+                                    this.stepRewind();
+                                }
+                            }
+                        } else {
+                            this._rewindActive = false;
+
+                            if (!this._stepForwardActive) {
+                                this._stepForwardActive = true;
+                                this._stepForwardStartTime = now;
+                                this._lastStepForwardTime = now;
+                                this.stepForward();
+                            } else if (
+                                now - this._stepForwardStartTime >=
+                                INITIAL_DELAY
+                            ) {
+                                if (
+                                    now - this._lastStepForwardTime >=
+                                    REPEAT_INTERVAL
+                                ) {
+                                    this._lastStepForwardTime = now;
+                                    this.stepForward();
+                                }
                             }
                         }
                     } else {
                         this._rewindActive = false;
+                        this._stepForwardActive = false;
                     }
 
                     if (
