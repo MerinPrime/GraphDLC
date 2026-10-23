@@ -11,11 +11,11 @@ const NameLocale = new I18nText(
 );
 
 const DescriptionLocale = new I18nText(
-    'Improves the visual appearance of selection',
-    'Улучшает внешний вид выделения',
-    'Покращує зовнішній вигляд виділення',
-    'Палепшыць знешні выгляд вылучэння',
-    "Améliore l'apparence visuelle de la sélection",
+    'Enable enhanced selection visuals (may cause significant performance drops when selecting large arrow groups)',
+    'Включить улучшенный визуал выделения (может значительно снижать производительность при выделении больших схем)',
+    'Увімкнути покращений вигляд виділення (може значно знижувати продуктивність під час виділення великих схем)',
+    'Уключыць палепшаны выгляд вылучэння (можа значна зніжаць прадукцыйнасць пры вылучэнні вялікіх схем)',
+    'Activer les effets visuels améliorés de sélection (peut fortement réduire les performances lors de la sélection de un grand nombre de flèches)',
 );
 
 export const VisualSelectionSetting = new BoolSetting(
