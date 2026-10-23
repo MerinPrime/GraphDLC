@@ -1,6 +1,6 @@
 @use "../shared/variables" as *;
 
-input[type="number"] {
+input[type="number"]:not(.custom-tps-input) {
   width: 100%;
   box-sizing: border-box;
 
