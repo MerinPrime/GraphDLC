@@ -48,9 +48,6 @@ export const PatchPlayerUI: IPatcher = (
                             const nodeIdx = arrow.astIndex;
                             const node = graph.getNode(nodeIdx);
                             const nodeState = engine.state.getNode(nodeIdx);
-                            debugLines.push(
-                                `Position: [${node.globalX}, ${node.globalY}]`,
-                            );
                             debugLines.push(`AST Index: ${node.nodeIdx}`);
                             debugLines.push(
                                 `Signal: ${DebugNodeSignal[nodeState.signal]}`,

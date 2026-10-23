@@ -36,15 +36,19 @@ export const PatchPlayerUI: IPatcher = (
             public updateFpsDisplay(): void {
                 const _this = this as any as PrivatePlayerUI;
                 if (_this.fpsDisplay === null || _this.game === null) return;
+
                 const fps = _this.game.getFPS();
                 const tps = _this.game.getTPS();
                 const tick = _this.game.gameMap.graph.engine.getTick();
                 const tickCounter = tick - this.startTickFrom;
-                if (tickCounter < 0 || this.startTickFrom === 0) {
-                    _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: ${tick}`;
-                } else {
-                    _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\nTick: +${tickCounter}`;
-                }
+                const [mouseX, mouseY] = _this.game.mousePosition;
+
+                const tickText =
+                    tickCounter < 0 || this.startTickFrom === 0
+                        ? `Tick: ${tick}`
+                        : `Tick: +${tickCounter}`;
+
+                _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\n${tickText}\nPosition: [${mouseX}, ${mouseY}]`;
             }
         };
     });
