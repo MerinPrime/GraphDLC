@@ -15,10 +15,13 @@ export const PatchSave: IPatcher = (
         return function save(map: GameMap): number[] {
             const buffer: number[] = [];
             buffer.push(0, 0); // version
-            buffer.push(map.chunks.size & 0xff, (map.chunks.size >> 8) & 0xff);
-            map.chunks.forEach((chunk: Chunk) => {
-                if (chunk.isEmpty()) return;
+            const chunks: Chunk[] = [...map.chunks.values()].sort(
+                (a: Chunk, b: Chunk) => a.x - b.x || b.y - a.y,
+            );
+            buffer.push(chunks.length & 0xff, (chunks.length >> 8) & 0xff);
+            for (const chunk of chunks) {
                 const arrowsTypes: number[] = chunk.getArrowTypes();
+                if (arrowsTypes.length === 0) continue;
                 const chunkBytesX: number[] = [
                     Math.abs(chunk.x) & 0xff,
                     (Math.abs(chunk.x) >> 8) & 0xff,
@@ -55,7 +58,7 @@ export const PatchSave: IPatcher = (
                     }
                     buffer[typesCountIndex] = typeCount - 1;
                 });
-            });
+            }
             return buffer;
         };
     });
