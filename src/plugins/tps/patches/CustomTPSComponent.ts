@@ -29,19 +29,6 @@ export class CustomTPSComponent {
             this.field.value = this.tps.toString(10);
         });
 
-        this.field.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            this.focus();
-        });
-        this.field.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.focus();
-        });
-        this.field.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.focus();
-        });
-
         this.parent.appendChild(this.field);
         this.setVisibility(false);
     }

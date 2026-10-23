@@ -53,9 +53,14 @@ export const PatchPlayerControls: IPatcher = (
                 }
 
                 public update(): void {
-                    super.update();
-
                     const _this = this as any as PrivatePlayerControls;
+
+                    if (
+                        _this.playerUI.speedController?.customTPSField?.isFocused()
+                    )
+                        return;
+
+                    super.update();
 
                     _this.game.customTPS =
                         _this.playerUI.speedController?.customTPSField.tps || 1;
