@@ -37,6 +37,29 @@ export const PatchGame: IPatcher = (
         return class Game extends _module {
             public customTPS: number = 1;
 
+            private readonly handleVisibilityChange = (): void => {
+                if (document.hidden) {
+                    this.playing = false;
+                    uiPauseSign.val?.setVisibility(true);
+                }
+            };
+
+            public constructor(canvas: HTMLCanvasElement) {
+                super(canvas);
+                document.addEventListener(
+                    'visibilitychange',
+                    this.handleVisibilityChange,
+                );
+            }
+
+            public dispose(): void {
+                super.dispose();
+                document.removeEventListener(
+                    'visibilitychange',
+                    this.handleVisibilityChange,
+                );
+            }
+
             public draw() {
                 const renderStart = performance.now();
 
