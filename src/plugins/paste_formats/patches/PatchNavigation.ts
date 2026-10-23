@@ -122,7 +122,7 @@ export const PatchNavigation: IPatcher = (
             // @ts-expect-error
             return class Navigation extends _module {
                 public goToPath(action: NavigationActionType): void {
-                    if (window.location.pathname.startsWith('/map')) {
+                    if (window.location.pathname.startsWith('/map-')) {
                         const mapId: string =
                             window.location.pathname.substring(5);
                         const url = new URL(window.location.href);
