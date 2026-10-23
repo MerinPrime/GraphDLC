@@ -17,7 +17,7 @@ export class StateRewinder<TSnapshot extends ISnapshot> {
     public static readonly SNAPSHOTS_PER_TIER: number = 10;
     public static readonly MAX_LEVELS: number = 5;
 
-    public readonly baseTimeInterval: number = 250;
+    public readonly baseTimeInterval: number = 100;
     public readonly baseTickInterval: number = 1000;
     private lastSavedTime: number = 0;
     private lastSavedTick: number = -this.baseTickInterval - 1;
