@@ -31,45 +31,59 @@ export const PatchSelectedMap: IPatcher = (
                 public select(x: number, y: number): void {
                     super.select(x, y);
                     this.renderDatas.set(`${x},${y}`, {
-                        x: x,
-                        y: y,
-
+                        x,
+                        y,
                         left_side: true,
                         top_side: true,
                         right_side: true,
                         bottom_side: true,
                     });
-                    for (let ox = -1; ox < 2; ox++) {
-                        for (let oy = -1; oy < 2; oy++) {
-                            this.updateSides(x + ox, y + oy);
-                        }
-                    }
+
+                    this.updateSides(x, y);
+                    this.updateSides(x - 1, y);
+                    this.updateSides(x + 1, y);
+                    this.updateSides(x, y - 1);
+                    this.updateSides(x, y + 1);
                 }
 
                 public deselect(x: number, y: number): void {
                     super.deselect(x, y);
                     this.renderDatas.delete(`${x},${y}`);
-                    for (let ox = -1; ox < 2; ox++) {
-                        for (let oy = -1; oy < 2; oy++) {
-                            this.updateSides(x + ox, y + oy);
-                        }
-                    }
+
+                    this.updateSides(x - 1, y);
+                    this.updateSides(x + 1, y);
+                    this.updateSides(x, y - 1);
+                    this.updateSides(x, y + 1);
                 }
 
                 public updateSides(x: number, y: number): void {
-                    if (!this.renderDatas.has(`${x},${y}`)) return;
+                    const key = `${x},${y}`;
+                    const current = this.renderDatas.get(key);
 
-                    const data = {
-                        x: x,
-                        y: y,
+                    if (!current) return;
 
-                        left_side: !this.renderDatas.has(`${x - 1},${y}`),
-                        top_side: !this.renderDatas.has(`${x},${y - 1}`),
-                        right_side: !this.renderDatas.has(`${x + 1},${y}`),
-                        bottom_side: !this.renderDatas.has(`${x},${y + 1}`),
-                    };
+                    const left_side = !this.renderDatas.has(`${x - 1},${y}`);
+                    const top_side = !this.renderDatas.has(`${x},${y - 1}`);
+                    const right_side = !this.renderDatas.has(`${x + 1},${y}`);
+                    const bottom_side = !this.renderDatas.has(`${x},${y + 1}`);
 
-                    this.renderDatas.set(`${x},${y}`, data);
+                    if (
+                        current.left_side === left_side &&
+                        current.top_side === top_side &&
+                        current.right_side === right_side &&
+                        current.bottom_side === bottom_side
+                    ) {
+                        return;
+                    }
+
+                    this.renderDatas.set(key, {
+                        x,
+                        y,
+                        left_side,
+                        top_side,
+                        right_side,
+                        bottom_side,
+                    });
                 }
 
                 public getSelectionForRender(): SelectedArrow[] {
