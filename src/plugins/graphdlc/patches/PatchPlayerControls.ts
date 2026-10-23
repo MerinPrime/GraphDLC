@@ -32,6 +32,10 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             // @ts-expect-error
             return class PlayerControls extends _module {
+                private _rewindActive = false;
+                private _rewindStartTime = 0;
+                private _lastRewindTime = 0;
+
                 public constructor(
                     cnv: HTMLCanvasElement,
                     game: Game,
@@ -86,18 +90,23 @@ export const PatchPlayerControls: IPatcher = (
                     ) => {
                         if (
                             _this.keyboardHandler.getShiftPressed() &&
-                            code === 'Enter' &&
+                            (code === 'Enter' || code === 'NumpadEnter') &&
                             !_this.game.playing
                         ) {
-                            const engine = _this.game.gameMap.graph.engine;
-                            engine.rewindToTick(
-                                Math.max(engine.getTick() - 1, 0),
-                            );
-                            _this.playerUI.updateFpsDisplay();
                             return;
                         }
                         if (oldKeyDownCallback) oldKeyDownCallback(code, key);
                     };
+                }
+
+                private stepRewind(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    const engine = _this.game.gameMap.graph.engine;
+                    const tick = engine.getTick();
+                    if (tick > 0) {
+                        engine.rewindToTick(tick - 1);
+                        _this.playerUI.updateFpsDisplay();
+                    }
                 }
 
                 public clearSignals() {
@@ -110,6 +119,34 @@ export const PatchPlayerControls: IPatcher = (
                 public update(): void {
                     const _this = this as any as PrivatePlayerControls;
                     const keyboard = _this.keyboardHandler;
+
+                    const isEnter =
+                        keyboard.getKeyPressed('Enter') ||
+                        keyboard.getKeyPressed('NumpadEnter');
+                    const isShift = keyboard.getShiftPressed();
+
+                    if (isShift && isEnter && !_this.game.playing) {
+                        const now = performance.now();
+                        const INITIAL_DELAY = 400;
+                        const REPEAT_INTERVAL = 50;
+
+                        if (!this._rewindActive) {
+                            this._rewindActive = true;
+                            this._rewindStartTime = now;
+                            this._lastRewindTime = now;
+                            this.stepRewind();
+                        } else if (
+                            now - this._rewindStartTime >=
+                            INITIAL_DELAY
+                        ) {
+                            if (now - this._lastRewindTime >= REPEAT_INTERVAL) {
+                                this._lastRewindTime = now;
+                                this.stepRewind();
+                            }
+                        }
+                    } else {
+                        this._rewindActive = false;
+                    }
 
                     if (
                         keyboard.getCtrlPressed() &&
