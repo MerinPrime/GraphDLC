@@ -25,6 +25,7 @@ export const enum ArrowType {
     LEVEL_TARGET = 23,
     DIRECTIONAL_BUTTON = 24,
     WALL = 25,
+    QUESTION = 26,
 }
 
 export const ArrowTypeCount = 24;
