@@ -5,6 +5,7 @@ import type { GraphCycle } from '../ast/cycle/types';
 import type { Graph } from '../ast/Graph';
 import type { GraphNode } from '../ast/GraphNode';
 import type { IGraphListener } from '../ast/IGraphListener';
+import type { GraphPath } from '../ast/path/types';
 import { DebugChunk } from './DebugChunk';
 import type { INodeDebugData, RenderDebugColor } from './types';
 
@@ -108,6 +109,26 @@ export abstract class DebuggerMode<TNodeDebugData extends INodeDebugData>
         cycle.extraNodes.forEach((node) => {
             this.performNodeUpdate(graph, node);
         });
+    }
+
+    public onPathAdded(graph: Graph, path: GraphPath): void {
+        this.performNodeUpdate(graph, path.sourceNode);
+        for (let i = 0; i < path.nodes.length; i++) {
+            this.performNodeUpdate(graph, path.nodes[i]);
+        }
+        for (let i = 0; i < path.targets.length; i++) {
+            this.performNodeUpdate(graph, path.targets[i].node);
+        }
+    }
+
+    public onPathRemoved(graph: Graph, path: GraphPath): void {
+        this.performNodeUpdate(graph, path.sourceNode);
+        for (let i = 0; i < path.nodes.length; i++) {
+            this.performNodeUpdate(graph, path.nodes[i]);
+        }
+        for (let i = 0; i < path.targets.length; i++) {
+            this.performNodeUpdate(graph, path.targets[i].node);
+        }
     }
 
     public renderChunks(bounds: Bounds, renderColor: RenderDebugColor) {

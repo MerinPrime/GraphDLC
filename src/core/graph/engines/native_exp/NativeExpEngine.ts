@@ -1,4 +1,5 @@
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
+import type { GraphPath } from 'src/core/graph/ast/path/types';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
@@ -13,18 +14,20 @@ interface NativeExpEngineTypes extends EngineTypes {
 }
 
 export class NativeExpEngine extends BaseEngine<NativeExpEngineTypes> {
-    public override readonly capabilities: EngineCapabilities = {
-        canWriteAndClear: true,
-        bulkRender: true,
-        supportCycles: true,
-    };
+    public override readonly capabilities: EngineCapabilities;
 
     protected readonly state: NativeExpState;
 
     private readonly wrapper: RustExpWrapper;
 
-    public constructor() {
+    public constructor(enablePathes: boolean = true) {
         super();
+        this.capabilities = {
+            canWriteAndClear: true,
+            bulkRender: true,
+            supportCycles: true,
+            supportPathes: enablePathes,
+        };
         this.wrapper = new RustExpWrapper();
         this.wrapper.init();
         this.state = new NativeExpState(this.wrapper);
@@ -44,6 +47,14 @@ export class NativeExpEngine extends BaseEngine<NativeExpEngineTypes> {
 
     public removeCycle(cycle: GraphCycle): void {
         this.wrapper.onCycleDismantle(cycle);
+    }
+
+    public override addPath(path: GraphPath): void {
+        this.wrapper.onPathBuild(path);
+    }
+
+    public override removePath(path: GraphPath): void {
+        this.wrapper.onPathDismantle(path);
     }
 
     public updateNodeState(_graph: Graph, node: GraphNode): void {

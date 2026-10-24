@@ -2,7 +2,9 @@ use crate::chunk::Chunk;
 use crate::consts::*;
 use crate::cycle::CycleState;
 use crate::node::Node;
+use crate::path::{PathInternalNode, PathState, PathTarget};
 use crate::rng::random_bool;
+use crate::time_wheel::{TimeWheel, INLINE_BUCKET_CAP, WHEEL_MASK};
 use std::collections::HashSet;
 
 const REQUEUE_MASK: u8 =
@@ -114,22 +116,51 @@ const fn build_state_lut() -> [u8; 8192] {
 
 static STATE_LUT: [u8; 8192] = build_state_lut();
 
+#[derive(Clone, Copy)]
 pub struct NodeCold {
+    pub chunk_idx: u32,
+    pub pos_hash: u32,
     pub cycle_idx: u32,
     pub cycle_offset: u32,
     pub blocked_link: u32,
     pub detectors: [u32; 4],
     pub head_type: u8,
     pub is_in_cycle: bool,
+    pub is_entry_point: bool,
+    pub is_in_path: bool,
+    pub path_idx: u32,
+    pub path_distance: u32,
 }
+
+pub const DEFAULT_NODE_COLD: NodeCold = NodeCold {
+    chunk_idx: 0,
+    pos_hash: 0,
+    cycle_idx: 0,
+    cycle_offset: 0,
+    blocked_link: u32::MAX,
+    detectors: [0u32; 4],
+    head_type: 0,
+    is_in_cycle: false,
+    is_entry_point: false,
+    is_in_path: false,
+    path_idx: u32::MAX,
+    path_distance: 0,
+};
 
 pub struct GraphState {
     pub nodes: Vec<Node>,
+    pub node_links: Vec<[u32; 4]>,
+    pub node_paths: Vec<[u32; 4]>,
+    pub node_paths_count: Vec<u8>,
     pub cold_nodes: Vec<NodeCold>,
     pub chunks: Vec<Chunk>,
     pub changed_nodes: Vec<u32>,
     pub temp_changed_nodes: Vec<u32>,
     pub cycles: Vec<Option<CycleState>>,
+    pub has_paths: bool,
+    pub paths: Vec<PathState>,
+    pub all_path_targets: Vec<PathTarget>,
+    pub time_wheel: TimeWheel,
     pub seed: u32,
     pub tick: u32,
     pub break_points: Vec<u32>,
@@ -170,11 +201,18 @@ impl GraphState {
     pub fn new() -> Self {
         GraphState {
             nodes: Vec::with_capacity(4096),
+            node_links: Vec::with_capacity(4096),
+            node_paths: Vec::with_capacity(4096),
+            node_paths_count: Vec::with_capacity(4096),
             cold_nodes: Vec::with_capacity(4096),
             chunks: Vec::with_capacity(16),
             changed_nodes: Vec::with_capacity(4096),
             temp_changed_nodes: Vec::with_capacity(4096),
             cycles: Vec::with_capacity(64),
+            has_paths: false,
+            paths: Vec::with_capacity(64),
+            all_path_targets: Vec::with_capacity(4096),
+            time_wheel: TimeWheel::new(),
             seed: 0,
             tick: 0,
             break_points: Vec::with_capacity(64),
@@ -194,11 +232,18 @@ impl GraphState {
 
     pub fn clear(&mut self) {
         self.nodes.clear();
+        self.node_links.clear();
+        self.node_paths.clear();
+        self.node_paths_count.clear();
         self.cold_nodes.clear();
         self.chunks.clear();
         self.changed_nodes.clear();
         self.temp_changed_nodes.clear();
         self.cycles.clear();
+        self.has_paths = false;
+        self.paths.clear();
+        self.all_path_targets.clear();
+        self.time_wheel.clear();
         self.tick = 0;
         self.break_points.clear();
         self.break_point = false;
@@ -228,19 +273,11 @@ impl GraphState {
                 blocked_count: 0,
                 links_count: 0,
                 detectors_count: 0,
-
-                chunk_idx: 0,
-                links: [0u32; 4],
-                pos_hash: 0,
             });
-            self.cold_nodes.resize_with(count, || NodeCold {
-                cycle_idx: 0,
-                cycle_offset: 0,
-                blocked_link: u32::MAX,
-                detectors: [0u32; 4],
-                head_type: 0,
-                is_in_cycle: false,
-            });
+            self.node_links.resize(count, [0u32; 4]);
+            self.node_paths.resize(count, [0u32; 4]);
+            self.node_paths_count.resize(count, 0);
+            self.cold_nodes.resize(count, DEFAULT_NODE_COLD);
             if self.render_signals.len() < count {
                 self.render_signals.resize(count, 0);
             }
@@ -316,6 +353,24 @@ impl GraphState {
             }
             return NODE_SIGNAL_NONE;
         }
+        if cold.is_in_path {
+            let path_idx = cold.path_idx as usize;
+            let path_dist = cold.path_distance;
+            if path_idx < self.paths.len() {
+                let path_state = unsafe {
+                    let ptr = self.paths.as_ptr().add(path_idx) as *mut PathState;
+                    &mut *ptr
+                };
+                if path_state.is_valid() {
+                    let is_active = path_state.is_signal_active_at(self.tick, path_dist);
+                    if is_active {
+                        return NODE_SIGNAL_ACTIVE;
+                    }
+                    return NODE_SIGNAL_NONE;
+                }
+            }
+            return NODE_SIGNAL_NONE;
+        }
         node.signal
     }
 
@@ -356,7 +411,7 @@ impl GraphState {
     pub fn update_node_back_links(&mut self, node_idx: u32, new_links: &[u32]) {
         let (old_links, old_count) = if (node_idx as usize) < self.nodes.len() {
             let node = &self.nodes[node_idx as usize];
-            (node.links, node.links_count as usize)
+            (self.node_links[node_idx as usize], node.links_count as usize)
         } else {
             ([0u32; 4], 0)
         };
@@ -398,16 +453,24 @@ impl GraphState {
     }
 
     pub fn run_ticks_fast(&mut self, count: u32) {
-        match (self.has_blockers, self.has_cycles) {
-            (false, false) => self.run_ticks_fast_impl::<false, false>(count),
-            (true, false) => self.run_ticks_fast_impl::<true, false>(count),
-            (false, true) => self.run_ticks_fast_impl::<false, true>(count),
-            (true, true) => self.run_ticks_fast_impl::<true, true>(count),
+        match (self.has_blockers, self.has_cycles, self.has_paths) {
+            (false, false, false) => self.run_ticks_fast_impl::<false, false, false>(count),
+            (true, false, false) => self.run_ticks_fast_impl::<true, false, false>(count),
+            (false, true, false) => self.run_ticks_fast_impl::<false, true, false>(count),
+            (true, true, false) => self.run_ticks_fast_impl::<true, true, false>(count),
+            (false, false, true) => self.run_ticks_fast_impl::<false, false, true>(count),
+            (true, false, true) => self.run_ticks_fast_impl::<true, false, true>(count),
+            (false, true, true) => self.run_ticks_fast_impl::<false, true, true>(count),
+            (true, true, true) => self.run_ticks_fast_impl::<true, true, true>(count),
         }
     }
 
     #[inline(always)]
-    fn run_ticks_fast_impl<const HAS_BLOCKERS: bool, const HAS_CYCLES: bool>(
+    fn run_ticks_fast_impl<
+        const HAS_BLOCKERS: bool,
+        const HAS_CYCLES: bool,
+        const HAS_PATHS: bool,
+    >(
         &mut self,
         count: u32,
     ) {
@@ -416,7 +479,11 @@ impl GraphState {
         }
 
         let nodes_ptr = self.nodes.as_mut_ptr();
+        let node_links_ptr = self.node_links.as_ptr();
+        let node_paths_ptr = self.node_paths.as_ptr();
+        let node_paths_count_ptr = self.node_paths_count.as_ptr();
         let cold_nodes_ptr = self.cold_nodes.as_mut_ptr();
+        let all_path_targets_ptr = self.all_path_targets.as_ptr();
         let mut curr_ptr = self.changed_nodes.as_mut_ptr();
         let mut next_ptr = self.temp_changed_nodes.as_mut_ptr();
         let deferred_clears_base = self.deferred_clears.as_mut_ptr();
@@ -426,6 +493,45 @@ impl GraphState {
 
         for _ in 0..count {
             let mut write_ptr = next_ptr;
+
+            if HAS_PATHS {
+                let slot = (tick as usize) & WHEEL_MASK;
+                let bucket = unsafe { self.time_wheel.buckets.get_unchecked_mut(slot) };
+                let bucket_len = bucket.len as usize;
+                if bucket_len != 0 {
+                    let inline_len = bucket_len.min(INLINE_BUCKET_CAP);
+                    for i in 0..inline_len {
+                        let entry = unsafe { *bucket.inline.get_unchecked(i) };
+                        let target_idx = (entry >> 8) as usize;
+                        let delta = entry as u8;
+                        let target = unsafe { &mut *nodes_ptr.add(target_idx) };
+                        target.signals_count = target.signals_count.wrapping_add(delta);
+                        let is_new = ((target.flags & FLAG_IS_CHANGED) == 0) as usize;
+                        target.flags |= FLAG_IS_CHANGED;
+                        unsafe {
+                            *write_ptr = target_idx as u32;
+                            write_ptr = write_ptr.add(is_new);
+                        }
+                    }
+                    if bucket_len > INLINE_BUCKET_CAP {
+                        for &entry in bucket.spill.iter() {
+                            let target_idx = (entry >> 8) as usize;
+                            let delta = entry as u8;
+                            let target = unsafe { &mut *nodes_ptr.add(target_idx) };
+                            target.signals_count = target.signals_count.wrapping_add(delta);
+                            let is_new = ((target.flags & FLAG_IS_CHANGED) == 0) as usize;
+                            target.flags |= FLAG_IS_CHANGED;
+                            unsafe {
+                                *write_ptr = target_idx as u32;
+                                write_ptr = write_ptr.add(is_new);
+                            }
+                        }
+                        bucket.spill.clear();
+                    }
+                    bucket.len = 0;
+                }
+            }
+
             let end_curr = unsafe { curr_ptr.add(len) };
             let mut read_curr = curr_ptr;
             let mut clear_ptr = deferred_clears_base;
@@ -501,7 +607,7 @@ impl GraphState {
 
                         if links_count != 0 {
                             let delta = ((is_active as u8) << 1).wrapping_sub(1);
-                            let links = &node.links;
+                            let links = unsafe { &*node_links_ptr.add(node_idx as usize) };
                             let is_blocker = HAS_BLOCKERS && node_type == NODE_TYPE_BLOCKER;
                             if is_blocker {
                                 let cold = unsafe { &*cold_nodes_ptr.add(node_idx as usize) };
@@ -521,29 +627,45 @@ impl GraphState {
                                     } else {
                                         edge.signals_count = edge.signals_count.wrapping_add(delta);
                                     }
-                                    if flags & FLAG_IS_CHANGED == 0 {
-                                        edge.flags = flags | FLAG_IS_CHANGED;
-                                        unsafe {
-                                            *write_ptr = edge_idx as u32;
-                                            write_ptr = write_ptr.add(1);
-                                        }
-                                    } else {
-                                        edge.flags = flags;
+                                    let is_new = ((flags & FLAG_IS_CHANGED) == 0) as usize;
+                                    edge.flags = flags | FLAG_IS_CHANGED;
+                                    unsafe {
+                                        *write_ptr = edge_idx as u32;
+                                        write_ptr = write_ptr.add(is_new);
                                     }
                                 }
                             } else {
                                 for k in 0..links_count {
                                     let edge_idx = links[k] as usize;
                                     let edge = unsafe { &mut *nodes_ptr.add(edge_idx) };
-                                    let flags = edge.flags;
-                                    if flags & FLAG_IS_CHANGED == 0 {
-                                        edge.flags = flags | FLAG_IS_CHANGED;
-                                        unsafe {
-                                            *write_ptr = edge_idx as u32;
-                                            write_ptr = write_ptr.add(1);
-                                        }
+                                    let is_new = ((edge.flags & FLAG_IS_CHANGED) == 0) as usize;
+                                    edge.flags |= FLAG_IS_CHANGED;
+                                    unsafe {
+                                        *write_ptr = edge_idx as u32;
+                                        write_ptr = write_ptr.add(is_new);
                                     }
                                     edge.signals_count = edge.signals_count.wrapping_add(delta);
+                                }
+                            }
+                        }
+
+                        if HAS_PATHS && (flags & FLAG_IS_PATH_SOURCE) != 0 {
+                            let count =
+                                unsafe { *node_paths_count_ptr.add(node_idx as usize) } as usize;
+                            let paths = unsafe { &*node_paths_ptr.add(node_idx as usize) };
+                            let delta = if is_active { 1u32 } else { 0xFFu32 };
+                            for k in 0..count {
+                                let path_idx = paths[k];
+                                let path =
+                                    unsafe { self.paths.get_unchecked_mut(path_idx as usize) };
+                                path.record_edge(tick, is_active);
+                                let start = path.targets_start as usize;
+                                let end = start + path.targets_count as usize;
+                                for i in start..end {
+                                    let pt = unsafe { *all_path_targets_ptr.add(i) };
+                                    let slot = ((tick + pt.delay) as usize) & WHEEL_MASK;
+                                    let value = (pt.target_node << 8) | delta;
+                                    self.time_wheel.schedule_raw(slot, value);
                                 }
                             }
                         }
@@ -559,27 +681,23 @@ impl GraphState {
                         if detectors_count == 1 {
                             let detector_idx = unsafe { *detectors.get_unchecked(0) } as usize;
                             let detector = unsafe { &mut *nodes_ptr.add(detector_idx) };
-                            let flags = detector.flags;
                             detector.signals_count = sig_count;
-                            if flags & FLAG_IS_CHANGED == 0 {
-                                detector.flags = flags | FLAG_IS_CHANGED;
-                                unsafe {
-                                    *write_ptr = detector_idx as u32;
-                                    write_ptr = write_ptr.add(1);
-                                }
+                            let is_new = ((detector.flags & FLAG_IS_CHANGED) == 0) as usize;
+                            detector.flags |= FLAG_IS_CHANGED;
+                            unsafe {
+                                *write_ptr = detector_idx as u32;
+                                write_ptr = write_ptr.add(is_new);
                             }
                         } else {
                             for k in 0..detectors_count {
                                 let detector_idx = detectors[k] as usize;
                                 let detector = unsafe { &mut *nodes_ptr.add(detector_idx) };
-                                let flags = detector.flags;
                                 detector.signals_count = sig_count;
-                                if flags & FLAG_IS_CHANGED == 0 {
-                                    detector.flags = flags | FLAG_IS_CHANGED;
-                                    unsafe {
-                                        *write_ptr = detector_idx as u32;
-                                        write_ptr = write_ptr.add(1);
-                                    }
+                                let is_new = ((detector.flags & FLAG_IS_CHANGED) == 0) as usize;
+                                detector.flags |= FLAG_IS_CHANGED;
+                                unsafe {
+                                    *write_ptr = detector_idx as u32;
+                                    write_ptr = write_ptr.add(is_new);
                                 }
                             }
                         }
@@ -606,11 +724,12 @@ impl GraphState {
                         false
                     };
 
-                    if should_requeue && (node.flags & FLAG_IS_CHANGED) == 0 {
+                    if should_requeue {
+                        let is_new = ((node.flags & FLAG_IS_CHANGED) == 0) as usize;
                         node.flags |= FLAG_IS_CHANGED;
                         unsafe {
                             *write_ptr = node_idx;
-                            write_ptr = write_ptr.add(1);
+                            write_ptr = write_ptr.add(is_new);
                         }
                     }
                 }
@@ -633,56 +752,62 @@ impl GraphState {
             }
 
             let mut read_next = next_ptr;
+            let mut keep_ptr = next_ptr;
             while read_next < write_ptr {
                 let node_idx = unsafe { *read_next };
                 read_next = unsafe { read_next.add(1) };
                 let node = unsafe { &mut *nodes_ptr.add(node_idx as usize) };
-                let flags = node.flags;
+                let dword = unsafe { *(node as *const Node as *const u32) };
+                let flags = dword as u8;
+                let type_and_signal = (dword >> 8) as u16;
+                let last_signal = (dword >> 24) as u8;
                 let signals_count = node.signals_count;
 
+                let lut_index = ((type_and_signal as usize) << 3) | (signals_count as usize);
                 let signal = if (flags
                     & (FLAG_IS_READ_HEAD | FLAG_IS_REQUEUE_TYPE | FLAG_IS_BLOCKED))
-                    != 0
+                    == 0
                 {
-                    if (flags & FLAG_IS_BLOCKED) != 0 {
+                    unsafe { *STATE_LUT.get_unchecked(lut_index) }
+                } else if (flags & FLAG_IS_BLOCKED) != 0 {
+                    NODE_SIGNAL_NONE
+                } else if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
+                    if signals_count > 1 {
+                        NODE_SIGNAL_ACTIVE
+                    } else if signals_count == 0 {
                         NODE_SIGNAL_NONE
-                    } else if HAS_CYCLES && (flags & FLAG_IS_READ_HEAD) != 0 {
-                        if signals_count > 1 {
-                            NODE_SIGNAL_ACTIVE
-                        } else if signals_count == 0 {
-                            NODE_SIGNAL_NONE
-                        } else {
-                            let cold = &self.cold_nodes[node_idx as usize];
-                            let cycle_state = unsafe {
-                                self.cycles
-                                    .get_unchecked(cold.cycle_idx as usize)
-                                    .as_ref()
-                                    .unwrap_unchecked()
-                            };
-                            cycle_state.get_bit(tick, cold.cycle_offset) as u8
-                        }
-                    } else if node.type_id() == NODE_TYPE_RANDOM {
-                        if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
-                            NODE_SIGNAL_ACTIVE
-                        } else {
-                            NODE_SIGNAL_NONE
-                        }
                     } else {
-                        let lut_index =
-                            ((node.type_and_signal() as usize) << 3) | (signals_count as usize);
-                        unsafe { *STATE_LUT.get_unchecked(lut_index) }
+                        let cold = &self.cold_nodes[node_idx as usize];
+                        let cycle_state = unsafe {
+                            self.cycles
+                                .get_unchecked(cold.cycle_idx as usize)
+                                .as_ref()
+                                .unwrap_unchecked()
+                        };
+                        cycle_state.get_bit(tick, cold.cycle_offset) as u8
+                    }
+                } else if (dword >> 8) as u8 == NODE_TYPE_RANDOM {
+                    if signals_count > 0 && random_bool(self.seed, self.cold_nodes[node_idx as usize].pos_hash, tick) {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
                     }
                 } else {
-                    let lut_index =
-                        ((node.type_and_signal() as usize) << 3) | (signals_count as usize);
                     unsafe { *STATE_LUT.get_unchecked(lut_index) }
                 };
 
                 node.signal = signal;
                 node.flags = flags & !FLAG_IS_CHANGED;
+
+                let needs_phase1 =
+                    (signal != last_signal) | ((flags & (REQUEUE_MASK | FLAG_IS_CYCLE_HEAD)) != 0);
+                unsafe {
+                    *keep_ptr = node_idx;
+                    keep_ptr = keep_ptr.add(needs_phase1 as usize);
+                }
             }
 
-            len = unsafe { write_ptr.offset_from(next_ptr) as usize };
+            len = unsafe { keep_ptr.offset_from(next_ptr) as usize };
             std::mem::swap(&mut curr_ptr, &mut next_ptr);
             swapped = !swapped;
             tick += 1;
@@ -744,7 +869,7 @@ impl GraphState {
             }
 
             if node.node_type == NODE_TYPE_RANDOM {
-                return if signals_count > 0 && random_bool(self.seed, node.pos_hash, tick) {
+                return if signals_count > 0 && random_bool(self.seed, self.cold_nodes[node_idx as usize].pos_hash, tick) {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
@@ -758,6 +883,15 @@ impl GraphState {
 
     pub fn full_node_state_calculate(&mut self, node_idx: u32) {
         let node_type = self.nodes[node_idx as usize].type_id();
+        if node_type == NODE_TYPE_EMPTY {
+            let n = &mut self.nodes[node_idx as usize];
+            n.signal = NODE_SIGNAL_NONE;
+            n.last_signal = NODE_SIGNAL_NONE;
+            n.signals_count = 0;
+            n.blocked_count = 0;
+            n.flags &= !(FLAG_IS_BLOCKED | FLAG_IS_CHANGED | FLAG_IS_UPDATED);
+            return;
+        }
         let is_detector = node_type == NODE_TYPE_DETECTOR;
 
         let mut signals_count = 0;
@@ -829,7 +963,7 @@ impl GraphState {
                 let cold = &self.cold_nodes[node_idx as usize];
                 (
                     cold.cycle_offset,
-                    node.chunk_idx,
+                    cold.chunk_idx,
                     node.signal == NODE_SIGNAL_ACTIVE,
                 )
             };
@@ -884,7 +1018,7 @@ impl GraphState {
         for &node_idx in cycle_nodes {
             let node = &self.nodes[node_idx as usize];
             let count = node.links_count as usize;
-            for &link_idx in &node.links[..count] {
+            for &link_idx in &self.node_links[node_idx as usize][..count] {
                 if !cycle_nodes_set.contains(&link_idx) {
                     external_affected.insert(link_idx);
                 }
@@ -895,7 +1029,7 @@ impl GraphState {
             external_affected.insert(head_idx);
             let node = &self.nodes[head_idx as usize];
             let count = node.links_count as usize;
-            for &link_idx in &node.links[..count] {
+            for &link_idx in &self.node_links[head_idx as usize][..count] {
                 external_affected.insert(link_idx);
             }
         }
@@ -923,7 +1057,7 @@ impl GraphState {
         self.total_clear_heads = self.total_clear_heads.saturating_sub(clears_in_cycle);
         for &node_idx in cycle_nodes {
             let idx = node_idx as usize;
-            let chunk_idx = self.nodes[idx].chunk_idx;
+            let chunk_idx = self.cold_nodes[idx].chunk_idx;
             let cycle_offset = self.cold_nodes[idx].cycle_offset;
 
             let is_active = if let Some(Some(ref cycle_state)) = self.cycles.get(cycle_idx as usize)
@@ -966,7 +1100,7 @@ impl GraphState {
         for &node_idx in cycle_nodes {
             let node = &self.nodes[node_idx as usize];
             let count = node.links_count as usize;
-            for &link_idx in &node.links[..count] {
+            for &link_idx in &self.node_links[node_idx as usize][..count] {
                 affected_nodes.insert(link_idx);
             }
         }
@@ -974,13 +1108,429 @@ impl GraphState {
             affected_nodes.insert(head_idx);
             let node = &self.nodes[head_idx as usize];
             let count = node.links_count as usize;
-            for &link_idx in &node.links[..count] {
+            for &link_idx in &self.node_links[head_idx as usize][..count] {
                 affected_nodes.insert(link_idx);
             }
         }
 
         for affected_idx in affected_nodes {
             self.full_node_state_calculate(affected_idx);
+        }
+    }
+
+    pub fn on_path_build(
+        &mut self,
+        path_idx: u32,
+        source_idx: u32,
+        max_delay: u32,
+        targets: &[PathTarget],
+        internal_nodes: &[PathInternalNode],
+    ) {
+        self.has_paths = true;
+        let idx = path_idx as usize;
+        if idx >= self.paths.len() {
+            self.paths.resize_with(idx + 1, PathState::empty);
+        }
+
+        let targets_start = self.all_path_targets.len() as u32;
+        let targets_count = targets.len() as u32;
+        self.all_path_targets.extend_from_slice(targets);
+
+        let mut path_state = PathState::new(
+            path_idx,
+            source_idx,
+            max_delay,
+            targets_start,
+            targets_count,
+        );
+
+        if (source_idx as usize) < self.node_paths.len() {
+            let cnt = self.node_paths_count[source_idx as usize] as usize;
+            let mut found = false;
+            for i in 0..cnt {
+                if self.node_paths[source_idx as usize][i] == path_idx {
+                    found = true;
+                    break;
+                }
+            }
+            if !found && cnt < 4 {
+                self.node_paths[source_idx as usize][cnt] = path_idx;
+                self.node_paths_count[source_idx as usize] += 1;
+            }
+        }
+        if (source_idx as usize) < self.nodes.len() {
+            self.nodes[source_idx as usize].flags |= FLAG_IS_PATH_SOURCE;
+        }
+
+        let mut first_nodes = [0u32; 4];
+        let mut first_nodes_count = 0usize;
+        for &node in internal_nodes {
+            if node.dist == 1 && first_nodes_count < 4 {
+                first_nodes[first_nodes_count] = node.node_idx;
+                first_nodes_count += 1;
+            }
+        }
+
+        if (source_idx as usize) < self.nodes.len() {
+            let source_links = &mut self.node_links[source_idx as usize];
+            let source_node = &mut self.nodes[source_idx as usize];
+            let mut new_links = [0u32; 4];
+            let mut new_count = 0;
+            for i in 0..source_node.links_count as usize {
+                let l = source_links[i];
+                let mut found = false;
+                for j in 0..first_nodes_count {
+                    if first_nodes[j] == l {
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    new_links[new_count] = l;
+                    new_count += 1;
+                }
+            }
+            *source_links = new_links;
+            source_node.links_count = new_count as u8;
+        }
+
+        for i in 0..first_nodes_count {
+            let fn_idx = first_nodes[i];
+            if (fn_idx as usize) < self.back_links.len() {
+                self.back_links[fn_idx as usize].retain(|&x| x != source_idx);
+            }
+        }
+
+        let (source_was_active, source_is_active) = if (source_idx as usize) < self.nodes.len() {
+            let n = &self.nodes[source_idx as usize];
+            (n.last_signal == NODE_SIGNAL_ACTIVE, n.signal == NODE_SIGNAL_ACTIVE)
+        } else {
+            (false, false)
+        };
+
+        let mut has_active = source_was_active && source_is_active;
+        let mut max_internal_dist = 0usize;
+        for &node in internal_nodes {
+            let dist_usize = node.dist as usize;
+            if dist_usize > max_internal_dist {
+                max_internal_dist = dist_usize;
+            }
+            if (node.node_idx as usize) < self.nodes.len()
+                && self.nodes[node.node_idx as usize].signal == NODE_SIGNAL_ACTIVE
+            {
+                has_active = true;
+            }
+        }
+
+        let mut dist_active = Vec::new();
+        if has_active {
+            dist_active.resize(max_internal_dist + 1, false);
+            if source_was_active && source_is_active {
+                dist_active[0] = true;
+            }
+            for &node in internal_nodes {
+                if (node.node_idx as usize) < self.nodes.len()
+                    && self.nodes[node.node_idx as usize].signal == NODE_SIGNAL_ACTIVE
+                {
+                    dist_active[node.dist as usize] = true;
+                }
+            }
+        }
+
+        let targets_delivered: Vec<bool> = targets
+            .iter()
+            .map(|pt| {
+                for node in internal_nodes {
+                    if node.dist == pt.delay {
+                        let n_idx = node.node_idx as usize;
+                        let count = self.nodes[n_idx].links_count as usize;
+                        if self.node_links[n_idx][..count].contains(&pt.target_node) {
+                            return self.nodes[n_idx].last_signal == NODE_SIGNAL_ACTIVE;
+                        }
+                    }
+                }
+                false
+            })
+            .collect();
+
+        let mut internal_set = HashSet::new();
+        for &node in internal_nodes {
+            internal_set.insert(node.node_idx);
+        }
+
+        for &node in internal_nodes {
+            let node_idx = node.node_idx as usize;
+            let last_sig = self.nodes[node_idx].last_signal;
+            let sig = self.nodes[node_idx].signal;
+            let count = self.nodes[node_idx].links_count as usize;
+            let links = &self.node_links[node_idx][..count];
+
+            if last_sig == NODE_SIGNAL_ACTIVE && sig == NODE_SIGNAL_NONE {
+                for &link in links {
+                    if !internal_set.contains(&link) {
+                        self.time_wheel.schedule(link, -1, self.tick);
+                    }
+                }
+            }
+        }
+
+        for &node in internal_nodes {
+            let node_idx = node.node_idx;
+            let dist = node.dist;
+            let chunk_idx = {
+                let n = &mut self.nodes[node_idx as usize];
+                n.flags &= !(FLAG_IS_CHANGED | FLAG_IS_UPDATED);
+                let word = (node_idx >> 6) as usize;
+                let bit = 1u64 << (node_idx & 63);
+                if word < self.in_changed_list.len() && (self.in_changed_list[word] & bit) != 0 {
+                    self.in_changed_list[word] &= !bit;
+                    if let Some(pos) = self.changed_nodes.iter().position(|&x| x == node_idx) {
+                        self.changed_nodes.swap_remove(pos);
+                    }
+                }
+                n.signal = NODE_SIGNAL_NONE;
+                n.last_signal = NODE_SIGNAL_NONE;
+                n.signals_count = 0;
+                self.cold_nodes[node_idx as usize].chunk_idx
+            };
+
+            let cold = &mut self.cold_nodes[node_idx as usize];
+            cold.is_in_path = true;
+            cold.path_idx = path_idx;
+            cold.path_distance = dist;
+
+            self.make_dirty_chunk(chunk_idx);
+        }
+
+        let current_tick = self.tick as i32;
+
+        if has_active {
+            let mut d_cont = 0usize;
+            if dist_active[0] {
+                while d_cont < max_internal_dist && dist_active[d_cont + 1] {
+                    d_cont += 1;
+                }
+                path_state.record_edge(self.tick, true);
+                path_state.last_on_tick = self.tick.saturating_sub(d_cont as u32);
+
+                for (t_idx, &pt) in targets.iter().enumerate() {
+                    let delay = pt.delay as i32;
+                    let target_node = pt.target_node;
+                    let on_tick = (path_state.last_on_tick as i32) + delay;
+
+                    let already_delivered = targets_delivered[t_idx];
+
+                    let should_schedule_on = if on_tick > current_tick {
+                        true
+                    } else if on_tick == current_tick {
+                        !already_delivered
+                    } else {
+                        false
+                    };
+
+                    if should_schedule_on {
+                        self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                    }
+                }
+            } else if source_was_active && !source_is_active {
+                while d_cont < max_internal_dist && dist_active[d_cont + 1] {
+                    d_cont += 1;
+                }
+                if d_cont > 0 {
+                    path_state.input_active = true;
+                    path_state.last_on_tick = self.tick.saturating_sub(d_cont as u32);
+
+                    for (t_idx, &pt) in targets.iter().enumerate() {
+                        let delay = pt.delay as i32;
+                        let target_node = pt.target_node;
+                        let on_tick = (path_state.last_on_tick as i32) + delay;
+
+                        let already_delivered = targets_delivered[t_idx];
+
+                        let should_schedule_on = if on_tick > current_tick {
+                            true
+                        } else if on_tick == current_tick {
+                            !already_delivered
+                        } else {
+                            false
+                        };
+
+                        if should_schedule_on {
+                            self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                        }
+                    }
+                }
+            }
+
+            let mut d = d_cont + 1;
+            while d <= max_internal_dist {
+                if dist_active[d] {
+                    let d_start = d;
+                    while d <= max_internal_dist && dist_active[d] {
+                        d += 1;
+                    }
+                    let d_end = d - 1;
+
+                    let start = current_tick - (d_end as i32);
+                    let end = current_tick - (d_start as i32) + 1;
+                    path_state.push_pulse(start, end);
+
+                    for (t_idx, &pt) in targets.iter().enumerate() {
+                        let delay = pt.delay as i32;
+                        let target_node = pt.target_node;
+                        let on_tick = start + delay;
+                        let off_tick = end + delay;
+
+                        let already_delivered = targets_delivered[t_idx];
+
+                        let should_schedule_on = if on_tick > current_tick {
+                            true
+                        } else if on_tick == current_tick {
+                            !already_delivered
+                        } else {
+                            false
+                        };
+
+                        if should_schedule_on {
+                            self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                        }
+
+                        if off_tick > current_tick {
+                            self.time_wheel.schedule(target_node, -1, off_tick as u32);
+                        }
+                    }
+                } else {
+                    d += 1;
+                }
+            }
+        }
+
+        self.paths[idx] = path_state;
+    }
+
+    pub fn on_path_dismantle(
+        &mut self,
+        path_idx: u32,
+        source_idx: u32,
+        internal_nodes: &[u32],
+        targets: &[u32],
+        source_links: &[u32],
+    ) {
+        let idx = path_idx as usize;
+        let mut active_internal_nodes = Vec::new();
+        let mut was_active_internal_nodes = Vec::new();
+        let mut cancel_events = Vec::new();
+
+        if idx < self.paths.len() && self.paths[idx].is_valid() {
+            let path = &mut self.paths[idx];
+
+            for &node_idx in internal_nodes {
+                let dist = self.cold_nodes[node_idx as usize].path_distance;
+                if path.is_signal_active_at(self.tick, dist) {
+                    active_internal_nodes.push(node_idx);
+                }
+                if self.tick > 0 && path.is_signal_active_at(self.tick - 1, dist) {
+                    was_active_internal_nodes.push(node_idx);
+                }
+            }
+
+            let start_t = path.targets_start as usize;
+            let end_t = start_t + path.targets_count as usize;
+            for t_i in start_t..end_t {
+                let pt = self.all_path_targets[t_i];
+                let target_node = pt.target_node;
+                let delay = pt.delay;
+
+                for p_idx in path.head..path.tail {
+                    let pulse = path.pulses[p_idx & path.mask];
+                    let start = pulse as u32 as i32;
+                    let end = (pulse >> 32) as u32 as i32;
+
+                    let on_tick = start + (delay as i32);
+                    let off_tick = end + (delay as i32);
+
+                    if on_tick >= (self.tick as i32) {
+                        cancel_events.push((target_node, true, on_tick as u32));
+                    }
+                    if off_tick >= (self.tick as i32) {
+                        cancel_events.push((target_node, false, off_tick as u32));
+                    }
+                }
+
+                if path.input_active && path.last_on_tick != u32::MAX {
+                    let on_tick = (path.last_on_tick as i32) + (delay as i32);
+                    if on_tick >= (self.tick as i32) {
+                        cancel_events.push((target_node, true, on_tick as u32));
+                    }
+                }
+            }
+
+            self.paths[idx] = PathState::empty();
+            self.has_paths = self.paths.iter().any(|p| p.is_valid());
+        }
+
+        for (target_node, is_active, at_tick) in cancel_events {
+            self.time_wheel.cancel(target_node, is_active, at_tick);
+        }
+
+        if (source_idx as usize) < self.node_paths.len() {
+            let cnt = self.node_paths_count[source_idx as usize] as usize;
+            let mut new_cnt = 0;
+            for i in 0..cnt {
+                let p = self.node_paths[source_idx as usize][i];
+                if p != path_idx {
+                    self.node_paths[source_idx as usize][new_cnt] = p;
+                    new_cnt += 1;
+                }
+            }
+            self.node_paths_count[source_idx as usize] = new_cnt as u8;
+            if new_cnt == 0 && (source_idx as usize) < self.nodes.len() {
+                self.nodes[source_idx as usize].flags &= !FLAG_IS_PATH_SOURCE;
+            }
+        }
+
+        if (source_idx as usize) < self.nodes.len() {
+            let links_arr = &mut self.node_links[source_idx as usize];
+            let source_node = &mut self.nodes[source_idx as usize];
+            let mut count = 0;
+            for &l in source_links {
+                if count < 4 {
+                    links_arr[count] = l;
+                    count += 1;
+                }
+            }
+            source_node.links_count = count as u8;
+            self.update_node_back_links(source_idx, &source_links[..count]);
+        }
+
+        for &node_idx in internal_nodes {
+            if (node_idx as usize) < self.cold_nodes.len() {
+                let cold = &mut self.cold_nodes[node_idx as usize];
+                cold.is_in_path = false;
+                cold.path_idx = u32::MAX;
+                cold.path_distance = 0;
+            }
+
+            if (node_idx as usize) < self.nodes.len() {
+                let is_empty = self.nodes[node_idx as usize].type_id() == NODE_TYPE_EMPTY;
+                let is_active = !is_empty && active_internal_nodes.contains(&node_idx);
+                let was_active = !is_empty && was_active_internal_nodes.contains(&node_idx);
+                let chunk_idx = {
+                    let n = &mut self.nodes[node_idx as usize];
+                    n.signal = if is_active { NODE_SIGNAL_ACTIVE } else { NODE_SIGNAL_NONE };
+                    n.last_signal = if was_active { NODE_SIGNAL_ACTIVE } else { NODE_SIGNAL_NONE };
+                    n.flags |= FLAG_IS_UPDATED;
+                    self.cold_nodes[node_idx as usize].chunk_idx
+                };
+                self.make_dirty_chunk(chunk_idx);
+                if is_active != was_active {
+                    self.mark_node_as_changed_non_temp(node_idx);
+                }
+            }
+        }
+
+        for &node_idx in internal_nodes {
+            self.full_node_state_calculate(node_idx);
         }
     }
 }

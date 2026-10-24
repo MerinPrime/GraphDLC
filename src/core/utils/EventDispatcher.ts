@@ -7,6 +7,7 @@ export class EventDispatcher<TListener extends object> {
     private readonly listeners: TListener[] = [];
 
     public subscribe(listener: TListener): () => void {
+        if (!listener) return () => {};
         if (!this.listeners.includes(listener)) {
             this.listeners.push(listener);
         }

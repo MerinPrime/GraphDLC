@@ -4,11 +4,14 @@ pub mod chunk;
 pub mod consts;
 pub mod cycle;
 pub mod node;
+pub mod path;
 pub mod rng;
 pub mod serialization;
 pub mod state;
+pub mod time_wheel;
 
 use consts::*;
+use path::{PathInternalNode, PathTarget};
 use serialization::{deserialize_state, serialize_state};
 use state::get_state;
 
@@ -83,20 +86,20 @@ pub extern "C" fn update_node_state(
     state.update_node_back_links(node_idx, &links[..safe_links_count]);
 
     let existing_flags = state.nodes[node_idx as usize].flags;
-    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BLOCKED | FLAG_IS_BREAKPOINT);
+    let mut flags = existing_flags & (FLAG_IS_UPDATED | FLAG_IS_BLOCKED | FLAG_IS_BREAKPOINT | FLAG_IS_PATH_SOURCE);
 
     let node = &mut state.nodes[node_idx as usize];
     node.set_type_id(node_type);
-    node.pos_hash = pos_hash;
 
+    let cold = &mut state.cold_nodes[node_idx as usize];
+    cold.pos_hash = pos_hash;
+    cold.is_entry_point = is_entry_point != 0;
     if is_entry_point != 0 {
-        flags |= FLAG_IS_ENTRY_POINT | FLAG_IS_UPDATED;
+        flags |= FLAG_IS_UPDATED;
     }
     if is_additional_update != 0 {
         flags |= FLAG_IS_ADDITIONAL_UPDATE;
     }
-
-    let cold = &mut state.cold_nodes[node_idx as usize];
     if cycle_idx >= 0 {
         state.has_cycles = true;
         cold.cycle_idx = cycle_idx as u32;
@@ -123,7 +126,7 @@ pub extern "C" fn update_node_state(
         flags |= FLAG_IS_REQUEUE_TYPE;
     }
 
-    node.chunk_idx = chunk_idx;
+    cold.chunk_idx = chunk_idx;
     if chunk_idx != u32::MAX
         && (local_idx as usize) < 256
         && (chunk_idx as usize) < state.chunks.len()
@@ -152,12 +155,12 @@ pub extern "C" fn update_node_state(
         state.has_blockers = true;
     }
 
-    let old_links = node.links;
+    let old_links = state.node_links[node_idx as usize];
     let old_links_count = node.links_count.min(4) as usize;
     let old_detectors = cold.detectors;
     let old_detectors_count = node.detectors_count.min(4) as usize;
 
-    node.links = links;
+    state.node_links[node_idx as usize] = links;
     node.links_count = safe_links_count as u8;
     cold.detectors = detectors;
     node.detectors_count = safe_detectors_count as u8;
@@ -234,6 +237,8 @@ pub extern "C" fn reset_export() {
     let state = get_state();
     state.changed_nodes.clear();
     state.temp_changed_nodes.clear();
+    state.in_changed_list.fill(0);
+    state.has_external_marks = false;
 
     for node_idx in 0..state.nodes.len() {
         let node = &mut state.nodes[node_idx];
@@ -243,7 +248,7 @@ pub extern "C" fn reset_export() {
         node.blocked_count = 0;
         node.flags &= !(FLAG_IS_CHANGED | FLAG_IS_UPDATED | FLAG_IS_BLOCKED);
 
-        let is_entry_point = (node.flags & FLAG_IS_ENTRY_POINT) != 0;
+        let is_entry_point = state.cold_nodes[node_idx].is_entry_point;
         if is_entry_point {
             node.flags |= FLAG_IS_UPDATED;
             state.changed_nodes.push(node_idx as u32);
@@ -257,6 +262,13 @@ pub extern "C" fn reset_export() {
     for cycle in state.cycles.iter_mut() {
         if let Some(ref mut c) = cycle {
             c.clear();
+        }
+    }
+
+    state.time_wheel.clear();
+    for path in state.paths.iter_mut() {
+        if path.is_valid() {
+            path.clear();
         }
     }
 
@@ -316,7 +328,7 @@ pub extern "C" fn get_breakpoint(do_reset: bool) -> i32 {
 #[no_mangle]
 pub extern "C" fn is_changed() -> i32 {
     let state = get_state();
-    if !state.changed_nodes.is_empty() {
+    if !state.changed_nodes.is_empty() || state.time_wheel.has_pending() {
         1
     } else {
         0
@@ -344,6 +356,21 @@ pub extern "C" fn make_undirty_chunk_export(chunk_idx: u32) {
 #[no_mangle]
 pub extern "C" fn get_node_signal_export(node_idx: u32) -> u8 {
     get_state().get_node_signal(node_idx)
+}
+
+#[no_mangle]
+pub extern "C" fn get_node_signals_count_export(node_idx: u32) -> u8 {
+    get_state().nodes[node_idx as usize].signals_count
+}
+
+#[no_mangle]
+pub extern "C" fn get_node_links_count_export(node_idx: u32) -> u8 {
+    get_state().nodes[node_idx as usize].links_count
+}
+
+#[no_mangle]
+pub extern "C" fn get_node_link_export(node_idx: u32, link_idx: u32) -> u32 {
+    get_state().node_links[node_idx as usize][link_idx as usize]
 }
 
 #[no_mangle]
@@ -423,7 +450,7 @@ fn collect_render_dirty_chunks() {
         if current_signal != last_render_signal {
             unsafe {
                 *render_ptr.add(i) = current_signal;
-                let chunk_idx = node.chunk_idx as usize;
+                let chunk_idx = state.cold_nodes[i].chunk_idx as usize;
                 if chunk_idx < chunks_len {
                     (*chunks_ptr.add(chunk_idx)).flags |= CHUNK_FLAG_IS_DIRTY;
                 }
@@ -531,7 +558,16 @@ pub extern "C" fn copy_dirty_chunks_in_viewport(
 pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     let state = get_state();
 
-    let (is_in_cycle, head_type, cycle_idx, cycle_offset, chunk_idx) = {
+    let (
+        is_in_cycle,
+        head_type,
+        cycle_idx,
+        cycle_offset,
+        is_in_path,
+        path_idx,
+        path_dist,
+        chunk_idx,
+    ) = {
         let node = &state.nodes[node_idx as usize];
         let cold = &state.cold_nodes[node_idx as usize];
         (
@@ -539,7 +575,10 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
             cold.head_type,
             cold.cycle_idx,
             cold.cycle_offset,
-            node.chunk_idx,
+            cold.is_in_path,
+            cold.path_idx,
+            cold.path_distance,
+            cold.chunk_idx,
         )
     };
 
@@ -553,6 +592,56 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
         } else {
             cycle_state.write_bit(tick, cycle_offset);
         }
+    } else if is_in_path {
+        let tick = state.tick;
+        let p_idx = path_idx as usize;
+        if p_idx < state.paths.len() {
+            let path = &mut state.paths[p_idx];
+            let targets_start = path.targets_start as usize;
+            let targets_count = path.targets_count as usize;
+
+            if signal == NODE_SIGNAL_ACTIVE {
+                let start = (tick as i32) - (path_dist as i32);
+                let end = start + 1;
+                path.push_pulse(start, end);
+
+                for i in targets_start..(targets_start + targets_count) {
+                    let pt = state.all_path_targets[i];
+                    let target_node = pt.target_node;
+                    let target_delay = pt.delay;
+
+                    let diff = target_delay as i32 - path_dist as i32;
+                    if diff >= 0 {
+                        let rem_delay = diff as u32;
+                        let on_tick = tick + rem_delay;
+                        let off_tick = on_tick + 1;
+
+                        state.time_wheel.schedule(target_node, 1, on_tick);
+                        state.time_wheel.schedule(target_node, -1, off_tick);
+                    }
+                }
+            } else {
+                let input_tick = (tick as i32) - (path_dist as i32);
+                let was_removed = path.remove_pulse_at(input_tick);
+                if was_removed {
+                    for i in targets_start..(targets_start + targets_count) {
+                        let pt = state.all_path_targets[i];
+                        let target_node = pt.target_node;
+                        let target_delay = pt.delay;
+
+                        let diff = target_delay as i32 - path_dist as i32;
+                        if diff >= 0 {
+                            let rem_delay = diff as u32;
+                            let on_tick = tick + rem_delay;
+                            let off_tick = on_tick + 1;
+
+                            state.time_wheel.cancel(target_node, true, on_tick);
+                            state.time_wheel.cancel(target_node, false, off_tick);
+                        }
+                    }
+                }
+            }
+        }
     } else {
         let n = &mut state.nodes[node_idx as usize];
         if n.signal != signal {
@@ -563,6 +652,75 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
     }
 
     state.make_dirty_chunk(chunk_idx);
+}
+
+#[no_mangle]
+pub extern "C" fn on_path_build_export(
+    path_idx: u32,
+    source_idx: u32,
+    max_delay: u32,
+    targets_count: u32,
+    internal_count: u32,
+) {
+    let mut targets = Vec::with_capacity(targets_count as usize);
+    let mut internal = Vec::with_capacity(internal_count as usize);
+
+    unsafe {
+        let ptr = STAGING_BUFFER.as_ptr();
+        let mut offset = 0;
+        for _ in 0..targets_count {
+            let node_idx = *ptr.add(offset);
+            let delay = *ptr.add(offset + 1);
+            targets.push(PathTarget {
+                target_node: node_idx,
+                delay,
+            });
+            offset += 2;
+        }
+        for _ in 0..internal_count {
+            let node_idx = *ptr.add(offset);
+            let dist = *ptr.add(offset + 1);
+            internal.push(PathInternalNode {
+                node_idx,
+                dist,
+            });
+            offset += 2;
+        }
+    }
+
+    get_state().on_path_build(path_idx, source_idx, max_delay, &targets, &internal);
+}
+
+#[no_mangle]
+pub extern "C" fn on_path_dismantle_export(
+    path_idx: u32,
+    source_idx: u32,
+    internal_count: u32,
+    targets_count: u32,
+    links_count: u32,
+) {
+    let mut internal = Vec::with_capacity(internal_count as usize);
+    let mut targets = Vec::with_capacity(targets_count as usize);
+    let mut links = Vec::with_capacity(links_count as usize);
+
+    unsafe {
+        let ptr = STAGING_BUFFER.as_ptr();
+        let mut offset = 0;
+        for _ in 0..internal_count {
+            internal.push(*ptr.add(offset));
+            offset += 1;
+        }
+        for _ in 0..targets_count {
+            targets.push(*ptr.add(offset));
+            offset += 1;
+        }
+        for _ in 0..links_count {
+            links.push(*ptr.add(offset));
+            offset += 1;
+        }
+    }
+
+    get_state().on_path_dismantle(path_idx, source_idx, &internal, &targets, &links);
 }
 
 #[no_mangle]

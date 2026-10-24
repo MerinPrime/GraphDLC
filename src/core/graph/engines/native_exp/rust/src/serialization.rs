@@ -1,6 +1,7 @@
 use crate::consts::*;
 use crate::cycle::CycleState;
 use crate::state::GraphState;
+use crate::time_wheel::INLINE_BUCKET_CAP;
 use std::collections::HashSet;
 
 pub struct BufferWriter {
@@ -95,6 +96,47 @@ pub fn serialize_state(state: &GraphState) -> Vec<u8> {
         writer.write_u32(c.state.len() as u32);
         for &word in &c.state {
             writer.write_u32(word);
+        }
+    }
+
+    let mut non_empty_buckets = Vec::new();
+    for (slot, b) in state.time_wheel.buckets.iter().enumerate() {
+        if b.len > 0 {
+            non_empty_buckets.push((slot as u32, b));
+        }
+    }
+    writer.write_u32(non_empty_buckets.len() as u32);
+    for (slot, b) in non_empty_buckets {
+        writer.write_u32(slot);
+        writer.write_u32(b.len);
+        let inline_len = (b.len as usize).min(INLINE_BUCKET_CAP);
+        for i in 0..inline_len {
+            writer.write_u32(b.inline[i]);
+        }
+        for &val in &b.spill {
+            writer.write_u32(val);
+        }
+    }
+
+    let mut active_paths = Vec::new();
+    for (idx, path) in state.paths.iter().enumerate() {
+        if path.is_valid()
+            && (path.input_active || path.head < path.tail || path.last_on_tick != u32::MAX)
+        {
+            active_paths.push((idx as u32, path));
+        }
+    }
+    writer.write_u32(active_paths.len() as u32);
+    for (idx, path) in active_paths {
+        writer.write_u32(idx);
+        writer.write_u8(if path.input_active { 1 } else { 0 });
+        writer.write_u32(path.last_on_tick);
+        let count = path.tail - path.head;
+        writer.write_u32(count as u32);
+        for i in path.head..path.tail {
+            let p = path.pulses[i & path.mask];
+            writer.write_u32(p as u32);
+            writer.write_u32((p >> 32) as u32);
         }
     }
 
@@ -197,7 +239,7 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
         for i in 0..state.nodes.len() {
             let node = &state.nodes[i];
             let t = node.type_id();
-            let is_entry = (node.flags & FLAG_IS_ENTRY_POINT) != 0;
+            let is_entry = state.cold_nodes[i].is_entry_point;
 
             if t == NODE_TYPE_SOURCE || t == NODE_TYPE_IMPULSE || is_entry {
                 let node_mut = &mut state.nodes[i];
@@ -257,4 +299,50 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
 
     state.has_cycles = state.cycles.iter().any(|c| c.is_some());
     state.has_blockers = state.nodes.iter().any(|n| n.type_id() == NODE_TYPE_BLOCKER);
+
+    state.time_wheel.clear();
+    if reader.offset < reader.data.len() {
+        let non_empty_buckets = reader.read_u32() as usize;
+        for _ in 0..non_empty_buckets {
+            let slot = reader.read_u32() as usize;
+            let len = reader.read_u32();
+            for _ in 0..len {
+                let val = reader.read_u32();
+                state.time_wheel.schedule_raw(slot, val);
+            }
+        }
+    }
+
+    for path in &mut state.paths {
+        if path.is_valid() {
+            path.clear();
+        }
+    }
+    if reader.offset < reader.data.len() {
+        let active_paths_len = reader.read_u32() as usize;
+        for _ in 0..active_paths_len {
+            let p_idx = reader.read_u32() as usize;
+            let input_active = reader.read_u8() != 0;
+            let last_on_tick = reader.read_u32();
+            let pulses_count = reader.read_u32() as usize;
+
+            if p_idx < state.paths.len() && state.paths[p_idx].is_valid() {
+                let path = &mut state.paths[p_idx];
+                path.input_active = input_active;
+                path.last_on_tick = last_on_tick;
+                for _ in 0..pulses_count {
+                    let start = reader.read_u32() as i32;
+                    let end = reader.read_u32() as i32;
+                    path.push_pulse(start, end);
+                }
+            } else {
+                for _ in 0..pulses_count {
+                    let _ = reader.read_u32();
+                    let _ = reader.read_u32();
+                }
+            }
+        }
+    }
+
+    state.has_paths = state.paths.iter().any(|p| p.is_valid());
 }

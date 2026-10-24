@@ -23,6 +23,8 @@ import { containsNode } from './cycle/utils';
 import { GraphNode } from './GraphNode';
 import type { IGraphListener } from './IGraphListener';
 import { NodeStateUpdater } from './NodeStateUpdater';
+import { PathManager } from './path/PathManager';
+import type { GraphPath } from './path/types';
 
 interface PrivateGameMap {
     getOrCreateChunkByArrowCoordinates(x: number, y: number): Chunk;
@@ -39,12 +41,36 @@ export class Graph {
     // public readonly breakpoints: Set<GraphNode> = new Set();
 
     private readonly cycleManager: CycleManager;
+    public readonly pathManager: PathManager = new PathManager(this);
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
 
     private readonly eventDispatcher: EventDispatcher<IGraphListener> =
         new EventDispatcher();
 
-    public engine: BaseEngine<EngineTypes>;
+    private _engine!: BaseEngine<EngineTypes>;
+
+    public get engine(): BaseEngine<EngineTypes> {
+        return this._engine;
+    }
+
+    public set engine(newEngine: BaseEngine<EngineTypes>) {
+        this._engine = newEngine;
+        if (this.eventDispatcher && this.cycleManager && this.pathManager) {
+            this.updateEngineSubscriptions();
+        }
+    }
+
+    private updateEngineSubscriptions(): void {
+        this.eventDispatcher.unsubscribe(this.cycleManager);
+        this.eventDispatcher.unsubscribe(this.pathManager);
+
+        if (this._engine.capabilities.supportCycles) {
+            this.eventDispatcher.subscribe(this.cycleManager);
+        }
+        if (this._engine.capabilities.supportPathes) {
+            this.eventDispatcher.subscribe(this.pathManager);
+        }
+    }
 
     public updater: NodeStateUpdater;
 
@@ -67,13 +93,11 @@ export class Graph {
 
         this.cycleManager = new CycleManager(
             this,
-            this.engine.capabilities.canWriteAndClear,
+            this._engine.capabilities.canWriteAndClear,
         );
 
         this.eventDispatcher.subscribe(this.debugger);
-        if (this.engine.capabilities.supportCycles) {
-            this.eventDispatcher.subscribe(this.cycleManager);
-        }
+        this.updateEngineSubscriptions();
 
         this.updater = new NodeStateUpdater(this);
 
@@ -502,6 +526,33 @@ export class Graph {
     }
 
     public addCycle(nodes: GraphNode[], heads?: HeadData[]): GraphCycle {
+        const nodesToDismantle = new Set<GraphNode>();
+        for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].path !== null) {
+                nodesToDismantle.add(nodes[i]);
+            }
+        }
+        if (heads) {
+            for (let i = 0; i < heads.length; i++) {
+                if (heads[i].node.path !== null) {
+                    nodesToDismantle.add(heads[i].node);
+                }
+                const extra = heads[i].extraPath;
+                if (extra) {
+                    for (let j = 0; j < extra.length; j++) {
+                        if (extra[j].path !== null) {
+                            nodesToDismantle.add(extra[j]);
+                        }
+                    }
+                }
+            }
+        }
+        for (const n of nodesToDismantle) {
+            if (n.path !== null) {
+                this.pathManager.dismantlePath(n.path.ref);
+            }
+        }
+
         const index = this.allocateCycleIndex();
 
         const cycle: GraphCycle = {
@@ -522,7 +573,32 @@ export class Graph {
     }
 
     public flushCycles(): void {
-        this.cycleManager.flushSync();
+        if (this._engine.capabilities.supportCycles) {
+            this.cycleManager.flushSync();
+        }
+        if (this._engine.capabilities.supportPathes) {
+            this.pathManager.flushSync();
+        }
+    }
+
+    public flushPaths(): void {
+        if (this._engine.capabilities.supportPathes) {
+            this.pathManager.flushSync();
+        }
+    }
+
+    public addPath(path: GraphPath): void {
+        this.engine.addPath(path);
+        this.eventDispatcher.dispatch('onPathAdded', this, path);
+    }
+
+    public removePath(path: GraphPath): void {
+        this.engine.removePath(path);
+        this.eventDispatcher.dispatch('onPathRemoved', this, path);
+    }
+
+    public getPaths(): readonly GraphPath[] {
+        return this.pathManager.getPaths();
     }
 
     public getCycles(): (GraphCycle | null)[] {
