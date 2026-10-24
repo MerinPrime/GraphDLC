@@ -31,13 +31,19 @@ export class CycleManager implements IGraphListener {
     private readonly dirtyInternals = new Set<InternalCycle>();
     private flushQueued = false;
     private deferredQueued = false;
-    private graph: Graph | null = null;
+    private graph: Graph;
+    private readonly canWriteAndClear: boolean;
     private readonly walkedUp = new Set<GraphNode>();
 
-    private getOrCreateTask(graph: Graph): CycleSearchTask {
+    public constructor(graph: Graph, canWriteAndClear: boolean = false) {
+        this.graph = graph;
+        this.canWriteAndClear = canWriteAndClear;
+    }
+
+    private getOrCreateTask(): CycleSearchTask {
         if (this.activeTask === null) {
             this.activeTask = new CycleSearchTask(
-                (path) => this.handleCycleCandidate(graph, path),
+                (path) => this.handleCycleCandidate(path),
                 () => {
                     this.activeTask = null;
                 },
@@ -154,20 +160,12 @@ export class CycleManager implements IGraphListener {
         };
     }
 
-    public applyCycleIO(
-        cycle: GraphCycle,
-        heads: readonly HeadData[],
-        graph?: Graph,
-    ): void {
+    public applyCycleIO(cycle: GraphCycle, heads: readonly HeadData[]): void {
         const { heads: cycleHeads, extraNodes, nodes: cycleNodes } = cycle;
 
-        const affected = graph ? new Set<GraphNode>() : null;
-        if (affected) {
-            for (let i = 0; i < cycleHeads.length; i++)
-                affected.add(cycleHeads[i]);
-            for (let i = 0; i < extraNodes.length; i++)
-                affected.add(extraNodes[i]);
-        }
+        const affected = new Set<GraphNode>();
+        for (let i = 0; i < cycleHeads.length; i++) affected.add(cycleHeads[i]);
+        for (let i = 0; i < extraNodes.length; i++) affected.add(extraNodes[i]);
 
         for (let i = 0; i < cycleHeads.length; i++) {
             this.resetNodeCycleInfo(cycleHeads[i]);
@@ -198,22 +196,18 @@ export class CycleManager implements IGraphListener {
             );
         }
 
-        if (graph && affected) {
-            for (let i = 0; i < cycleHeads.length; i++)
-                affected.add(cycleHeads[i]);
-            for (let i = 0; i < extraNodes.length; i++)
-                affected.add(extraNodes[i]);
+        for (let i = 0; i < cycleHeads.length; i++) affected.add(cycleHeads[i]);
+        for (let i = 0; i < extraNodes.length; i++) affected.add(extraNodes[i]);
 
-            for (const node of affected) {
-                graph.updater.update(node);
-            }
+        for (const node of affected) {
+            this.graph.updater.update(node);
         }
     }
 
-    public refreshCycleIO(cycle: GraphCycle, graph?: Graph): void {
+    public refreshCycleIO(cycle: GraphCycle): void {
         const heads = this.validateAndExtractIO(cycle.nodes);
         if (heads !== null) {
-            this.applyCycleIO(cycle, heads, graph);
+            this.applyCycleIO(cycle, heads);
         }
     }
 
@@ -271,6 +265,7 @@ export class CycleManager implements IGraphListener {
                 }
 
                 let hasWriteLink = false;
+                let hasClearLink = false;
 
                 for (let j = 0; j < nodeBackLinks.length; j++) {
                     const neighbor = nodeBackLinks[j];
@@ -286,13 +281,27 @@ export class CycleManager implements IGraphListener {
                             type === NodeType.LATCH ||
                             type === NodeType.FLIP_FLOP;
 
-                        if (isInvalidEntryPoint || hasWriteLink) return null;
-                        hasWriteLink = true;
+                        if (isInvalidEntryPoint) return null;
+
+                        const isClear = neighbor.type === NodeType.BLOCKER;
+                        if (isClear) {
+                            if (hasClearLink) return null;
+                            if (!this.canWriteAndClear && hasWriteLink) {
+                                return null;
+                            }
+                            hasClearLink = true;
+                        } else {
+                            if (hasWriteLink) return null;
+                            if (!this.canWriteAndClear && hasClearLink) {
+                                return null;
+                            }
+                            hasWriteLink = true;
+                        }
 
                         const offset = (revIdx + 1) % pathLen;
                         let headType = CycleHeadType.WRITE;
 
-                        if (neighbor.type === NodeType.BLOCKER) {
+                        if (isClear) {
                             headType = CycleHeadType.CLEAR;
                         } else if (cycleNode.type === NodeType.LOGIC_XOR) {
                             headType = CycleHeadType.XOR_WRITE;
@@ -318,8 +327,7 @@ export class CycleManager implements IGraphListener {
         return this.validateAndExtractIO(cyclePath) !== null;
     }
 
-    private markNodeDirty(graph: Graph, node: GraphNode): void {
-        this.graph = graph;
+    private markNodeDirty(node: GraphNode): void {
         this.dirtyNodes.add(node);
         this.scheduleFlush();
     }
@@ -342,8 +350,6 @@ export class CycleManager implements IGraphListener {
     public flush(budgetMs: number = Infinity): void {
         this.flushQueued = false;
 
-        const graph = this.graph;
-        if (graph === null) return;
         if (this.dirtyNodes.size === 0 && this.dirtyInternals.size === 0) {
             return;
         }
@@ -361,16 +367,15 @@ export class CycleManager implements IGraphListener {
             this.walkedUp.clear();
             for (let i = 0; i < nodes.length; i++) {
                 if (hasCycles) this.collectAffected(nodes[i]);
-                this.invalidateCluster(graph, nodes[i]);
+                this.invalidateCluster(nodes[i]);
             }
             this.walkedUp.clear();
         }
 
-        this.revalidateDirty(graph, deadline);
+        this.revalidateDirty(deadline);
     }
 
-    public reevaluateAllCycles(graph: Graph): void {
-        this.graph = graph;
+    public reevaluateAllCycles(): void {
         for (const internal of this.internalCycles.values()) {
             this.dirtyInternals.add(internal);
         }
@@ -391,16 +396,16 @@ export class CycleManager implements IGraphListener {
         }
     }
 
-    private revalidateDirty(graph: Graph, deadline: number): void {
+    private revalidateDirty(deadline: number): void {
         let count = 0;
         for (const internal of this.dirtyInternals) {
             this.dirtyInternals.delete(internal);
 
             if (this.internalCycles.get(internal.key) === internal) {
                 if (this.isStructurallyIntact(internal)) {
-                    this.processInternal(graph, internal);
+                    this.processInternal(internal);
                 } else {
-                    this.dropInternal(graph, internal);
+                    this.dropInternal(internal);
                 }
             }
 
@@ -412,45 +417,45 @@ export class CycleManager implements IGraphListener {
         }
     }
 
-    private processInternal(graph: Graph, internal: InternalCycle): void {
+    private processInternal(internal: InternalCycle): void {
         if (this.internalCycles.get(internal.key) !== internal) return;
 
         if (this.hasOverlap(internal)) {
             internal.valid = false;
-            this.deactivate(graph, internal);
+            this.deactivate(internal);
             return;
         }
 
         const heads = this.validateAndExtractIO(internal.nodes);
         if (heads === null) {
             internal.valid = false;
-            this.deactivate(graph, internal);
+            this.deactivate(internal);
             return;
         }
 
         internal.valid = true;
         if (internal.graphCycleRef === null) {
-            const cycle = graph.addCycle(internal.nodes, heads);
+            const cycle = this.graph.addCycle(internal.nodes, heads);
             internal.graphCycleRef = cycle;
             this.cycleToInternal.set(cycle, internal);
         } else {
-            this.applyCycleIO(internal.graphCycleRef, heads, graph);
+            this.applyCycleIO(internal.graphCycleRef, heads);
         }
     }
 
-    private deactivate(graph: Graph, internal: InternalCycle): void {
+    private deactivate(internal: InternalCycle): void {
         const ref = internal.graphCycleRef;
         if (ref === null) return;
 
         internal.graphCycleRef = null;
-        graph.removeCycle(ref);
+        this.graph.removeCycle(ref);
     }
 
-    private dropInternal(graph: Graph, internal: InternalCycle): void {
+    private dropInternal(internal: InternalCycle): void {
         this.internalCycles.delete(internal.key);
         this.unindexInternal(internal);
         internal.valid = false;
-        this.deactivate(graph, internal);
+        this.deactivate(internal);
     }
 
     private isStructurallyIntact(internal: InternalCycle): boolean {
@@ -573,7 +578,7 @@ export class CycleManager implements IGraphListener {
         }
     }
 
-    private handleCycleCandidate(graph: Graph, path: GraphNode[]): void {
+    private handleCycleCandidate(path: GraphNode[]): void {
         if (path.length < 2) return;
 
         const key = this.getCycleKey(path);
@@ -588,14 +593,13 @@ export class CycleManager implements IGraphListener {
         this.internalCycles.set(key, internal);
         this.indexInternal(internal);
 
-        this.graph = graph;
         this.scheduleFlush();
     }
 
-    public invalidateCluster(graph: Graph, root: GraphNode): void {
+    public invalidateCluster(root: GraphNode): void {
         if (!canBeInCycle(root)) return;
 
-        const task = this.getOrCreateTask(graph);
+        const task = this.getOrCreateTask();
         task.pushCandidate(root);
 
         for (let i = 0; i < root.links.length; i++) {
@@ -608,22 +612,26 @@ export class CycleManager implements IGraphListener {
         }
     }
 
-    public onLinkAdded(graph: Graph, node: GraphNode, target: GraphNode): void {
-        this.markNodeDirty(graph, node);
-        this.markNodeDirty(graph, target);
+    public onLinkAdded(
+        _graph: Graph,
+        node: GraphNode,
+        target: GraphNode,
+    ): void {
+        this.markNodeDirty(node);
+        this.markNodeDirty(target);
     }
 
     public onLinkRemoved(
-        graph: Graph,
+        _graph: Graph,
         fromNode: GraphNode,
         toNode: GraphNode,
     ): void {
-        this.markNodeDirty(graph, fromNode);
-        this.markNodeDirty(graph, toNode);
+        this.markNodeDirty(fromNode);
+        this.markNodeDirty(toNode);
     }
 
-    public onNodeTypeChanged(graph: Graph, node: GraphNode): void {
-        this.markNodeDirty(graph, node);
+    public onNodeTypeChanged(_graph: Graph, node: GraphNode): void {
+        this.markNodeDirty(node);
     }
 
     public onCycleAdded(_graph: Graph, cycle: GraphCycle): void {
@@ -695,7 +703,6 @@ export class CycleManager implements IGraphListener {
         this.dirtyNodes.clear();
         this.dirtyInternals.clear();
         this.walkedUp.clear();
-        this.graph = null;
         if (this.activeTask !== null) {
             this.activeTask.clear();
             this.activeTask = null;

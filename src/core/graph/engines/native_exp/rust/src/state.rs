@@ -142,6 +142,8 @@ pub struct GraphState {
     pub has_blockers: bool,
     pub has_cycles: bool,
     pub render_signals: Vec<u8>,
+    pub deferred_clears: Vec<(u32, u32)>,
+    pub total_clear_heads: usize,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -185,6 +187,8 @@ impl GraphState {
             has_blockers: false,
             has_cycles: false,
             render_signals: vec![0; 4096],
+            deferred_clears: Vec::with_capacity(4096),
+            total_clear_heads: 0,
         }
     }
 
@@ -209,6 +213,8 @@ impl GraphState {
         self.has_cycles = false;
         self.render_signals.clear();
         self.render_signals.resize(4096, 0);
+        self.deferred_clears.clear();
+        self.total_clear_heads = 0;
     }
 
     pub fn ensure_node_capacity(&mut self, count: usize) {
@@ -254,6 +260,10 @@ impl GraphState {
         }
         if self.changed_nodes.capacity() < count {
             self.changed_nodes.reserve(count);
+        }
+        if self.deferred_clears.capacity() < count {
+            self.deferred_clears
+                .reserve(count - self.deferred_clears.capacity());
         }
     }
 
@@ -409,6 +419,7 @@ impl GraphState {
         let cold_nodes_ptr = self.cold_nodes.as_mut_ptr();
         let mut curr_ptr = self.changed_nodes.as_mut_ptr();
         let mut next_ptr = self.temp_changed_nodes.as_mut_ptr();
+        let deferred_clears_base = self.deferred_clears.as_mut_ptr();
         let mut len = self.changed_nodes.len();
         let mut tick = self.tick;
         let mut swapped = false;
@@ -417,6 +428,7 @@ impl GraphState {
             let mut write_ptr = next_ptr;
             let end_curr = unsafe { curr_ptr.add(len) };
             let mut read_curr = curr_ptr;
+            let mut clear_ptr = deferred_clears_base;
 
             while read_curr < end_curr {
                 let node_idx = unsafe { *read_curr };
@@ -457,9 +469,10 @@ impl GraphState {
                         CYCLE_HEAD_TYPE_XOR_WRITE => {
                             cycle_state.xor_bit(tick, cycle_offset);
                         }
-                        CYCLE_HEAD_TYPE_CLEAR => {
-                            cycle_state.clear_bit(tick, cycle_offset);
-                        }
+                        CYCLE_HEAD_TYPE_CLEAR => unsafe {
+                            *clear_ptr = (cycle_idx, cycle_offset);
+                            clear_ptr = clear_ptr.add(1);
+                        },
                         _ => {}
                     }
 
@@ -600,6 +613,22 @@ impl GraphState {
                             write_ptr = write_ptr.add(1);
                         }
                     }
+                }
+            }
+
+            if HAS_CYCLES {
+                let end_clear = clear_ptr;
+                let mut read_clear = deferred_clears_base;
+                while read_clear < end_clear {
+                    let (c_idx, c_offset) = unsafe { *read_clear };
+                    read_clear = unsafe { read_clear.add(1) };
+                    let cycle_state = unsafe {
+                        self.cycles
+                            .get_unchecked_mut(c_idx as usize)
+                            .as_mut()
+                            .unwrap_unchecked()
+                    };
+                    cycle_state.clear_bit(tick, c_offset);
                 }
             }
 
@@ -874,9 +903,24 @@ impl GraphState {
         for affected_idx in external_affected {
             self.full_node_state_calculate(affected_idx);
         }
+
+        let clears_in_cycle = cycle_heads
+            .iter()
+            .filter(|&&h| self.cold_nodes[h as usize].head_type == CYCLE_HEAD_TYPE_CLEAR)
+            .count();
+        self.total_clear_heads += clears_in_cycle;
+        if self.deferred_clears.capacity() < self.total_clear_heads {
+            self.deferred_clears
+                .reserve(self.total_clear_heads - self.deferred_clears.capacity());
+        }
     }
 
     pub fn on_cycle_dismantle(&mut self, cycle_idx: u32, cycle_nodes: &[u32], cycle_heads: &[u32]) {
+        let clears_in_cycle = cycle_heads
+            .iter()
+            .filter(|&&h| self.cold_nodes[h as usize].head_type == CYCLE_HEAD_TYPE_CLEAR)
+            .count();
+        self.total_clear_heads = self.total_clear_heads.saturating_sub(clears_in_cycle);
         for &node_idx in cycle_nodes {
             let idx = node_idx as usize;
             let chunk_idx = self.nodes[idx].chunk_idx;
