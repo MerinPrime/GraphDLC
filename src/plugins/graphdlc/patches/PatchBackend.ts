@@ -15,6 +15,10 @@ async function preloadRustEngine(): Promise<void> {
         await tryLoadRustEngine();
     } else if (GraphEngineSetting.value === GraphEngine.NATIVE_EXP) {
         await tryLoadRustExpEngine();
+    } else if (
+        GraphEngineSetting.value === GraphEngine.NATIVE_EXP_WITH_PATHES
+    ) {
+        await tryLoadRustExpEngine();
     }
 }
 

@@ -24,6 +24,8 @@ export namespace EngineFactory {
             case GraphEngine.NATIVE:
                 return new NativeEngine();
             case GraphEngine.NATIVE_EXP:
+                return new NativeExpEngine(false);
+            case GraphEngine.NATIVE_EXP_WITH_PATHES:
                 return new NativeExpEngine(true);
         }
     }
