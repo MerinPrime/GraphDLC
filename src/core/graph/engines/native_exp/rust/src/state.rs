@@ -658,6 +658,9 @@ impl GraphState {
                                 let path_idx = paths[k];
                                 let path =
                                     unsafe { self.paths.get_unchecked_mut(path_idx as usize) };
+                                if path.input_active == is_active {
+                                    continue;
+                                }
                                 path.record_edge(tick, is_active);
                                 let start = path.targets_start as usize;
                                 let end = start + path.targets_count as usize;
@@ -1332,37 +1335,9 @@ impl GraphState {
                         self.time_wheel.schedule(target_node, 1, on_tick as u32);
                     }
                 }
-            } else if source_was_active && !source_is_active {
-                while d_cont < max_internal_dist && dist_active[d_cont + 1] {
-                    d_cont += 1;
-                }
-                if d_cont > 0 {
-                    path_state.input_active = true;
-                    path_state.last_on_tick = self.tick.saturating_sub(d_cont as u32);
-
-                    for (t_idx, &pt) in targets.iter().enumerate() {
-                        let delay = pt.delay as i32;
-                        let target_node = pt.target_node;
-                        let on_tick = (path_state.last_on_tick as i32) + delay;
-
-                        let already_delivered = targets_delivered[t_idx];
-
-                        let should_schedule_on = if on_tick > current_tick {
-                            true
-                        } else if on_tick == current_tick {
-                            !already_delivered
-                        } else {
-                            false
-                        };
-
-                        if should_schedule_on {
-                            self.time_wheel.schedule(target_node, 1, on_tick as u32);
-                        }
-                    }
-                }
             }
 
-            let mut d = d_cont + 1;
+            let mut d = if dist_active[0] { d_cont + 1 } else { 1 };
             while d <= max_internal_dist {
                 if dist_active[d] {
                     let d_start = d;
@@ -1423,7 +1398,6 @@ impl GraphState {
 
         if idx < self.paths.len() && self.paths[idx].is_valid() {
             let path = &mut self.paths[idx];
-
             for &node_idx in internal_nodes {
                 let dist = self.cold_nodes[node_idx as usize].path_distance;
                 if path.is_signal_active_at(self.tick, dist) {
