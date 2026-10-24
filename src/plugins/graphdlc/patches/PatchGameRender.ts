@@ -14,6 +14,12 @@ interface PrivateGameRender {
     gridRenderTexture: RenderTexture | null;
 }
 
+const BUCKET_SIZE = 128;
+
+function getBucketKey(bx: number, by: number): number {
+    return (bx * 73856093) ^ (by * 19349663);
+}
+
 export const PatchGameRender: IPatcher = (
     patchLoader: PatchLoader,
     _graphDLC: GraphDLC,
@@ -23,7 +29,9 @@ export const PatchGameRender: IPatcher = (
         (_module: typeof GameRender) => {
             return class GameRender extends _module {
                 private clearQueue: [number, number, number][] = [];
-                private clearedHistory: [number, number, number][] = [];
+                private clearedGrid: Map<number, [number, number, number][]> =
+                    new Map();
+                private clearedCount: number = 0;
                 private _showBorder: boolean = true;
                 private _disableSolidColor: boolean = false;
 
@@ -44,6 +52,8 @@ export const PatchGameRender: IPatcher = (
                     _this.render.setRenderTarget(_this.gridRenderTexture);
                     _this.render.clear(r, g, b, a);
                     _this.render.setRenderTarget(null);
+                    this.clearedGrid.clear();
+                    this.clearedCount = 0;
                 }
 
                 public setShowBorder(show: boolean): void {
@@ -72,18 +82,30 @@ export const PatchGameRender: IPatcher = (
                     height: number,
                 ): void {
                     if (this._disableSolidColor) return;
-                    if (!this.showBorder && this.clearedHistory.length > 0) {
+                    if (!this.showBorder && this.clearedCount > 0) {
                         const centerX = x + width / 2;
                         const centerY = y + height / 2;
 
-                        for (const [cx, cy, size] of this.clearedHistory) {
-                            if (
-                                centerX >= cx &&
-                                centerX <= cx + size &&
-                                centerY >= cy &&
-                                centerY <= cy + size
-                            ) {
-                                return;
+                        const bx = Math.floor(centerX / BUCKET_SIZE);
+                        const by = Math.floor(centerY / BUCKET_SIZE);
+                        const bucket = this.clearedGrid.get(
+                            getBucketKey(bx, by),
+                        );
+
+                        if (bucket !== undefined) {
+                            for (let i = 0; i < bucket.length; i++) {
+                                const item = bucket[i];
+                                const cx = item[0];
+                                const cy = item[1];
+                                const size = item[2];
+                                if (
+                                    centerX >= cx &&
+                                    centerX <= cx + size &&
+                                    centerY >= cy &&
+                                    centerY <= cy + size
+                                ) {
+                                    return;
+                                }
                             }
                         }
                     }
@@ -92,10 +114,33 @@ export const PatchGameRender: IPatcher = (
                 }
 
                 public drawArrowsRenderTexture() {
-                    this.clearedHistory.length = 0;
-                    for (const item of this.clearQueue) {
-                        this.internalClearArrow(item[0], item[1], item[2]);
-                        this.clearedHistory.push(item);
+                    this.clearedGrid.clear();
+                    this.clearedCount = this.clearQueue.length;
+
+                    for (let i = 0; i < this.clearQueue.length; i++) {
+                        const item = this.clearQueue[i];
+                        const cx = item[0];
+                        const cy = item[1];
+                        const size = item[2];
+
+                        this.internalClearArrow(cx, cy, size);
+
+                        const minBx = Math.floor(cx / BUCKET_SIZE);
+                        const maxBx = Math.floor((cx + size) / BUCKET_SIZE);
+                        const minBy = Math.floor(cy / BUCKET_SIZE);
+                        const maxBy = Math.floor((cy + size) / BUCKET_SIZE);
+
+                        for (let bx = minBx; bx <= maxBx; bx++) {
+                            for (let by = minBy; by <= maxBy; by++) {
+                                const key = getBucketKey(bx, by);
+                                let bucket = this.clearedGrid.get(key);
+                                if (bucket === undefined) {
+                                    bucket = [];
+                                    this.clearedGrid.set(key, bucket);
+                                }
+                                bucket.push(item);
+                            }
+                        }
                     }
                     this.clearQueue.length = 0;
 

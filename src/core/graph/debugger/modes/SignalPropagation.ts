@@ -3,7 +3,6 @@ import type { ITask } from 'src/core/task/ITask';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { NodeType } from '../../engines/core/NodeType';
-import type { DebugChunk } from '../DebugChunk';
 import { DebuggerMode } from '../DebuggerMode';
 import type { DebugColor, INodeDebugData } from '../types';
 
@@ -17,57 +16,87 @@ const HASH_COLORS: readonly DebugColor[] = [
     [0.2, 0.8, 0.8, ALPHA],
 ] as const;
 
-class UpdateSignalTask implements ITask<void> {
+class BatchUpdateSignalTask implements ITask<void> {
     public isCanceled = false;
-    public stepBatchSize = 1;
+    public stepBatchSize = 500;
+    private nodes: GraphNode[];
+    private index = 0;
 
     public constructor(
-        private node: GraphNode,
-        private debugChunk: DebugChunk,
-    ) {}
+        nodes: GraphNode[],
+        private mode: SignalPropagationDebuggerMode,
+    ) {
+        this.nodes = nodes;
+    }
 
-    public step(_batchSize: number): boolean {
-        const chunk = this.debugChunk;
-
-        if (this.node.type === NodeType.EMPTY) {
-            chunk.setColor(this.node.localX, this.node.localY, [0, 0, 0, 0]);
-            return true;
+    public step(batchSize: number): boolean {
+        if (this.isCanceled) return true;
+        const limit = Math.min(this.index + batchSize, this.nodes.length);
+        for (let i = this.index; i < limit; i++) {
+            this.mode.updateNodeColor(this.nodes[i]);
         }
-
-        let hash = this.node.type;
-        this.node.backLinks.forEach((link) => {
-            if (link.type !== NodeType.EMPTY) hash += link.type;
-        });
-
-        const color = HASH_COLORS[hash % HASH_COLORS.length];
-
-        chunk.setColor(this.node.localX, this.node.localY, color);
-
-        return true;
+        this.index = limit;
+        return this.index >= this.nodes.length;
     }
 
     public getResult(): void {}
 }
 
 export class SignalPropagationDebuggerMode extends DebuggerMode<INodeDebugData> {
+    private dirtyNodes = new Set<GraphNode>();
+    private isScheduled = false;
+
     public constructor(asyncScheduler: AsyncScheduler) {
         super(asyncScheduler, () => ({}));
     }
 
-    protected doRunTask(
-        _graph: Graph,
-        _node: GraphNode,
-        _data: INodeDebugData,
-    ): boolean {
-        return true;
+    public override performNodeUpdate(_graph: Graph, node: GraphNode): void {
+        this.dirtyNodes.add(node);
+        this.scheduleBatch();
     }
 
-    protected runUpdateTask(
-        _graph: Graph,
-        node: GraphNode,
-        _data: INodeDebugData,
-    ): [ITask<void>, boolean] {
-        const debugChunk = this.getDebugChunk(node.chunkIdx);
-        return [new UpdateSignalTask(node, debugChunk), true];
+    private scheduleBatch(): void {
+        if (this.isScheduled || this.dirtyNodes.size === 0) return;
+        this.isScheduled = true;
+
+        const nodesToProcess = Array.from(this.dirtyNodes);
+        this.dirtyNodes.clear();
+
+        this.asyncScheduler.schedule(
+            new BatchUpdateSignalTask(nodesToProcess, this),
+            () => {
+                this.isScheduled = false;
+                if (this.dirtyNodes.size > 0) {
+                    this.scheduleBatch();
+                }
+            },
+            'batch-signal-update',
+        );
+    }
+
+    public override onGraphClear(graph: Graph): void {
+        this.dirtyNodes.clear();
+        this.isScheduled = false;
+        super.onGraphClear(graph);
+    }
+
+    public updateNodeColor(node: GraphNode): void {
+        const chunk = this.getDebugChunk(node.chunkIdx);
+        if (!chunk) return;
+
+        if (node.type === NodeType.EMPTY) {
+            chunk.setColor(node.localX, node.localY, [0, 0, 0, 0]);
+            return;
+        }
+
+        let hash = node.type;
+        const backLinks = node.backLinks;
+        for (let i = 0; i < backLinks.length; i++) {
+            const link = backLinks[i];
+            if (link.type !== NodeType.EMPTY) hash += link.type;
+        }
+
+        const color = HASH_COLORS[hash % HASH_COLORS.length];
+        chunk.setColor(node.localX, node.localY, color);
     }
 }
