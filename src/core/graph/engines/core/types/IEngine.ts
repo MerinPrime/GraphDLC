@@ -1,6 +1,7 @@
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import type { GraphPath } from 'src/core/graph/ast/path/types';
 import type { Bounds } from 'src/core/utils/Bounds';
 import type { NodeSignal } from '../NodeSignal';
 import type { EngineCapabilities } from './EngineCapabilities';
@@ -30,6 +31,9 @@ export interface IEngine {
 
     addCycle(cycle: GraphCycle): void;
     removeCycle(cycle: GraphCycle): void;
+
+    addPath?(path: GraphPath): void;
+    removePath?(path: GraphPath): void;
 
     updateNodeState(graph: Graph, node: GraphNode): void;
 

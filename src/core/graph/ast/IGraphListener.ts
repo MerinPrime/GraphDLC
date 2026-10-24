@@ -1,5 +1,6 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
+import type { GraphPath } from 'src/core/graph/ast/path/types';
 import type { Graph } from './Graph';
 import type { GraphNode } from './GraphNode';
 
@@ -15,4 +16,7 @@ export interface IGraphListener {
 
     onCycleAdded(graph: Graph, cycle: GraphCycle): void;
     onCycleRemoved(graph: Graph, cycle: GraphCycle): void;
+
+    onPathAdded?(graph: Graph, path: GraphPath): void;
+    onPathRemoved?(graph: Graph, path: GraphPath): void;
 }
