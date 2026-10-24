@@ -1,4 +1,4 @@
-pub const FLAG_IS_ENTRY_POINT: u8 = 1 << 0;
+pub const FLAG_IS_PATH_SOURCE: u8 = 1 << 0;
 pub const FLAG_IS_ADDITIONAL_UPDATE: u8 = 1 << 1;
 pub const FLAG_IS_BLOCKED: u8 = 1 << 2;
 pub const FLAG_IS_BREAKPOINT: u8 = 0;

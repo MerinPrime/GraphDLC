@@ -2,6 +2,7 @@ import { CHUNK_SIZE } from '@logic-arrows/game-logic/game-constants';
 import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
+import type { GraphPath } from 'src/core/graph/ast/path/types';
 import type { Bounds } from 'src/core/utils/Bounds';
 import { StaticSeedSetting } from 'src/plugins/graphdlc/settings/tools/StaticSeedSetting';
 import type { NodeSignal } from '../NodeSignal';
@@ -23,6 +24,7 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         canWriteAndClear: false,
         bulkRender: false,
         supportCycles: false,
+        supportPathes: false,
     };
 
     protected readonly rewinder: StateRewinder<T['Snapshot']> =
@@ -222,6 +224,8 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
 
     public abstract addCycle(cycle: GraphCycle): void;
     public abstract removeCycle(cycle: GraphCycle): void;
+    public addPath(_path: GraphPath): void {}
+    public removePath(_path: GraphPath): void {}
     public abstract updateNodeState(graph: Graph, node: GraphNode): void;
     public abstract setNodeBreakpoint(
         nodeIdx: number,

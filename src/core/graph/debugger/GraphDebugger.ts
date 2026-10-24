@@ -9,9 +9,11 @@ import type { GraphCycle } from '../ast/cycle/types';
 import type { Graph } from '../ast/Graph';
 import type { GraphNode } from '../ast/GraphNode';
 import type { IGraphListener } from '../ast/IGraphListener';
+import type { GraphPath } from '../ast/path/types';
 import type { DebuggerMode } from './DebuggerMode';
 import { CycleDebuggerMode } from './modes/Cycle';
 import { DeadNodeDebuggerMode } from './modes/DeadNodes';
+import { PathDebuggerMode } from './modes/Path';
 import { SignalPropagationDebuggerMode } from './modes/SignalPropagation';
 import type { RenderDebugColor } from './types';
 
@@ -37,6 +39,7 @@ export class GraphDebugger implements IGraphListener {
             [DebugMode.SHOW_UNUSED_ARROWS]: new DeadNodeDebuggerMode(
                 this.asyncScheduler,
             ),
+            [DebugMode.SHOW_PATHS]: new PathDebuggerMode(this.asyncScheduler),
         };
 
         DebugModeSetting.onChange.add((newDebugMode: DebugMode) => {
@@ -90,5 +93,13 @@ export class GraphDebugger implements IGraphListener {
 
     public onCycleRemoved(g: Graph, c: GraphCycle): void {
         this.activeMode?.onCycleRemoved(g, c);
+    }
+
+    public onPathAdded(g: Graph, p: GraphPath): void {
+        this.activeMode?.onPathAdded?.(g, p);
+    }
+
+    public onPathRemoved(g: Graph, p: GraphPath): void {
+        this.activeMode?.onPathRemoved?.(g, p);
     }
 }

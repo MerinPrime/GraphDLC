@@ -18,6 +18,7 @@ export class RawEngine extends BaseEngine<RawEngineTypes> {
         canWriteAndClear: false,
         bulkRender: true,
         supportCycles: true,
+        supportPathes: false,
     };
 
     public readonly state = new RawGraphState();

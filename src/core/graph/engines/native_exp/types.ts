@@ -36,6 +36,9 @@ export interface RustEngineExports extends WebAssembly.Exports {
     make_dirty_chunk_export(chunk_idx: number): void;
     make_undirty_chunk_export(chunk_idx: number): void;
     get_node_signal_export(node_idx: number): number;
+    get_node_signals_count_export(node_idx: number): number;
+    get_node_links_count_export(node_idx: number): number;
+    get_node_link_export(node_idx: number, link_idx: number): number;
     get_nodes_signals_bulk_export(count: number): void;
     get_chunks_signals_bulk_export(chunks_count: number): void;
     get_dirty_chunks_count(): number;
@@ -59,6 +62,20 @@ export interface RustEngineExports extends WebAssembly.Exports {
         cycle_idx: number,
         nodes_count: number,
         heads_count: number,
+    ): void;
+    on_path_build_export(
+        path_idx: number,
+        source_idx: number,
+        max_delay: number,
+        targets_count: number,
+        internal_count: number,
+    ): void;
+    on_path_dismantle_export(
+        path_idx: number,
+        source_idx: number,
+        internal_count: number,
+        targets_count: number,
+        source_links_count: number,
     ): void;
     update_node_change_export(
         node_idx: number,
