@@ -32,8 +32,8 @@ export interface IEngine {
     addCycle(cycle: GraphCycle): void;
     removeCycle(cycle: GraphCycle): void;
 
-    addPath?(path: GraphPath): void;
-    removePath?(path: GraphPath): void;
+    addPath(path: GraphPath): void;
+    removePath(path: GraphPath): void;
 
     updateNodeState(graph: Graph, node: GraphNode): void;
 

@@ -24,6 +24,7 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         canWriteAndClear: false,
         bulkRender: false,
         supportCycles: false,
+        supportPathes: false,
     };
 
     protected readonly rewinder: StateRewinder<T['Snapshot']> =
@@ -223,8 +224,8 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
 
     public abstract addCycle(cycle: GraphCycle): void;
     public abstract removeCycle(cycle: GraphCycle): void;
-    public addPath?(path: GraphPath): void;
-    public removePath?(path: GraphPath): void;
+    public addPath(_path: GraphPath): void {}
+    public removePath(_path: GraphPath): void {}
     public abstract updateNodeState(graph: Graph, node: GraphNode): void;
     public abstract setNodeBreakpoint(
         nodeIdx: number,

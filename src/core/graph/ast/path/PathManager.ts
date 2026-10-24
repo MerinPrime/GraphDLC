@@ -1,5 +1,5 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
-import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
+import { CycleHeadType, type GraphCycle } from 'src/core/graph/ast/cycle/types';
 import { NodeType } from '../../engines/core/NodeType';
 import type { Graph } from '../Graph';
 import type { GraphNode } from '../GraphNode';
@@ -14,6 +14,11 @@ export class PathManager implements IGraphListener {
     private readonly dirtyNodes = new Set<GraphNode>();
     private flushQueued = false;
     private nextPathId = 1;
+
+    private readonly scratchNodes: GraphNode[] = [];
+    private readonly scratchSplitters: GraphNode[] = [];
+    private readonly scratchTargets: PathTarget[] = [];
+    private readonly scratchQueue: GraphNode[] = [];
 
     private visitedEpoch: Uint32Array = new Uint32Array(1024);
     private processedEpoch: Uint32Array = new Uint32Array(1024);
@@ -80,18 +85,28 @@ export class PathManager implements IGraphListener {
     public markNodeDirty(node: GraphNode): void {
         this.dirtyNodes.add(node);
 
-        this.invalidateNodePath(node);
-
-        for (let i = 0; i < node.links.length; i++) {
-            const link = node.links[i];
-            this.dirtyNodes.add(link);
-            this.invalidateNodePath(link);
+        if (this.graph.updater.isLoading) {
+            return;
         }
 
-        for (let i = 0; i < node.backLinks.length; i++) {
-            const back = node.backLinks[i];
-            this.dirtyNodes.add(back);
-            this.invalidateNodePath(back);
+        if (this.paths.size > 0) {
+            this.invalidateNodePath(node);
+
+            for (let i = 0; i < node.links.length; i++) {
+                const link = node.links[i];
+                this.dirtyNodes.add(link);
+                if (link.path !== null) {
+                    this.dismantlePath(link.path.ref);
+                }
+            }
+
+            for (let i = 0; i < node.backLinks.length; i++) {
+                const back = node.backLinks[i];
+                this.dirtyNodes.add(back);
+                if (back.path !== null) {
+                    this.dismantlePath(back.path.ref);
+                }
+            }
         }
 
         this.scheduleFlush();
@@ -105,17 +120,11 @@ export class PathManager implements IGraphListener {
 
         let curr = node;
         let hops = 0;
-        while (
-            curr.path === null &&
-            curr.backLinks.length === 1 &&
-            hops < 250
-        ) {
+        while (curr.path === null && curr.backLinks.length === 1 && hops < 8) {
             const back = curr.backLinks[0];
-            if (back.type !== NodeType.PATH && back.type !== NodeType.EMPTY)
-                break;
+            if (back.type !== NodeType.PATH) break;
             curr = back;
             hops++;
-            this.dirtyNodes.add(curr);
             if (curr.path !== null) {
                 this.dismantlePath(curr.path.ref);
                 break;
@@ -199,17 +208,25 @@ export class PathManager implements IGraphListener {
         const sourceNode = curr.backLinks[0];
         if (!sourceNode) return;
         if (sourceNode.type === NodeType.EMPTY) return;
-        if (sourceNode.cycle !== null) return;
+        if (
+            sourceNode.cycle !== null &&
+            sourceNode.cycle.headType !== CycleHeadType.READ
+        ) {
+            return;
+        }
 
         const entryNode = curr;
         if (entryNode.path !== null) return;
 
-        const pathNodes: GraphNode[] = [];
-        const splitters: GraphNode[] = [];
-        const targets: PathTarget[] = [];
+        this.scratchNodes.length = 0;
+        this.scratchSplitters.length = 0;
+        this.scratchTargets.length = 0;
+        this.scratchQueue.length = 0;
+
+        const queue = this.scratchQueue;
         const treeEpoch = ++this.currentEpoch;
 
-        const queue: GraphNode[] = [entryNode];
+        queue.push(entryNode);
         this.visitedEpoch[entryNode.nodeIdx] = treeEpoch;
         this.nodeDists[entryNode.nodeIdx] = 1;
         this.processedEpoch[entryNode.nodeIdx] = flushEpoch;
@@ -219,10 +236,10 @@ export class PathManager implements IGraphListener {
             const n = queue[queueHead++];
             const dist = this.nodeDists[n.nodeIdx];
 
-            pathNodes.push(n);
+            this.scratchNodes.push(n);
 
             if (n.links.length > 1) {
-                splitters.push(n);
+                this.scratchSplitters.push(n);
             }
 
             for (let j = 0; j < n.links.length; j++) {
@@ -248,17 +265,24 @@ export class PathManager implements IGraphListener {
                         resolved !== null &&
                         resolved.node.type !== NodeType.EMPTY
                     ) {
-                        targets.push(resolved);
+                        this.scratchTargets.push(resolved);
                     }
                 }
             }
         }
 
-        if (pathNodes.length < MIN_PATH_NODES || targets.length === 0) {
+        if (
+            this.scratchNodes.length < MIN_PATH_NODES ||
+            this.scratchTargets.length === 0
+        ) {
             return;
         }
 
         const pathId = this.nextPathId++;
+        const pathNodes = this.scratchNodes.slice();
+        const splitters = this.scratchSplitters.slice();
+        const targets = this.scratchTargets.slice();
+
         const path: GraphPath = {
             index: pathId,
             sourceNode,
@@ -312,6 +336,7 @@ export class PathManager implements IGraphListener {
             if (nextHop.path !== null) break;
 
             let signalBackLinks = 0;
+            let isBlocked = false;
             for (let b = 0; b < curr.backLinks.length; b++) {
                 const back = curr.backLinks[b];
                 if (
@@ -324,39 +349,18 @@ export class PathManager implements IGraphListener {
                     back.type === NodeType.BLOCKER &&
                     back.blockedLink === curr
                 ) {
-                    continue;
+                    isBlocked = true;
+                    break;
                 }
                 signalBackLinks++;
             }
-            if (signalBackLinks > 1) {
+            if (isBlocked || signalBackLinks > 1) {
                 break;
             }
 
             if (this.visitedEpoch[nextHop.nodeIdx] === treeEpoch) {
                 break;
             }
-
-            let isBlocked = false;
-            for (let b = 0; b < curr.backLinks.length; b++) {
-                const back = curr.backLinks[b];
-                if (
-                    back.type === NodeType.BLOCKER &&
-                    back.blockedLink === curr
-                ) {
-                    isBlocked = true;
-                    break;
-                }
-            }
-            if (isBlocked) break;
-
-            let hasDetector = false;
-            for (let l = 0; l < curr.links.length; l++) {
-                if (curr.links[l].type === NodeType.DETECTOR) {
-                    hasDetector = true;
-                    break;
-                }
-            }
-            if (hasDetector) break;
 
             curr = nextHop;
             delay++;
@@ -396,17 +400,28 @@ export class PathManager implements IGraphListener {
     }
 
     public onCycleAdded(_graph: Graph, cycle: GraphCycle): void {
-        for (let i = 0; i < cycle.nodes.length; i++) {
-            const n = cycle.nodes[i];
+        const allNodes = [...cycle.nodes, ...cycle.extraNodes, ...cycle.heads];
+        for (let i = 0; i < allNodes.length; i++) {
+            const n = allNodes[i];
             if (n.path !== null) {
                 this.dismantlePath(n.path.ref);
             }
+            this.dirtyNodes.add(n);
+            for (let j = 0; j < n.links.length; j++) {
+                this.dirtyNodes.add(n.links[j]);
+            }
         }
+        this.scheduleFlush();
     }
 
     public onCycleRemoved(_graph: Graph, cycle: GraphCycle): void {
-        for (let i = 0; i < cycle.nodes.length; i++) {
-            this.dirtyNodes.add(cycle.nodes[i]);
+        const allNodes = [...cycle.nodes, ...cycle.extraNodes, ...cycle.heads];
+        for (let i = 0; i < allNodes.length; i++) {
+            const n = allNodes[i];
+            this.dirtyNodes.add(n);
+            for (let j = 0; j < n.links.length; j++) {
+                this.dirtyNodes.add(n.links[j]);
+            }
         }
         this.scheduleFlush();
     }

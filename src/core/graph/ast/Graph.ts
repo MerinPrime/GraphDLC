@@ -47,7 +47,30 @@ export class Graph {
     private readonly eventDispatcher: EventDispatcher<IGraphListener> =
         new EventDispatcher();
 
-    public engine: BaseEngine<EngineTypes>;
+    private _engine!: BaseEngine<EngineTypes>;
+
+    public get engine(): BaseEngine<EngineTypes> {
+        return this._engine;
+    }
+
+    public set engine(newEngine: BaseEngine<EngineTypes>) {
+        this._engine = newEngine;
+        if (this.eventDispatcher && this.cycleManager && this.pathManager) {
+            this.updateEngineSubscriptions();
+        }
+    }
+
+    private updateEngineSubscriptions(): void {
+        this.eventDispatcher.unsubscribe(this.cycleManager);
+        this.eventDispatcher.unsubscribe(this.pathManager);
+
+        if (this._engine.capabilities.supportCycles) {
+            this.eventDispatcher.subscribe(this.cycleManager);
+        }
+        if (this._engine.capabilities.supportPathes) {
+            this.eventDispatcher.subscribe(this.pathManager);
+        }
+    }
 
     public updater: NodeStateUpdater;
 
@@ -70,14 +93,11 @@ export class Graph {
 
         this.cycleManager = new CycleManager(
             this,
-            this.engine.capabilities.canWriteAndClear,
+            this._engine.capabilities.canWriteAndClear,
         );
 
         this.eventDispatcher.subscribe(this.debugger);
-        if (this.engine.capabilities.supportCycles) {
-            this.eventDispatcher.subscribe(this.cycleManager);
-        }
-        this.eventDispatcher.subscribe(this.pathManager);
+        this.updateEngineSubscriptions();
 
         this.updater = new NodeStateUpdater(this);
 
@@ -553,21 +573,27 @@ export class Graph {
     }
 
     public flushCycles(): void {
-        this.cycleManager.flushSync();
-        this.pathManager.flushSync();
+        if (this._engine.capabilities.supportCycles) {
+            this.cycleManager.flushSync();
+        }
+        if (this._engine.capabilities.supportPathes) {
+            this.pathManager.flushSync();
+        }
     }
 
     public flushPaths(): void {
-        this.pathManager.flushSync();
+        if (this._engine.capabilities.supportPathes) {
+            this.pathManager.flushSync();
+        }
     }
 
     public addPath(path: GraphPath): void {
-        this.engine.addPath?.(path);
+        this.engine.addPath(path);
         this.eventDispatcher.dispatch('onPathAdded', this, path);
     }
 
     public removePath(path: GraphPath): void {
-        this.engine.removePath?.(path);
+        this.engine.removePath(path);
         this.eventDispatcher.dispatch('onPathRemoved', this, path);
     }
 

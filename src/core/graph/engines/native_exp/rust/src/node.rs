@@ -9,10 +9,6 @@ pub struct Node {
     pub blocked_count: u8,
     pub links_count: u8,
     pub detectors_count: u8,
-
-    pub chunk_idx: u32,
-    pub links: [u32; 4],
-    pub pos_hash: u32,
 }
 
 impl Node {
