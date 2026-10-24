@@ -915,7 +915,8 @@ impl GraphState {
 
         for &back_idx in back_links {
             let back_node = &self.nodes[back_idx as usize];
-            let head_type = self.cold_nodes[back_idx as usize].head_type;
+            let cold = &self.cold_nodes[back_idx as usize];
+            let head_type = cold.head_type;
             let is_bypassed_head =
                 head_type != CYCLE_HEAD_TYPE_NONE && head_type != CYCLE_HEAD_TYPE_READ;
 
@@ -923,10 +924,30 @@ impl GraphState {
                 continue;
             }
 
-            let back_last_signal = back_node.last_signal;
+            let back_last_signal = if cold.is_in_path {
+                let path_idx = cold.path_idx as usize;
+                let path_dist = cold.path_distance;
+                if path_idx < self.paths.len() {
+                    let path = unsafe {
+                        let ptr = self.paths.as_ptr().add(path_idx) as *mut PathState;
+                        &mut *ptr
+                    };
+                    let check_tick = self.tick.saturating_sub(1);
+                    if path.is_valid() && path.is_signal_active_at(check_tick, path_dist) {
+                        NODE_SIGNAL_ACTIVE
+                    } else {
+                        NODE_SIGNAL_NONE
+                    }
+                } else {
+                    NODE_SIGNAL_NONE
+                }
+            } else {
+                back_node.last_signal
+            };
+
             if back_last_signal == NODE_SIGNAL_ACTIVE {
                 let is_blocker = back_node.type_id() == NODE_TYPE_BLOCKER;
-                let blocked_link = self.cold_nodes[back_idx as usize].blocked_link;
+                let blocked_link = cold.blocked_link;
                 if is_blocker && blocked_link == node_idx {
                     blocked_count += 1;
                 } else if !is_detector {
