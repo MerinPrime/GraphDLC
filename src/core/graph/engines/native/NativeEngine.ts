@@ -16,6 +16,7 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
     public override readonly capabilities: EngineCapabilities = {
         canWriteAndClear: false,
         bulkRender: false,
+        supportCycles: true,
     };
 
     protected readonly state: NativeState;

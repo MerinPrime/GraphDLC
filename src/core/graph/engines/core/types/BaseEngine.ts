@@ -22,6 +22,7 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
     public readonly capabilities: EngineCapabilities = {
         canWriteAndClear: false,
         bulkRender: false,
+        supportCycles: false,
     };
 
     protected readonly rewinder: StateRewinder<T['Snapshot']> =

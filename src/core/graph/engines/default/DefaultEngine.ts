@@ -18,6 +18,7 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
     public override readonly capabilities: EngineCapabilities = {
         canWriteAndClear: false,
         bulkRender: false,
+        supportCycles: false,
     };
 
     public chunkUpdates: typeof ChunkUpdates;

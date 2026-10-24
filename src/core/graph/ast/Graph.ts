@@ -71,7 +71,9 @@ export class Graph {
         );
 
         this.eventDispatcher.subscribe(this.debugger);
-        this.eventDispatcher.subscribe(this.cycleManager);
+        if (this.engine.capabilities.supportCycles) {
+            this.eventDispatcher.subscribe(this.cycleManager);
+        }
 
         this.updater = new NodeStateUpdater(this);
 
