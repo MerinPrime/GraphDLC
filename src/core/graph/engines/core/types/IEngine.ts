@@ -3,8 +3,10 @@ import type { Graph } from 'src/core/graph/ast/Graph';
 import type { GraphNode } from 'src/core/graph/ast/GraphNode';
 import type { Bounds } from 'src/core/utils/Bounds';
 import type { NodeSignal } from '../NodeSignal';
+import type { EngineCapabilities } from './EngineCapabilities';
 
 export interface IEngine {
+    readonly capabilities: EngineCapabilities;
     runTick(): boolean;
     runManyTicks(ticksCount: number): boolean;
     rewindToTick(targetTick: number): void;

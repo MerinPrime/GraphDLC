@@ -2,6 +2,7 @@ import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
+import type { EngineCapabilities } from '../core/types/EngineCapabilities';
 import type { RawSnapshot } from './RawSnapshot';
 import { RawGraphState } from './RawState';
 import { RawStateSynchronizer } from './RawStateSynchronizer';
@@ -13,6 +14,11 @@ interface RawEngineTypes extends EngineTypes {
 }
 
 export class RawEngine extends BaseEngine<RawEngineTypes> {
+    public override readonly capabilities: EngineCapabilities = {
+        canWriteAndClear: false,
+        bulkRender: true,
+    };
+
     public readonly state = new RawGraphState();
     private readonly updater: RawGraphUpdater = new RawGraphUpdater();
     private readonly synchronizer: RawStateSynchronizer =

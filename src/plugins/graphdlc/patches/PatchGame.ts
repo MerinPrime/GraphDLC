@@ -111,7 +111,10 @@ export const PatchGame: IPatcher = (
                 }
 
                 if (visibleChunks.length > 0) {
-                    if (engine.fillChunksSignalsBulk) {
+                    if (
+                        engine.capabilities.bulkRender &&
+                        engine.fillChunksSignalsBulk
+                    ) {
                         const count = visibleChunks.length;
                         if (bulkChunksBuffer.length < count) {
                             bulkChunksBuffer = new Uint32Array(
@@ -143,7 +146,10 @@ export const PatchGame: IPatcher = (
                             }
                             chunk.markRenderDirty();
                         }
-                    } else if (engine.fillNodeSignalsBulk) {
+                    } else if (
+                        engine.capabilities.bulkRender &&
+                        engine.fillNodeSignalsBulk
+                    ) {
                         const totalArrows = visibleChunks.length * CHUNK_AREA;
                         if (bulkIndicesBuffer.length < totalArrows) {
                             bulkIndicesBuffer = new Uint32Array(

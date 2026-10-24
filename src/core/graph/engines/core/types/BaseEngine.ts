@@ -6,6 +6,7 @@ import type { Bounds } from 'src/core/utils/Bounds';
 import { StaticSeedSetting } from 'src/plugins/graphdlc/settings/tools/StaticSeedSetting';
 import type { NodeSignal } from '../NodeSignal';
 import { StateRewinder } from '../StateRewinder';
+import type { EngineCapabilities } from './EngineCapabilities';
 import type { IEngine } from './IEngine';
 import type { ISnapshot } from './ISnapshot';
 import type { IState } from './IState';
@@ -18,6 +19,11 @@ export interface EngineTypes {
 const MAX_REWIND_STEPS = 1000000;
 
 export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
+    public readonly capabilities: EngineCapabilities = {
+        canWriteAndClear: false,
+        bulkRender: false,
+    };
+
     protected readonly rewinder: StateRewinder<T['Snapshot']> =
         new StateRewinder();
     protected abstract readonly state: T['State'];
