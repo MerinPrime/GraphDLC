@@ -2,6 +2,7 @@ import type { GraphCycle } from 'src/core/graph/ast/cycle/types';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
+import type { EngineCapabilities } from '../core/types/EngineCapabilities';
 import type { NativeExpSnapshot } from './NativeExpSnapshot';
 import { NativeExpState } from './NativeExpState';
 import { RustExpWrapper } from './RustExpWrapper';
@@ -12,6 +13,11 @@ interface NativeExpEngineTypes extends EngineTypes {
 }
 
 export class NativeExpEngine extends BaseEngine<NativeExpEngineTypes> {
+    public override readonly capabilities: EngineCapabilities = {
+        canWriteAndClear: true,
+        bulkRender: true,
+    };
+
     protected readonly state: NativeExpState;
 
     private readonly wrapper: RustExpWrapper;

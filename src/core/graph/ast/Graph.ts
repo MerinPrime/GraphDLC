@@ -18,7 +18,6 @@ import { NodeSignal } from '../engines/core/NodeSignal';
 import { NodeType } from '../engines/core/NodeType';
 import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
 import { EngineFactory } from '../engines/EngineFactory';
-import { NativeExpEngine } from '../engines/native_exp/NativeExpEngine';
 import { CycleManager } from './cycle/CycleManager';
 import { containsNode } from './cycle/utils';
 import { GraphNode } from './GraphNode';
@@ -68,7 +67,7 @@ export class Graph {
 
         this.cycleManager = new CycleManager(
             this,
-            this.engine instanceof NativeExpEngine,
+            this.engine.capabilities.canWriteAndClear,
         );
 
         this.eventDispatcher.subscribe(this.debugger);

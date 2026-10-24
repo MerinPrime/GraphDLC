@@ -5,6 +5,7 @@ import { removeWithSwap } from 'src/core/utils/removeWithSwap';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
 import { BaseEngine, type EngineTypes } from '../core/types/BaseEngine';
+import type { EngineCapabilities } from '../core/types/EngineCapabilities';
 import type { DefaultSnapshot } from './DefaultSnapshot';
 import { DefaultState } from './DefaultState';
 
@@ -14,6 +15,11 @@ interface DefaultEngineTypes extends EngineTypes {
 }
 
 export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
+    public override readonly capabilities: EngineCapabilities = {
+        canWriteAndClear: false,
+        bulkRender: false,
+    };
+
     public chunkUpdates: typeof ChunkUpdates;
 
     protected readonly state;
