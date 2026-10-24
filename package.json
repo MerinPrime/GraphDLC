@@ -8,7 +8,6 @@
         "build": "NODE_ENV=production rolldown -c",
         "lint": "npx biome check --write .",
         "dev": "NODE_ENV=development concurrently \"npm run watch:game\" \"npm run watch:graphdlc\" \"npm run server\"",
-        "benchmark": "taskset -c 2 node --experimental-strip-types benchmark/run.ts",
         "watch:game": "cd logic-arrows && npm run prod -- --watch --output-path=../dist/dev",
         "watch:graphdlc": "rolldown -c -w",
         "server": "sirv dist/dev --port 8080 --single --dev"
