@@ -1201,16 +1201,21 @@ impl GraphState {
             }
         }
 
-        let mut has_active = (source_idx as usize) < self.nodes.len()
-            && self.nodes[source_idx as usize].signal == NODE_SIGNAL_ACTIVE;
+        let (source_was_active, source_is_active) = if (source_idx as usize) < self.nodes.len() {
+            let n = &self.nodes[source_idx as usize];
+            (n.last_signal == NODE_SIGNAL_ACTIVE, n.signal == NODE_SIGNAL_ACTIVE)
+        } else {
+            (false, false)
+        };
+
+        let mut has_active = source_was_active && source_is_active;
         let mut max_internal_dist = 0usize;
         for &node in internal_nodes {
             let dist_usize = node.dist as usize;
             if dist_usize > max_internal_dist {
                 max_internal_dist = dist_usize;
             }
-            if !has_active
-                && (node.node_idx as usize) < self.nodes.len()
+            if (node.node_idx as usize) < self.nodes.len()
                 && self.nodes[node.node_idx as usize].signal == NODE_SIGNAL_ACTIVE
             {
                 has_active = true;
@@ -1220,9 +1225,7 @@ impl GraphState {
         let mut dist_active = Vec::new();
         if has_active {
             dist_active.resize(max_internal_dist + 1, false);
-            if (source_idx as usize) < self.nodes.len()
-                && self.nodes[source_idx as usize].signal == NODE_SIGNAL_ACTIVE
-            {
+            if source_was_active && source_is_active {
                 dist_active[0] = true;
             }
             for &node in internal_nodes {
@@ -1234,7 +1237,27 @@ impl GraphState {
             }
         }
 
-        let mut target_off_scheduled = HashSet::new();
+        let targets_delivered: Vec<bool> = targets
+            .iter()
+            .map(|pt| {
+                for node in internal_nodes {
+                    if node.dist == pt.delay {
+                        let n_idx = node.node_idx as usize;
+                        let count = self.nodes[n_idx].links_count as usize;
+                        if self.node_links[n_idx][..count].contains(&pt.target_node) {
+                            return self.nodes[n_idx].last_signal == NODE_SIGNAL_ACTIVE;
+                        }
+                    }
+                }
+                false
+            })
+            .collect();
+
+        let mut internal_set = HashSet::new();
+        for &node in internal_nodes {
+            internal_set.insert(node.node_idx);
+        }
+
         for &node in internal_nodes {
             let node_idx = node.node_idx as usize;
             let last_sig = self.nodes[node_idx].last_signal;
@@ -1242,11 +1265,10 @@ impl GraphState {
             let count = self.nodes[node_idx].links_count as usize;
             let links = &self.node_links[node_idx][..count];
 
-            for &pt in targets {
-                if links.contains(&pt.target_node) {
-                    if last_sig == NODE_SIGNAL_ACTIVE && sig == NODE_SIGNAL_NONE {
-                        self.time_wheel.schedule(pt.target_node, -1, self.tick);
-                        target_off_scheduled.insert(pt.target_node);
+            if last_sig == NODE_SIGNAL_ACTIVE && sig == NODE_SIGNAL_NONE {
+                for &link in links {
+                    if !internal_set.contains(&link) {
+                        self.time_wheel.schedule(link, -1, self.tick);
                     }
                 }
             }
@@ -1291,13 +1313,51 @@ impl GraphState {
                 path_state.record_edge(self.tick, true);
                 path_state.last_on_tick = self.tick.saturating_sub(d_cont as u32);
 
-                for &pt in targets {
+                for (t_idx, &pt) in targets.iter().enumerate() {
                     let delay = pt.delay as i32;
                     let target_node = pt.target_node;
                     let on_tick = (path_state.last_on_tick as i32) + delay;
 
-                    if on_tick > current_tick {
+                    let already_delivered = targets_delivered[t_idx];
+
+                    let should_schedule_on = if on_tick > current_tick {
+                        true
+                    } else if on_tick == current_tick {
+                        !already_delivered
+                    } else {
+                        false
+                    };
+
+                    if should_schedule_on {
                         self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                    }
+                }
+            } else if source_was_active && !source_is_active {
+                while d_cont < max_internal_dist && dist_active[d_cont + 1] {
+                    d_cont += 1;
+                }
+                if d_cont > 0 {
+                    path_state.input_active = true;
+                    path_state.last_on_tick = self.tick.saturating_sub(d_cont as u32);
+
+                    for (t_idx, &pt) in targets.iter().enumerate() {
+                        let delay = pt.delay as i32;
+                        let target_node = pt.target_node;
+                        let on_tick = (path_state.last_on_tick as i32) + delay;
+
+                        let already_delivered = targets_delivered[t_idx];
+
+                        let should_schedule_on = if on_tick > current_tick {
+                            true
+                        } else if on_tick == current_tick {
+                            !already_delivered
+                        } else {
+                            false
+                        };
+
+                        if should_schedule_on {
+                            self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                        }
                     }
                 }
             }
@@ -1315,18 +1375,27 @@ impl GraphState {
                     let end = current_tick - (d_start as i32) + 1;
                     path_state.push_pulse(start, end);
 
-                    for &pt in targets {
+                    for (t_idx, &pt) in targets.iter().enumerate() {
                         let delay = pt.delay as i32;
                         let target_node = pt.target_node;
                         let on_tick = start + delay;
                         let off_tick = end + delay;
 
-                        if on_tick <= current_tick {
-                            if off_tick > current_tick && !target_off_scheduled.contains(&target_node) {
-                                self.time_wheel.schedule(target_node, -1, off_tick as u32);
-                            }
+                        let already_delivered = targets_delivered[t_idx];
+
+                        let should_schedule_on = if on_tick > current_tick {
+                            true
+                        } else if on_tick == current_tick {
+                            !already_delivered
                         } else {
+                            false
+                        };
+
+                        if should_schedule_on {
                             self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                        }
+
+                        if off_tick > current_tick {
                             self.time_wheel.schedule(target_node, -1, off_tick as u32);
                         }
                     }
@@ -1349,6 +1418,7 @@ impl GraphState {
     ) {
         let idx = path_idx as usize;
         let mut active_internal_nodes = Vec::new();
+        let mut was_active_internal_nodes = Vec::new();
         let mut cancel_events = Vec::new();
 
         if idx < self.paths.len() && self.paths[idx].is_valid() {
@@ -1358,6 +1428,9 @@ impl GraphState {
                 let dist = self.cold_nodes[node_idx as usize].path_distance;
                 if path.is_signal_active_at(self.tick, dist) {
                     active_internal_nodes.push(node_idx);
+                }
+                if self.tick > 0 && path.is_signal_active_at(self.tick - 1, dist) {
+                    was_active_internal_nodes.push(node_idx);
                 }
             }
 
@@ -1376,17 +1449,17 @@ impl GraphState {
                     let on_tick = start + (delay as i32);
                     let off_tick = end + (delay as i32);
 
-                    if on_tick > (self.tick as i32) {
+                    if on_tick >= (self.tick as i32) {
                         cancel_events.push((target_node, true, on_tick as u32));
                     }
-                    if on_tick > (self.tick as i32) && off_tick >= (self.tick as i32) {
+                    if off_tick >= (self.tick as i32) {
                         cancel_events.push((target_node, false, off_tick as u32));
                     }
                 }
 
                 if path.input_active && path.last_on_tick != u32::MAX {
                     let on_tick = (path.last_on_tick as i32) + (delay as i32);
-                    if on_tick > (self.tick as i32) {
+                    if on_tick >= (self.tick as i32) {
                         cancel_events.push((target_node, true, on_tick as u32));
                     }
                 }
@@ -1441,20 +1514,18 @@ impl GraphState {
             if (node_idx as usize) < self.nodes.len() {
                 let is_empty = self.nodes[node_idx as usize].type_id() == NODE_TYPE_EMPTY;
                 let is_active = !is_empty && active_internal_nodes.contains(&node_idx);
+                let was_active = !is_empty && was_active_internal_nodes.contains(&node_idx);
                 let chunk_idx = {
                     let n = &mut self.nodes[node_idx as usize];
-                    if is_active {
-                        n.signal = NODE_SIGNAL_ACTIVE;
-                        n.last_signal = NODE_SIGNAL_NONE;
-                    } else {
-                        n.signal = NODE_SIGNAL_NONE;
-                        n.last_signal = NODE_SIGNAL_NONE;
-                    }
+                    n.signal = if is_active { NODE_SIGNAL_ACTIVE } else { NODE_SIGNAL_NONE };
+                    n.last_signal = if was_active { NODE_SIGNAL_ACTIVE } else { NODE_SIGNAL_NONE };
                     n.flags |= FLAG_IS_UPDATED;
                     self.cold_nodes[node_idx as usize].chunk_idx
                 };
                 self.make_dirty_chunk(chunk_idx);
-                self.mark_node_as_changed_non_temp(node_idx);
+                if is_active != was_active {
+                    self.mark_node_as_changed_non_temp(node_idx);
+                }
             }
         }
 
