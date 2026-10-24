@@ -830,7 +830,7 @@ impl GraphState {
                 (
                     cold.cycle_offset,
                     node.chunk_idx,
-                    node.signal == NODE_SIGNAL_ACTIVE || node.last_signal == NODE_SIGNAL_ACTIVE,
+                    node.signal == NODE_SIGNAL_ACTIVE,
                 )
             };
 
