@@ -18,6 +18,7 @@ import { NodeSignal } from '../engines/core/NodeSignal';
 import { NodeType } from '../engines/core/NodeType';
 import type { BaseEngine, EngineTypes } from '../engines/core/types/BaseEngine';
 import { EngineFactory } from '../engines/EngineFactory';
+import { NativeExpEngine } from '../engines/native_exp/NativeExpEngine';
 import { CycleManager } from './cycle/CycleManager';
 import { containsNode } from './cycle/utils';
 import { GraphNode } from './GraphNode';
@@ -38,7 +39,7 @@ export class Graph {
     private freeCycleIndices: number[] = [];
     // public readonly breakpoints: Set<GraphNode> = new Set();
 
-    private readonly cycleManager: CycleManager = new CycleManager();
+    private readonly cycleManager: CycleManager;
     public readonly debugger: GraphDebugger = new GraphDebugger(this);
 
     private readonly eventDispatcher: EventDispatcher<IGraphListener> =
@@ -62,11 +63,16 @@ export class Graph {
         this.gameMap = gameMap;
         this.privateGameMap = gameMap as any as PrivateGameMap;
 
-        this.eventDispatcher.subscribe(this.debugger);
-        this.eventDispatcher.subscribe(this.cycleManager);
-
         this.engine = EngineFactory.create(this, this.gameMap);
         this.engine.reset();
+
+        this.cycleManager = new CycleManager(
+            this,
+            this.engine instanceof NativeExpEngine,
+        );
+
+        this.eventDispatcher.subscribe(this.debugger);
+        this.eventDispatcher.subscribe(this.cycleManager);
 
         this.updater = new NodeStateUpdater(this);
 
