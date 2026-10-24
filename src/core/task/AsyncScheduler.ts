@@ -24,7 +24,22 @@ export class AsyncScheduler {
         key?: K,
     ) {
         if (key !== undefined) {
-            this.cancel(key);
+            const existing = this.activeTasksByKey.get(key);
+            if (existing) {
+                const existingIdx = this.tasksQueue.indexOf(
+                    existing,
+                    this.queueHead,
+                );
+                if (existingIdx >= this.queueHead) {
+                    existing.task.isCanceled = true;
+                    existing.task = task;
+                    existing.task.isCanceled = false;
+                    existing.onComplete = onComplete;
+                    this.ensureSchedulerStarted();
+                    return;
+                }
+                this.cancel(key);
+            }
         }
 
         const entry: SchedulerEntry = { task, key, onComplete };

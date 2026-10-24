@@ -19,9 +19,53 @@ const DEBUG_COLORS = {
     UNOPTIMIZED: [0.6, 0.1, 0.8, 0.4] as DebugColor,
 } as const;
 
+function getPatternKey(points: readonly [number, number][]): string {
+    const sorted = points
+        .slice()
+        .sort((a, b) => (a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]));
+    let key = '';
+    for (let i = 0; i < sorted.length; i++) {
+        if (i > 0) key += '|';
+        key += `${sorted[i][0]},${sorted[i][1]}`;
+    }
+    return key;
+}
+
+const MATCH_PATTERNS = new Set<string>();
+const ROTATIONS = [0, 1, 2, 3];
+const FLIPPED_STATES = [false, true];
+
+for (let i = 0; i < NodeTypes.PATH_TYPES.length; i++) {
+    const checkType = NodeTypes.PATH_TYPES[i];
+    const relations = getArrowRelations(checkType);
+
+    for (let r = 0; r < ROTATIONS.length; r++) {
+        const rot = ROTATIONS[r];
+        for (let f = 0; f < FLIPPED_STATES.length; f++) {
+            const flip = FLIPPED_STATES[f];
+            const points: [number, number][] = [];
+
+            for (let j = 0; j < relations.length; j++) {
+                const [forward, sideways] = relations[j];
+                const pos = getRelativePosition(
+                    0,
+                    0,
+                    rot,
+                    flip,
+                    forward,
+                    sideways,
+                );
+                points.push([pos.x, pos.y]);
+            }
+
+            MATCH_PATTERNS.add(getPatternKey(points));
+        }
+    }
+}
+
 class GlobalUpdateTask implements ITask<void> {
     public isCanceled = false;
-    public stepBatchSize = 200;
+    public stepBatchSize = 500;
 
     private phase = 0;
 
@@ -245,50 +289,16 @@ class GlobalUpdateTask implements ITask<void> {
     private hasMatchPattern(
         startX: number,
         startY: number,
-        targetRelations: [posX: number, posY: number][],
+        targetRelations: readonly [posX: number, posY: number][],
     ): boolean {
-        const targetKeys = new Set(
-            targetRelations.map(([x, y]) => `${x},${y}`),
-        );
-        const availablePathTypes = NodeTypes.PATH_TYPES.filter(
-            (type) => getArrowRelations(type).length === targetRelations.length,
-        );
-
-        if (availablePathTypes.length === 0) return false;
-
-        const ROTATIONS = [0, 1, 2, 3];
-        const FLIPPED_STATES = [false, true];
-
-        for (let i = 0; i < availablePathTypes.length; i++) {
-            const checkType = availablePathTypes[i];
-            const relations = getArrowRelations(checkType);
-
-            for (let r = 0; r < ROTATIONS.length; r++) {
-                const rot = ROTATIONS[r];
-                for (let f = 0; f < FLIPPED_STATES.length; f++) {
-                    const flip = FLIPPED_STATES[f];
-                    let isFullMatch = true;
-
-                    for (let j = 0; j < relations.length; j++) {
-                        const [forward, sideways] = relations[j];
-                        const targetPos = getRelativePosition(
-                            startX,
-                            startY,
-                            rot,
-                            flip,
-                            forward,
-                            sideways,
-                        );
-                        if (!targetKeys.has(`${targetPos.x},${targetPos.y}`)) {
-                            isFullMatch = false;
-                            break;
-                        }
-                    }
-                    if (isFullMatch) return true;
-                }
-            }
+        const relPoints: [number, number][] = [];
+        for (let i = 0; i < targetRelations.length; i++) {
+            relPoints.push([
+                targetRelations[i][0] - startX,
+                targetRelations[i][1] - startY,
+            ]);
         }
-        return false;
+        return MATCH_PATTERNS.has(getPatternKey(relPoints));
     }
 
     private checkIsPathUnoptimized(
@@ -297,28 +307,46 @@ class GlobalUpdateTask implements ITask<void> {
     ): boolean {
         if (pathNode.type !== NodeType.PATH) return false;
 
-        const validLinks = pathNode.links.filter((link) => {
-            if (link.type === NodeType.EMPTY) return false;
-            return isReachableArr[link.nodeIdx] === 1;
-        });
-
+        const links = pathNode.links;
         const totalRelations = getArrowRelations(pathNode.arrowType);
+        const totalLen = totalRelations.length;
 
-        if (validLinks.length === 0) return totalRelations.length !== 1;
+        let validCount = 0;
+        let hasDetectorBacklink = false;
 
-        if (validLinks.length === totalRelations.length) {
-            return validLinks.some(
-                (link) =>
+        for (let i = 0; i < links.length; i++) {
+            const link = links[i];
+            if (
+                link.type !== NodeType.EMPTY &&
+                isReachableArr[link.nodeIdx] === 1
+            ) {
+                validCount++;
+                if (
                     link.type === NodeType.DETECTOR &&
                     link.detectedLink === pathNode &&
-                    link.backLinks.length === 1,
-            );
+                    link.backLinks.length === 1
+                ) {
+                    hasDetectorBacklink = true;
+                }
+            }
         }
 
-        const targetRelations = validLinks.map((node) => [
-            node.globalX,
-            node.globalY,
-        ]) as [posX: number, posY: number][];
+        if (validCount === 0) return totalLen !== 1;
+
+        if (validCount === totalLen) {
+            return hasDetectorBacklink;
+        }
+
+        const targetRelations: [number, number][] = [];
+        for (let i = 0; i < links.length; i++) {
+            const link = links[i];
+            if (
+                link.type !== NodeType.EMPTY &&
+                isReachableArr[link.nodeIdx] === 1
+            ) {
+                targetRelations.push([link.globalX, link.globalY]);
+            }
+        }
 
         return this.hasMatchPattern(
             pathNode.globalX,
@@ -388,6 +416,9 @@ class GlobalUpdateTask implements ITask<void> {
 }
 
 export class DeadNodeDebuggerMode extends DebuggerMode<DeadNodeDebugData> {
+    private isScheduled = false;
+    private needsReupdate = false;
+
     public constructor(asyncScheduler: AsyncScheduler) {
         super(asyncScheduler, () => ({
             isUnoptimized: false,
@@ -395,24 +426,34 @@ export class DeadNodeDebuggerMode extends DebuggerMode<DeadNodeDebugData> {
         }));
     }
 
-    protected doRunTask(
-        _graph: Graph,
-        _node: GraphNode,
-        _data: INodeDebugData,
-    ): boolean {
-        return true;
+    public override performNodeUpdate(graph: Graph, _node: GraphNode): void {
+        if (this.isScheduled) {
+            this.needsReupdate = true;
+            return;
+        }
+        this.scheduleGlobalUpdate(graph);
     }
 
-    protected runUpdateTask(
-        graph: Graph,
-        _node: GraphNode,
-        _data: INodeDebugData,
-    ): [ITask<void>, boolean, any] {
-        return [
+    private scheduleGlobalUpdate(graph: Graph): void {
+        this.isScheduled = true;
+        this.needsReupdate = false;
+
+        this.asyncScheduler.schedule(
             new GlobalUpdateTask(graph, this),
-            true,
+            () => {
+                this.isScheduled = false;
+                if (this.needsReupdate) {
+                    this.scheduleGlobalUpdate(graph);
+                }
+            },
             'global-dead-node-update',
-        ];
+        );
+    }
+
+    public override onGraphClear(graph: Graph): void {
+        this.isScheduled = false;
+        this.needsReupdate = false;
+        super.onGraphClear(graph);
     }
 
     public setChunkColor(

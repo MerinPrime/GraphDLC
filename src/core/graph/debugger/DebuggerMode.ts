@@ -1,6 +1,5 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import type { AsyncScheduler } from 'src/core/task/AsyncScheduler';
-import type { ITask } from 'src/core/task/ITask';
 import type { Bounds } from 'src/core/utils/Bounds';
 import type { GraphCycle } from '../ast/cycle/types';
 import type { Graph } from '../ast/Graph';
@@ -48,32 +47,7 @@ export abstract class DebuggerMode<TNodeDebugData extends INodeDebugData>
         return this.debugChunks[chunkIdx];
     }
 
-    public performNodeUpdate(graph: Graph, node: GraphNode): void {
-        const nodeData = this.getNodeData(node.nodeIdx);
-
-        const doTask = this.doRunTask(graph, node, nodeData);
-        if (!doTask) return;
-
-        const [task, doReset, customKey] = this.runUpdateTask(
-            graph,
-            node,
-            nodeData,
-        );
-        const key = doReset ? (customKey ?? node.nodeIdx) : undefined;
-        this.asyncScheduler.schedule(task, () => {}, key);
-    }
-
-    protected abstract doRunTask(
-        graph: Graph,
-        node: GraphNode,
-        nodeData: TNodeDebugData,
-    ): boolean;
-
-    protected abstract runUpdateTask(
-        graph: Graph,
-        node: GraphNode,
-        nodeData: TNodeDebugData,
-    ): [task: ITask<void>, doReset: boolean, customKey?: any];
+    public abstract performNodeUpdate(graph: Graph, node: GraphNode): void;
 
     public onGraphClear(_graph: Graph): void {
         this.asyncScheduler.clear();
@@ -137,8 +111,9 @@ export abstract class DebuggerMode<TNodeDebugData extends INodeDebugData>
     }
 
     public renderChunks(bounds: Bounds, renderColor: RenderDebugColor) {
-        for (const chunk of this.debugChunks) {
-            if (chunk?.inBounds(bounds)) {
+        for (let i = 0; i < this.debugChunks.length; i++) {
+            const chunk = this.debugChunks[i];
+            if (chunk && chunk.activeCount > 0 && chunk.inBounds(bounds)) {
                 chunk.renderChunk(renderColor);
             }
         }

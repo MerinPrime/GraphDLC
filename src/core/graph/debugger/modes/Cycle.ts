@@ -3,7 +3,6 @@ import type { ITask } from 'src/core/task/ITask';
 import { CycleHeadType } from '../../ast/cycle/types';
 import type { Graph } from '../../ast/Graph';
 import type { GraphNode } from '../../ast/GraphNode';
-import type { DebugChunk } from '../DebugChunk';
 import { DebuggerMode } from '../DebuggerMode';
 import type { DebugColor, INodeDebugData } from '../types';
 
@@ -20,56 +19,84 @@ const HEAD_COLORS: Record<CycleHeadType, DebugColor> = {
 const CYCLE_COLOR: DebugColor = [0.8, 0.2, 0.8, ALPHA];
 const EXTRA_COLOR: DebugColor = [0.5, 0.4, 0.7, ALPHA];
 
-class UpdateCycleTask implements ITask<void> {
+class BatchUpdateCycleTask implements ITask<void> {
     public isCanceled = false;
-    public stepBatchSize = 1;
+    public stepBatchSize = 500;
+    private nodes: GraphNode[];
+    private index = 0;
 
     public constructor(
-        private node: GraphNode,
-        private debugChunk: DebugChunk,
-    ) {}
+        nodes: GraphNode[],
+        private mode: CycleDebuggerMode,
+    ) {
+        this.nodes = nodes;
+    }
 
-    public step(_batchSize: number): boolean {
-        let color: DebugColor | null = [0, 0, 0, 0];
-
-        if (
-            this.node.headType !== null &&
-            this.node.headType !== CycleHeadType.NONE
-        ) {
-            color = HEAD_COLORS[this.node.headType];
-        } else if (this.node.isCycle) {
-            color = CYCLE_COLOR;
-        } else if (this.node.cycleRef?.extraNodes.includes(this.node)) {
-            color = EXTRA_COLOR;
+    public step(batchSize: number): boolean {
+        if (this.isCanceled) return true;
+        const limit = Math.min(this.index + batchSize, this.nodes.length);
+        for (let i = this.index; i < limit; i++) {
+            this.mode.updateNodeColor(this.nodes[i]);
         }
-
-        this.debugChunk.setColor(this.node.localX, this.node.localY, color);
-
-        return true;
+        this.index = limit;
+        return this.index >= this.nodes.length;
     }
 
     public getResult(): void {}
 }
 
 export class CycleDebuggerMode extends DebuggerMode<INodeDebugData> {
+    private dirtyNodes = new Set<GraphNode>();
+    private isScheduled = false;
+
     public constructor(asyncScheduler: AsyncScheduler) {
         super(asyncScheduler, () => ({}));
     }
 
-    protected doRunTask(
-        _graph: Graph,
-        _node: GraphNode,
-        _data: INodeDebugData,
-    ): boolean {
-        return true;
+    public override performNodeUpdate(_graph: Graph, node: GraphNode): void {
+        this.dirtyNodes.add(node);
+        this.scheduleBatch();
     }
 
-    protected runUpdateTask(
-        _graph: Graph,
-        node: GraphNode,
-        _data: INodeDebugData,
-    ): [ITask<void>, boolean] {
+    private scheduleBatch(): void {
+        if (this.isScheduled || this.dirtyNodes.size === 0) return;
+        this.isScheduled = true;
+
+        const nodesToProcess = Array.from(this.dirtyNodes);
+        this.dirtyNodes.clear();
+
+        this.asyncScheduler.schedule(
+            new BatchUpdateCycleTask(nodesToProcess, this),
+            () => {
+                this.isScheduled = false;
+                if (this.dirtyNodes.size > 0) {
+                    this.scheduleBatch();
+                }
+            },
+            'batch-cycle-update',
+        );
+    }
+
+    public override onGraphClear(graph: Graph): void {
+        this.dirtyNodes.clear();
+        this.isScheduled = false;
+        super.onGraphClear(graph);
+    }
+
+    public updateNodeColor(node: GraphNode): void {
         const debugChunk = this.getDebugChunk(node.chunkIdx);
-        return [new UpdateCycleTask(node, debugChunk), true];
+        if (!debugChunk) return;
+
+        let color: DebugColor = [0, 0, 0, 0];
+
+        if (node.headType !== null && node.headType !== CycleHeadType.NONE) {
+            color = HEAD_COLORS[node.headType];
+        } else if (node.isCycle) {
+            color = CYCLE_COLOR;
+        } else if (node.cycleRef?.extraNodes.includes(node)) {
+            color = EXTRA_COLOR;
+        }
+
+        debugChunk.setColor(node.localX, node.localY, color);
     }
 }
