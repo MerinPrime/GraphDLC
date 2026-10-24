@@ -7,6 +7,7 @@ export const enum DebugMode {
     SHOW_RINGS = 1,
     SHOW_SIGNAL_PROPAGATION = 2,
     SHOW_UNUSED_ARROWS = 3,
+    SHOW_PATHS = 4,
 }
 
 const NameLocale = new I18nText(
@@ -51,6 +52,14 @@ const ShowUnusedArrowsLocale = new I18nText(
     'Afficher les flèches inutilisées',
 );
 
+const ShowPathsLocale = new I18nText(
+    'Show paths',
+    'Показывать пути',
+    'Показувати шляхи',
+    'Паказваць шляхі',
+    'Afficher les chemins',
+);
+
 export const DebugModeSetting = new SelectSetting<DebugMode>(
     'DebugMode',
     DebugMode.OFF,
@@ -77,6 +86,10 @@ export const DebugModeSetting = new SelectSetting<DebugMode>(
         {
             value: DebugMode.SHOW_UNUSED_ARROWS,
             label: ShowUnusedArrowsLocale,
+        },
+        {
+            value: DebugMode.SHOW_PATHS,
+            label: ShowPathsLocale,
         },
     ],
 );
