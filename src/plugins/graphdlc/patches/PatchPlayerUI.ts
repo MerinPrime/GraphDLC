@@ -45,10 +45,10 @@ export const PatchPlayerUI: IPatcher = (
 
                 const tickText =
                     tickCounter < 0 || this.startTickFrom === 0
-                        ? `Tick: ${tick}`
-                        : `Tick: +${tickCounter}`;
+                        ? `Tick: ${tick.toLocaleString('ru-RU')}`
+                        : `Tick: +${tickCounter.toLocaleString('ru-RU')}`;
 
-                _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps}\n${tickText}\nPosition: [${mouseX}, ${mouseY}]`;
+                _this.fpsDisplay.innerText = `FPS: ${fps}\nTPS: ${tps.toLocaleString('ru-RU')}\n${tickText}\nPosition: [${mouseX}, ${mouseY}]`;
             }
         };
     });
