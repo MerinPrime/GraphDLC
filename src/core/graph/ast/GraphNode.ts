@@ -3,6 +3,7 @@ import {
     type GraphCycle,
     type NodeCycleInfo,
 } from 'src/core/graph/ast/cycle/types';
+import type { GraphPath, NodePathInfo } from 'src/core/graph/ast/path/types';
 import { ArrowType } from 'src/core/utils/ArrowType';
 import { NodeType, NodeTypes } from '../engines/core/NodeType';
 import { NodeEdgeList } from './NodeEdgeList';
@@ -31,6 +32,7 @@ export class GraphNode {
 
     public isBreakpoint: boolean = false;
     public cycle: NodeCycleInfo | null = null;
+    public path: NodePathInfo | null = null;
 
     public constructor(
         nodeIdx: number,
@@ -103,6 +105,22 @@ export class GraphNode {
 
     public get cycleOffset(): number {
         return this.cycle?.offset ?? 0;
+    }
+
+    public get isPath(): boolean {
+        return this.path !== null;
+    }
+
+    public get pathRef(): GraphPath | null {
+        return this.path?.ref ?? null;
+    }
+
+    public get pathDistance(): number {
+        return this.path?.distanceFromSource ?? 0;
+    }
+
+    public get isPathSplitter(): boolean {
+        return this.path?.isSplitter ?? false;
     }
 }
 
