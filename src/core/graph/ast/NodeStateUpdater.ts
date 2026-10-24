@@ -1,3 +1,4 @@
+import { startSchedulers } from 'src/core/task/AsyncScheduler';
 import type { Graph } from './Graph';
 import type { GraphNode } from './GraphNode';
 
@@ -41,6 +42,9 @@ export class NodeStateUpdater {
         this.pendingNodes.clear();
         this.pendingBreakpoints.clear();
         this.maxNodeIdx = -1;
+
+        this.graph.pathManager.scheduleFlush();
+        setTimeout(() => startSchedulers(), 1000);
     }
 
     public update(node: GraphNode): void {

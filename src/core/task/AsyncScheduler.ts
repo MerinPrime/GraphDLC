@@ -6,6 +6,18 @@ interface SchedulerEntry {
     onComplete: (result: any) => void;
 }
 
+const activeSchedulers = new Set<AsyncScheduler>();
+let isSchedulersGloballyStarted = false;
+
+export function startSchedulers(): void {
+    if (isSchedulersGloballyStarted) return;
+    isSchedulersGloballyStarted = true;
+
+    for (const scheduler of activeSchedulers) {
+        scheduler.startIfPending();
+    }
+}
+
 export class AsyncScheduler {
     private tasksQueue: SchedulerEntry[] = [];
     private queueHead = 0;
@@ -16,6 +28,7 @@ export class AsyncScheduler {
 
     public constructor(getBudget: () => number) {
         this.getBudget = getBudget;
+        activeSchedulers.add(this);
     }
 
     public schedule<K, R>(
@@ -49,7 +62,9 @@ export class AsyncScheduler {
             this.activeTasksByKey.set(key, entry);
         }
 
-        this.ensureSchedulerStarted();
+        if (isSchedulersGloballyStarted) {
+            this.ensureSchedulerStarted();
+        }
     }
 
     public cancel(key: any) {
@@ -67,14 +82,31 @@ export class AsyncScheduler {
         this.isSchedulerRunning = false;
     }
 
+    public startIfPending() {
+        if (this.queueHead < this.tasksQueue.length) {
+            this.ensureSchedulerStarted();
+        }
+    }
+
+    public destroy() {
+        this.clear();
+        activeSchedulers.delete(this);
+    }
+
     private ensureSchedulerStarted() {
         if (this.isSchedulerRunning) return;
         this.isSchedulerRunning = true;
 
         const tick = () => {
+            if (!isSchedulersGloballyStarted) {
+                this.isSchedulerRunning = false;
+                return;
+            }
+
             const budget = this.getBudget();
 
             if (budget === 0) {
+                requestAnimationFrame(tick);
                 return;
             }
 

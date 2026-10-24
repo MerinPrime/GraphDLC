@@ -1,15 +1,21 @@
 import type { Chunk } from '@logic-arrows/game-logic/chunk';
 import { CycleHeadType, type GraphCycle } from 'src/core/graph/ast/cycle/types';
+import { AsyncScheduler } from 'src/core/task/AsyncScheduler';
 import { NodeType } from '../../engines/core/NodeType';
 import type { Graph } from '../Graph';
 import type { GraphNode } from '../GraphNode';
 import type { IGraphListener } from '../IGraphListener';
+import { PathSearchTask } from './PathSearchTask';
 import type { GraphPath, PathTarget } from './types';
 
 const MIN_PATH_NODES = 3;
 const MAX_PATH_DISTANCE = 1000;
+const TASK_BUDGET_MS = 16;
 
 export class PathManager implements IGraphListener {
+    private readonly scheduler = new AsyncScheduler(() => TASK_BUDGET_MS);
+    private activeTask: PathSearchTask | null = null;
+
     private readonly paths = new Map<number, GraphPath>();
     private readonly dirtyNodes = new Set<GraphNode>();
     private flushQueued = false;
@@ -155,34 +161,58 @@ export class PathManager implements IGraphListener {
                 this.dirtyNodes.add(t);
             }
         }
+
+        this.scheduleFlush();
     }
 
-    private scheduleFlush(): void {
+    private getOrCreateTask(): PathSearchTask {
+        if (this.activeTask === null) {
+            this.activeTask = new PathSearchTask(
+                (node) => this.processNode(node),
+                () => {
+                    this.activeTask = null;
+                },
+            );
+            this.scheduler.schedule(this.activeTask, () => {}, this);
+        }
+        return this.activeTask;
+    }
+
+    public scheduleFlush(): void {
         if (this.flushQueued) return;
         this.flushQueued = true;
-        queueMicrotask(() => {
-            this.flushQueued = false;
-            this.flushSync();
-        });
+        queueMicrotask(() => this.flush());
+    }
+
+    public flush(): void {
+        this.flushQueued = false;
+        if (this.dirtyNodes.size === 0) return;
+
+        this.ensureCapacity(this.graph.getNodes().length);
+        this.currentFlushEpoch++;
+
+        const task = this.getOrCreateTask();
+        task.pushNodes(this.dirtyNodes);
+        this.dirtyNodes.clear();
+
+        this.scheduler.schedule(this.activeTask!, () => {}, this);
     }
 
     public flushSync(): void {
-        if (this.dirtyNodes.size === 0) return;
-
-        const nodesToProcess = Array.from(this.dirtyNodes);
-        this.dirtyNodes.clear();
-
-        this.ensureCapacity(this.graph.getNodes().length);
-        const flushEpoch = ++this.currentFlushEpoch;
-
-        for (let i = 0; i < nodesToProcess.length; i++) {
-            const node = nodesToProcess[i];
-            if (node.path !== null) continue;
-            if (this.processedEpoch[node.nodeIdx] === flushEpoch) continue;
-            if (!this.isPathCandidate(node)) continue;
-
-            this.tryBuildPathFromNode(node, flushEpoch);
+        this.flush();
+        if (this.activeTask !== null) {
+            this.scheduler.forceComplete(this);
         }
+    }
+
+    public processNode(node: GraphNode): void {
+        this.ensureCapacity(node.nodeIdx);
+        if (node.path !== null) return;
+        if (this.processedEpoch[node.nodeIdx] === this.currentFlushEpoch)
+            return;
+        if (!this.isPathCandidate(node)) return;
+
+        this.tryBuildPathFromNode(node, this.currentFlushEpoch);
     }
 
     private tryBuildPathFromNode(
@@ -408,7 +438,18 @@ export class PathManager implements IGraphListener {
             }
             this.dirtyNodes.add(n);
             for (let j = 0; j < n.links.length; j++) {
-                this.dirtyNodes.add(n.links[j]);
+                const link = n.links[j];
+                if (link.path !== null && n.headType !== CycleHeadType.READ) {
+                    this.dismantlePath(link.path.ref);
+                }
+                this.dirtyNodes.add(link);
+            }
+            for (let j = 0; j < n.backLinks.length; j++) {
+                const back = n.backLinks[j];
+                if (back.path !== null) {
+                    this.dismantlePath(back.path.ref);
+                }
+                this.dirtyNodes.add(back);
             }
         }
         this.scheduleFlush();
@@ -422,15 +463,29 @@ export class PathManager implements IGraphListener {
             for (let j = 0; j < n.links.length; j++) {
                 this.dirtyNodes.add(n.links[j]);
             }
+            for (let j = 0; j < n.backLinks.length; j++) {
+                this.dirtyNodes.add(n.backLinks[j]);
+            }
         }
         this.scheduleFlush();
     }
 
     public onGraphClear(_graph: Graph): void {
+        if (this.activeTask !== null) {
+            this.activeTask.isCanceled = true;
+            this.activeTask.clear();
+            this.activeTask = null;
+        }
+        this.scheduler.clear();
         this.paths.clear();
         this.dirtyNodes.clear();
         this.flushQueued = false;
         this.nextPathId = 1;
+    }
+
+    public destroy(): void {
+        this.onGraphClear(this.graph);
+        this.scheduler.destroy();
     }
 
     public onChunkAdded(
