@@ -1,5 +1,6 @@
 import type { GraphCycle } from '../../ast/cycle/types';
 import type { GraphNode } from '../../ast/GraphNode';
+import type { GraphPath } from '../../ast/path/types';
 import type { NodeSignal } from '../core/NodeSignal';
 import { NodeType, NodeTypes } from '../core/NodeType';
 import { getRustEngine } from './loader';
@@ -165,6 +166,19 @@ export class RustExpWrapper {
         return this.exports.get_node_signal_export(nodeIdx) as NodeSignal;
     }
 
+    public getNodeSignalsCount(nodeIdx: number): number {
+        return this.exports.get_node_signals_count_export(nodeIdx);
+    }
+
+    public getNodeLinks(nodeIdx: number): number[] {
+        const count = this.exports.get_node_links_count_export(nodeIdx);
+        const links: number[] = [];
+        for (let i = 0; i < count; i++) {
+            links.push(this.exports.get_node_link_export(nodeIdx, i));
+        }
+        return links;
+    }
+
     public fillNodeSignalsBulk(nodeIndices: Uint32Array): Uint8Array {
         const count = nodeIndices.length;
         const staging32 = this.getStagingUint32View(count);
@@ -216,6 +230,98 @@ export class RustExpWrapper {
         );
     }
 
+    public onPathBuild(path: GraphPath): void {
+        let maxDelay = 0;
+        for (let i = 0; i < path.targets.length; i++) {
+            if (path.targets[i].delay > maxDelay) {
+                maxDelay = path.targets[i].delay;
+            }
+        }
+        for (let i = 0; i < path.nodes.length; i++) {
+            const dist = path.nodes[i].path?.distanceFromSource ?? 1;
+            if (dist > maxDelay) {
+                maxDelay = dist;
+            }
+        }
+
+        const targets = path.targets;
+        const nodes = path.nodes;
+        const staging = this.getStagingUint32View(
+            targets.length * 2 + nodes.length * 2,
+        );
+
+        let offset = 0;
+        for (let i = 0; i < targets.length; i++) {
+            staging[offset++] = targets[i].node.nodeIdx;
+            staging[offset++] = targets[i].delay;
+        }
+        for (let i = 0; i < nodes.length; i++) {
+            staging[offset++] = nodes[i].nodeIdx;
+            staging[offset++] = nodes[i].path?.distanceFromSource ?? 1;
+        }
+
+        this.exports.on_path_build_export(
+            path.index,
+            path.sourceNode.nodeIdx,
+            maxDelay,
+            targets.length,
+            nodes.length,
+        );
+    }
+
+    public onPathDismantle(path: GraphPath): void {
+        const nodes = path.nodes;
+        const targets = path.targets;
+
+        const otherPathFirstNodes = new Set<number>();
+        for (let i = 0; i < path.sourceNode.links.length; i++) {
+            const next = path.sourceNode.links[i];
+            if (
+                next.path &&
+                next.path.ref !== path &&
+                next.path.ref.sourceNode === path.sourceNode &&
+                next.path.distanceFromSource === 1
+            ) {
+                otherPathFirstNodes.add(next.nodeIdx);
+            }
+        }
+
+        const remainingSourceLinks: number[] = [];
+        for (let i = 0; i < path.sourceNode.links.length; i++) {
+            const next = path.sourceNode.links[i];
+            const isDetector = next.type === NodeType.DETECTOR;
+            if (
+                (!isDetector || path.sourceNode.type === NodeType.BLOCKER) &&
+                !otherPathFirstNodes.has(next.nodeIdx)
+            ) {
+                remainingSourceLinks.push(next.nodeIdx);
+            }
+        }
+
+        const totalCount =
+            nodes.length + targets.length + remainingSourceLinks.length;
+        const staging = this.getStagingUint32View(totalCount);
+
+        let offset = 0;
+        for (let i = 0; i < nodes.length; i++) {
+            staging[offset++] = nodes[i].nodeIdx;
+        }
+        for (let i = 0; i < targets.length; i++) {
+            staging[offset++] = targets[i].node.nodeIdx;
+        }
+        for (let i = 0; i < remainingSourceLinks.length; i++) {
+            staging[offset++] = remainingSourceLinks[i];
+        }
+
+        this.exports.on_path_dismantle_export(
+            path.index,
+            path.sourceNode.nodeIdx,
+            nodes.length,
+            targets.length,
+            remainingSourceLinks.length,
+        );
+    }
+
     public updateNodeChange(node: GraphNode, oldLinks: GraphNode[]): void {
         this.writeNodesToStaging(oldLinks, node.links);
 
@@ -239,13 +345,11 @@ export class RustExpWrapper {
     }
 
     public getDirtyChunks(markUndirty: boolean): number[] {
-        const count = this.getDirtyChunksCount();
+        const count = this.copyDirtyChunks(this.stagingBufferPtr, markUndirty);
 
         if (count === 0) {
             return [];
         }
-
-        this.copyDirtyChunks(this.stagingBufferPtr, markUndirty);
 
         const view = this.getStagingUint32View(count);
 

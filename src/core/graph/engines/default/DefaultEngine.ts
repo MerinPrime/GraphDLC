@@ -19,6 +19,7 @@ export class DefaultEngine extends BaseEngine<DefaultEngineTypes> {
         canWriteAndClear: false,
         bulkRender: false,
         supportCycles: false,
+        supportPathes: false,
     };
 
     public chunkUpdates: typeof ChunkUpdates;

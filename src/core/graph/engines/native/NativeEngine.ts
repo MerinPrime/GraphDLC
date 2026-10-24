@@ -17,6 +17,7 @@ export class NativeEngine extends BaseEngine<NativeEngineTypes> {
         canWriteAndClear: false,
         bulkRender: false,
         supportCycles: true,
+        supportPathes: false,
     };
 
     protected readonly state: NativeState;
