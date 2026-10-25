@@ -150,6 +150,12 @@ declare module '@logic-arrows/player/player-ui' {
     }
 }
 
+declare module '@logic-arrows/player/player-controls' {
+    export interface PlayerControls {
+        setPause(state: boolean): void;
+    }
+}
+
 declare module '@logic-arrows/pages/game-page' {
     export interface GamePage {
         doMapSave(): Promise<void>;

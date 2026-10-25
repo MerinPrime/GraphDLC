@@ -1,6 +1,6 @@
 import type { GameMap } from '@logic-arrows/game-logic/game-map';
 import type { Game } from '@logic-arrows/player/game';
-import type { UIPauseSign } from '@logic-arrows/ui/components/ui-pause-sign';
+import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import {
@@ -31,7 +31,8 @@ export const PatchGame: IPatcher = (
 
     let adaptiveBatchSize = 100;
 
-    const uiPauseSign = patchLoader.getInstance<UIPauseSign>('UIPauseSign');
+    const playerControls =
+        patchLoader.getInstance<PlayerControls>('PlayerControls');
 
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
@@ -39,8 +40,7 @@ export const PatchGame: IPatcher = (
 
             private readonly handleVisibilityChange = (): void => {
                 if (document.hidden) {
-                    this.playing = false;
-                    uiPauseSign.val?.setVisibility(true);
+                    playerControls.val?.setPause(true);
                 }
             };
 
@@ -248,8 +248,7 @@ export const PatchGame: IPatcher = (
                         const breakpointIdx =
                             this.gameMap.graph.engine.getBreakpoint(true);
                         if (breakpointIdx !== false) {
-                            this.playing = false;
-                            uiPauseSign.val?.setVisibility(true);
+                            playerControls.val?.setPause(true);
                             if (breakMode === BreakpointMode.ON_ZOOM) {
                                 const breakpointNode =
                                     this.gameMap.graph.getNode(breakpointIdx);

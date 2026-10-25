@@ -8,6 +8,7 @@ import type { PlayerAccess } from '@logic-arrows/player/player-access';
 import type { PlayerArrowActions } from '@logic-arrows/player/player-arrow-actions';
 import type { PlayerControls } from '@logic-arrows/player/player-controls';
 import type { PlayerUI } from '@logic-arrows/player/player-ui';
+import { PLATFORM } from '@logic-arrows/utils/platform';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
@@ -103,7 +104,9 @@ export const PatchPlayerControls: IPatcher = (
 
                 private stepRewind(): void {
                     const _this = this as any as PrivatePlayerControls;
-                    if (_this.game.playing) return;
+                    if (_this.game.playing) {
+                        this.setPause(true);
+                    }
                     if (!_this.playerAccess.canRunOneTick) return;
                     const engine = _this.game.gameMap.graph.engine;
                     const tick = engine.getTick();
@@ -115,7 +118,9 @@ export const PatchPlayerControls: IPatcher = (
 
                 private stepForward(): void {
                     const _this = this as any as PrivatePlayerControls;
-                    if (_this.game.playing) return;
+                    if (_this.game.playing) {
+                        this.setPause(true);
+                    }
                     if (!_this.playerAccess.canRunOneTick) return;
                     _this.game.updateTick();
                 }
@@ -211,6 +216,14 @@ export const PatchPlayerControls: IPatcher = (
                     }
 
                     super.update();
+                }
+
+                public setPause(state: boolean): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    _this.game.playing = !state;
+                    _this.playerUI.pauseSign.setVisibility(state);
+                    if (PLATFORM === 'mobile' && state)
+                        _this.playerUI.speedController?.setValue(0);
                 }
             };
         },
