@@ -217,6 +217,8 @@ export abstract class BaseEngine<T extends EngineTypes> implements IEngine {
         this.state.makeUndirtyChunk(chunkIdx);
     }
 
+    public markCyclesDirtyBulk?(): void;
+
     public fillNodeSignalsBulk?(nodeIndices: Uint32Array): Uint8Array;
     public fillChunksSignalsBulk?(
         chunkIndices: Uint32Array | number[],

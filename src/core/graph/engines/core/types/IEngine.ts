@@ -22,6 +22,7 @@ export interface IEngine {
     ): ReadonlyArray<number>;
     makeDirtyChunk(chunkIdx: number): void;
     makeUndirtyChunk(chunkIdx: number): void;
+    markCyclesDirtyBulk?(): void;
     getNodeSignal(nodeIdx: number): NodeSignal;
     fillNodeSignalsBulk?(nodeIndices: Uint32Array): Uint8Array;
     fillChunksSignalsBulk?(chunkIndices: Uint32Array | number[]): Uint8Array;

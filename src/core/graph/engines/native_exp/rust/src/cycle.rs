@@ -3,6 +3,7 @@ pub struct CycleState {
     pub length: u32,
     pub words_ptr: *mut u32,
     pub state: Vec<u32>,
+    pub chunks: Vec<u32>,
 }
 
 impl CycleState {
@@ -15,6 +16,7 @@ impl CycleState {
             length,
             words_ptr,
             state,
+            chunks: Vec::new(),
         }
     }
 

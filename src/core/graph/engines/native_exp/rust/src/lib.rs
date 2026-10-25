@@ -341,6 +341,11 @@ pub extern "C" fn make_dirty_chunk_export(chunk_idx: u32) {
 }
 
 #[no_mangle]
+pub extern "C" fn mark_cycles_dirty_bulk_export() {
+    get_state().mark_cycles_dirty_bulk();
+}
+
+#[no_mangle]
 pub extern "C" fn mark_all_chunks_dirty() {
     let state = get_state();
     state.chunks.iter_mut().for_each(|chunk| {

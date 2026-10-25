@@ -33,6 +33,7 @@ export interface RustEngineExports extends WebAssembly.Exports {
     get_breakpoint(do_reset: boolean): number;
     is_changed(): number;
     mark_all_chunks_dirty(): void;
+    mark_cycles_dirty_bulk_export(): void;
     make_dirty_chunk_export(chunk_idx: number): void;
     make_undirty_chunk_export(chunk_idx: number): void;
     get_node_signal_export(node_idx: number): number;

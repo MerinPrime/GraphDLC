@@ -175,6 +175,7 @@ pub struct GraphState {
     pub render_signals: Vec<u8>,
     pub deferred_clears: Vec<(u32, u32)>,
     pub total_clear_heads: usize,
+    pub cycle_chunks: Vec<u32>,
 }
 
 static mut STATE: Option<GraphState> = None;
@@ -227,6 +228,7 @@ impl GraphState {
             render_signals: vec![0; 4096],
             deferred_clears: Vec::with_capacity(4096),
             total_clear_heads: 0,
+            cycle_chunks: Vec::with_capacity(64),
         }
     }
 
@@ -240,6 +242,7 @@ impl GraphState {
         self.changed_nodes.clear();
         self.temp_changed_nodes.clear();
         self.cycles.clear();
+        self.cycle_chunks.clear();
         self.has_paths = false;
         self.paths.clear();
         self.all_path_targets.clear();
@@ -326,6 +329,28 @@ impl GraphState {
                 chunk.flags |= CHUNK_FLAG_IS_DIRTY;
             }
         }
+    }
+
+    #[inline(always)]
+    pub fn mark_cycles_dirty_bulk(&mut self) {
+        for i in 0..self.cycle_chunks.len() {
+            let chunk_idx = self.cycle_chunks[i];
+            self.make_dirty_chunk(chunk_idx);
+        }
+    }
+
+    pub fn rebuild_cycle_chunks(&mut self) {
+        let mut chunks = Vec::new();
+        for cycle in &self.cycles {
+            if let Some(ref c) = cycle {
+                for &chunk_idx in &c.chunks {
+                    if !chunks.contains(&chunk_idx) {
+                        chunks.push(chunk_idx);
+                    }
+                }
+            }
+        }
+        self.cycle_chunks = chunks;
     }
 
     #[inline(always)]
@@ -981,6 +1006,7 @@ impl GraphState {
             cycle_state.clear();
         }
 
+        let mut chunks = Vec::new();
         for &node_idx in cycle_nodes {
             let (cycle_offset, chunk_idx, is_active) = {
                 let node = &self.nodes[node_idx as usize];
@@ -991,6 +1017,10 @@ impl GraphState {
                     node.signal == NODE_SIGNAL_ACTIVE,
                 )
             };
+
+            if chunk_idx != u32::MAX && !chunks.contains(&chunk_idx) {
+                chunks.push(chunk_idx);
+            }
 
             if is_active {
                 if let Some(ref mut cycle_state) = self.cycles[cycle_idx as usize] {
@@ -1004,6 +1034,11 @@ impl GraphState {
             node.flags &= !FLAG_IS_UPDATED;
             self.make_dirty_chunk(chunk_idx);
         }
+
+        if let Some(ref mut cycle_state) = self.cycles[cycle_idx as usize] {
+            cycle_state.chunks = chunks;
+        }
+        self.rebuild_cycle_chunks();
 
         let mut removed: HashSet<u32> = HashSet::new();
         for &node_idx in cycle_nodes {
@@ -1119,6 +1154,7 @@ impl GraphState {
         }
 
         self.remove_cycle(cycle_idx);
+        self.rebuild_cycle_chunks();
 
         let mut affected_nodes = HashSet::new();
         for &node_idx in cycle_nodes {

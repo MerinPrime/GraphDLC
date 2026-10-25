@@ -74,4 +74,8 @@ export class NativeExpEngine extends BaseEngine<NativeExpEngineTypes> {
     ): Uint8Array {
         return this.wrapper.fillChunksSignalsBulk(chunkIndices);
     }
+
+    public override markCyclesDirtyBulk(): void {
+        this.wrapper.markCyclesDirtyBulk();
+    }
 }

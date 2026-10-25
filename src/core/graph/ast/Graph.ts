@@ -116,6 +116,11 @@ export class Graph {
     }
 
     public markCyclesChunksDirty() {
+        if (this.engine.markCyclesDirtyBulk) {
+            this.engine.markCyclesDirtyBulk();
+            return;
+        }
+
         const cycles = this.cycles;
         const cyclesLen = cycles.length;
 

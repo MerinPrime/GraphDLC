@@ -110,6 +110,8 @@ export const PatchGame: IPatcher = (
                     }
                 }
 
+                graph.markCyclesChunksDirty();
+
                 if (visibleChunks.length > 0) {
                     if (
                         engine.capabilities.bulkRender &&

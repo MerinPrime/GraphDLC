@@ -154,6 +154,10 @@ export class RustExpWrapper {
         this.exports.mark_all_chunks_dirty();
     }
 
+    public markCyclesDirtyBulk(): void {
+        this.exports.mark_cycles_dirty_bulk_export();
+    }
+
     public makeDirtyChunk(chunkIdx: number): void {
         this.exports.make_dirty_chunk_export(chunkIdx);
     }

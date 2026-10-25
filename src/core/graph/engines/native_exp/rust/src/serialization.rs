@@ -297,6 +297,20 @@ pub fn deserialize_state(state: &mut GraphState, data: &[u8]) {
         }
     }
 
+    for cold in &state.cold_nodes {
+        if cold.is_in_cycle && cold.chunk_idx != u32::MAX {
+            let idx = cold.cycle_idx as usize;
+            if idx < state.cycles.len() {
+                if let Some(ref mut c) = state.cycles[idx] {
+                    if !c.chunks.contains(&cold.chunk_idx) {
+                        c.chunks.push(cold.chunk_idx);
+                    }
+                }
+            }
+        }
+    }
+    state.rebuild_cycle_chunks();
+
     state.has_cycles = state.cycles.iter().any(|c| c.is_some());
     state.has_blockers = state.nodes.iter().any(|n| n.type_id() == NODE_TYPE_BLOCKER);
 
