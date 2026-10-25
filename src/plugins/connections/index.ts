@@ -5,11 +5,16 @@ import { CorePlugin } from '../graphdlc';
 import { PatchGame } from './patches/PatchGame';
 import { PatchPlayerControls } from './patches/PatchPlayerControls';
 import { EnableArrowRelationsSetting } from './settings/EnableArrowRelationsSetting';
+import { GraphVisualizerSetting } from './settings/GraphVisualizerSetting';
 import { ShowArrowConnectionsSetting } from './settings/ShowArrowConnectionsSetting';
 
 const Patches = [PatchGame, PatchPlayerControls];
 
-const Settings = [EnableArrowRelationsSetting, ShowArrowConnectionsSetting];
+const Settings = [
+    EnableArrowRelationsSetting,
+    ShowArrowConnectionsSetting,
+    GraphVisualizerSetting,
+];
 
 export const HighlightPathLocale = new I18nText(
     'highlight path',

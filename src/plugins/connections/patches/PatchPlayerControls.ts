@@ -366,7 +366,7 @@ export const PatchPlayerControls: IPatcher = (
                     }
 
                     let head = 0;
-                    while (head < timingQueue.length) {
+                    while (head < timingQueue.length && head < 10000) {
                         const curr = timingQueue[head++];
                         const currTiming = timings.get(curr) ?? 1;
                         const delay = getNodeDelay(curr);

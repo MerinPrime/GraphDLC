@@ -8,8 +8,17 @@ import type { PatchLoader } from 'src/core/PatchLoader';
 import { getArrowRelations } from 'src/core/utils/getArrowRelations';
 import { getRelativePosition } from 'src/core/utils/getRelativePosition';
 import { EnableArrowRelationsSetting } from '../../connections/settings/EnableArrowRelationsSetting';
+import { GraphVisualizerSetting } from '../../connections/settings/GraphVisualizerSetting';
 import { ShowArrowConnectionsSetting } from '../../connections/settings/ShowArrowConnectionsSetting';
 import type { IPatcher } from '../../Patcher';
+import {
+    BRANCH_COLOR,
+    GraphRenderHelper,
+    INPUT_COLOR,
+    OUTPUT_COLOR,
+    PATH_COLOR,
+    SAME_TIMING_COLOR,
+} from './GraphRenderHelper';
 import type { HighlightPathData } from './types';
 
 interface PrivateGame {
@@ -24,6 +33,7 @@ export const PatchGame: IPatcher = (
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public highlightPathData: HighlightPathData | null = null;
+            private graphRenderer = new GraphRenderHelper();
 
             private drawPastedArrowRelations(
                 render: GameRender,
@@ -80,7 +90,10 @@ export const PatchGame: IPatcher = (
                     return;
 
                 const astNode = gameMap.graph.getNode(arrowAtCursor.astIndex);
+                if (!astNode) return;
+
                 const isEmpty = arrowAtCursor.type === 0;
+                let hasConnections = false;
 
                 render.setSolidColor(0.8, 0.2, 0.2, 0.25);
                 astNode.backLinks.forEach((previousNode) => {
@@ -90,6 +103,7 @@ export const PatchGame: IPatcher = (
                         astNode.detectedLink !== previousNode
                     )
                         return;
+                    hasConnections = true;
                     render.drawSolidColorRect(
                         previousNode.globalX * this.scale + offsetX,
                         previousNode.globalY * this.scale + offsetY,
@@ -114,6 +128,7 @@ export const PatchGame: IPatcher = (
                         linkedNode.detectedLink !== astNode
                     )
                         return;
+                    hasConnections = true;
                     render.drawSolidColorRect(
                         linkedNode.globalX * this.scale + offsetX,
                         linkedNode.globalY * this.scale + offsetY,
@@ -122,7 +137,7 @@ export const PatchGame: IPatcher = (
                     );
                 });
 
-                if (!isEmpty) {
+                if (!isEmpty || hasConnections) {
                     render.setSolidColor(0.2, 0.2, 0.8, 0.25);
                     render.drawSolidColorRect(
                         astNode.globalX * this.scale + offsetX,
@@ -135,12 +150,30 @@ export const PatchGame: IPatcher = (
 
             private drawArrowPath(
                 render: GameRender,
+                gameMap: GameMap,
                 offsetX: number,
                 offsetY: number,
             ) {
                 if (this.highlightPathData === null) return;
 
-                render.setSolidColor(0.8, 0.1, 0.7, 0.5);
+                if (GraphVisualizerSetting.value) {
+                    this.graphRenderer.renderPath(
+                        render,
+                        gameMap,
+                        this.highlightPathData,
+                        offsetX,
+                        offsetY,
+                        this.scale,
+                    );
+                    return;
+                }
+
+                render.setSolidColor(
+                    PATH_COLOR[0],
+                    PATH_COLOR[1],
+                    PATH_COLOR[2],
+                    PATH_COLOR[3],
+                );
                 this.highlightPathData.path.forEach((node) => {
                     render.drawSolidColorRect(
                         node.globalX * this.scale + offsetX,
@@ -150,7 +183,12 @@ export const PatchGame: IPatcher = (
                     );
                 });
 
-                render.setSolidColor(0.5, 0.35, 0.6, 0.35);
+                render.setSolidColor(
+                    BRANCH_COLOR[0],
+                    BRANCH_COLOR[1],
+                    BRANCH_COLOR[2],
+                    BRANCH_COLOR[3],
+                );
                 this.highlightPathData.branches.forEach((node) => {
                     render.drawSolidColorRect(
                         node.globalX * this.scale + offsetX,
@@ -160,7 +198,12 @@ export const PatchGame: IPatcher = (
                     );
                 });
 
-                render.setSolidColor(0.2, 0.2, 0.8, 0.5);
+                render.setSolidColor(
+                    SAME_TIMING_COLOR[0],
+                    SAME_TIMING_COLOR[1],
+                    SAME_TIMING_COLOR[2],
+                    SAME_TIMING_COLOR[3],
+                );
                 this.highlightPathData.sameNodes.forEach((node) => {
                     render.drawSolidColorRect(
                         node.globalX * this.scale + offsetX,
@@ -170,7 +213,12 @@ export const PatchGame: IPatcher = (
                     );
                 });
 
-                render.setSolidColor(0.2, 0.8, 0.2, 0.5);
+                render.setSolidColor(
+                    OUTPUT_COLOR[0],
+                    OUTPUT_COLOR[1],
+                    OUTPUT_COLOR[2],
+                    OUTPUT_COLOR[3],
+                );
                 this.highlightPathData.output.forEach((node) => {
                     render.drawSolidColorRect(
                         node.globalX * this.scale + offsetX,
@@ -180,7 +228,12 @@ export const PatchGame: IPatcher = (
                     );
                 });
 
-                render.setSolidColor(0.8, 0.2, 0.2, 0.5);
+                render.setSolidColor(
+                    INPUT_COLOR[0],
+                    INPUT_COLOR[1],
+                    INPUT_COLOR[2],
+                    INPUT_COLOR[3],
+                );
                 this.highlightPathData.input.forEach((node) => {
                     render.drawSolidColorRect(
                         node.globalX * this.scale + offsetX,
@@ -206,7 +259,7 @@ export const PatchGame: IPatcher = (
                 );
 
                 if (this.highlightPathData !== null) {
-                    this.drawArrowPath(render, offsetX, offsetY);
+                    this.drawArrowPath(render, gameMap, offsetX, offsetY);
                 } else {
                     const arrowAtCursor = this.getArrowAtCursor();
                     if (arrowAtCursor) {
