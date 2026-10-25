@@ -410,6 +410,8 @@ export const PatchPlayerControls: IPatcher = (
                             sameTimingNodes.push(n);
                             fullPath.delete(n);
                         }
+
+                        if (branches.has(n)) fullPath.delete(n);
                     });
 
                     this.highlightPathData.path = Array.from(fullPath);
