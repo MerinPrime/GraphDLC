@@ -1,5 +1,6 @@
 import type { KeyboardHandler } from '@logic-arrows/controls/keyboard-handler';
 import type { MouseHandler } from '@logic-arrows/controls/mouse-handler';
+import type { Arrow } from '@logic-arrows/game-logic/arrow';
 import type { ArrowData } from '@logic-arrows/game-logic/arrow-data';
 import type { Game } from '@logic-arrows/player/game';
 import type { GameHistory } from '@logic-arrows/player/game-history';
@@ -23,6 +24,7 @@ interface PrivatePlayerControls {
     readonly playerUI: PlayerUI;
     readonly history: GameHistory | null;
     getPositionByMousePosition(): [x: number, y: number];
+    getArrowByMousePosition(): Arrow | undefined;
 }
 
 interface SelectedMapPrivate {
@@ -99,7 +101,8 @@ export const PatchPlayerControls: IPatcher = (
 
             // @ts-expect-error
             return class PlayerControls extends _module {
-                private isSelectionMoving = false;
+                private isSelectionMoving: boolean = false;
+                private isSingleArrowMoving: boolean = false;
                 private startMousePos: [x: number, y: number] | undefined =
                     undefined;
 
@@ -134,8 +137,16 @@ export const PatchPlayerControls: IPatcher = (
                             selectedMap.selectedArrows.size === 0 &&
                             selectedMap.currentSelectedArrows.size === 0
                         ) {
-                            super.update();
-                            return;
+                            const arrow = _this.getArrowByMousePosition();
+                            if (arrow) {
+                                const [posX, posY] =
+                                    _this.getPositionByMousePosition();
+                                _this.game.selectedMap.select(posX, posY);
+                                _this.isSingleArrowMoving = true;
+                            } else {
+                                super.update();
+                                return;
+                            }
                         }
 
                         const [mouseX, mouseY] =
@@ -320,6 +331,10 @@ export const PatchPlayerControls: IPatcher = (
                         ..._selectedMap.currentSelectedArrows,
                     ]);
 
+                    if (this.isSingleArrowMoving) {
+                        selectedMap.clear();
+                    }
+
                     _this.history?.pushState(newState);
                     // @ts-expect-error
                     _this.history.lastChangeTime = Number.NEGATIVE_INFINITY;
@@ -328,6 +343,7 @@ export const PatchPlayerControls: IPatcher = (
                     _this.game.screenUpdated = true;
                     _this.game.draw();
                     this.isSelectionMoving = false;
+                    this.isSingleArrowMoving = false;
                     this.startMousePos = undefined;
                     this.context.initArrows.length = 0;
                     this.context.deltaX = 0;
