@@ -43,6 +43,9 @@ export const PatchPlayerControls: IPatcher = (
                 private _stepForwardStartTime = 0;
                 private _lastStepForwardTime = 0;
 
+                private _cleanupMouseNavigation?: () => void;
+                private _isDisposed = false;
+
                 public constructor(
                     cnv: HTMLCanvasElement,
                     game: Game,
@@ -50,6 +53,49 @@ export const PatchPlayerControls: IPatcher = (
                     history?: GameHistory | null,
                 ) {
                     super(cnv, game, playerUI, history);
+
+                    const handleMouseUp = (e: MouseEvent) => {
+                        if (this._isDisposed) return;
+                        if (e.button === 3) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.history.back();
+                        } else if (e.button === 4) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.history.forward();
+                        }
+                    };
+
+                    const handlePrevent = (e: MouseEvent) => {
+                        if (this._isDisposed) return;
+                        if (e.button === 3 || e.button === 4) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    };
+
+                    window.addEventListener('mouseup', handleMouseUp, true);
+                    window.addEventListener('mousedown', handlePrevent, true);
+                    window.addEventListener('auxclick', handlePrevent, true);
+
+                    this._cleanupMouseNavigation = () => {
+                        window.removeEventListener(
+                            'mouseup',
+                            handleMouseUp,
+                            true,
+                        );
+                        window.removeEventListener(
+                            'mousedown',
+                            handlePrevent,
+                            true,
+                        );
+                        window.removeEventListener(
+                            'auxclick',
+                            handlePrevent,
+                            true,
+                        );
+                    };
 
                     const _this = this as any as PrivatePlayerControls;
 
@@ -224,6 +270,12 @@ export const PatchPlayerControls: IPatcher = (
                     _this.playerUI.pauseSign.setVisibility(state);
                     if (PLATFORM === 'mobile' && state)
                         _this.playerUI.speedController?.setValue(0);
+                }
+
+                public override dispose(): void {
+                    this._isDisposed = true;
+                    this._cleanupMouseNavigation?.();
+                    super.dispose();
                 }
             };
         },
