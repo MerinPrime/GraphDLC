@@ -37,7 +37,7 @@ A performance-focused mod for Logic Arrows, featuring an optimized simulation en
 | Map                                                                             |     Vanilla |       GraphDLC |     Speedup |
 | ------------------------------------------------------------------------------- | ----------: | -------------: | ----------: |
 | [Chubrik's Computer Running Game of Life](https://logic-arrows.io/map-computer) |    ~570 TPS | ~6,600,000 TPS | **12,000x** |
-| [Benchmark](https://logic-arrows.io/map-cz9Xil8p)                               | ~40,000 TPS | ~1,400,000 TPS |     **35x** |
+| [Benchmark](https://logic-arrows.io/map-cz9Xil8p)                               | ~40,000 TPS | ~1,500,000 TPS |     **38x** |
 
 ## Installation
 
