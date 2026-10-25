@@ -30,12 +30,11 @@ export const PatchGame: IPatcher = (
                     this.screenUpdated = true;
                 }
 
-                super.draw();
-
                 const { render } = this as any as PrivateGame;
                 const { offsetX, offsetY } = this.getDrawOffsets();
 
                 this.clearAllArrows(render, offsetX, offsetY);
+                super.draw();
                 this.clearSelectionArrows(render, offsetX, offsetY);
             }
 

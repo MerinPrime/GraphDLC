@@ -166,30 +166,22 @@ export const PatchGame: IPatcher = (
                     (this.selectedMap as any).selectedArrows = [];
                     (this.selectedMap as any).currentSelectedArrows = [];
 
-                    if (
-                        typeof (_this.render as any).clearArrow === 'function'
-                    ) {
-                        for (let gx = minX; gx < maxX; gx++) {
-                            for (let gy = minY; gy < maxY; gy++) {
-                                const isBorder =
-                                    gx === minX ||
-                                    gx === maxX - 1 ||
-                                    gy === minY ||
-                                    gy === maxY - 1;
-                                const isUnselected =
-                                    selectedSet !== undefined &&
-                                    selectedSet.size > 0 &&
-                                    !selectedSet.has(`${gx},${gy}`);
+                    for (let gx = minX; gx < maxX; gx++) {
+                        for (let gy = minY; gy < maxY; gy++) {
+                            const isBorder =
+                                gx === minX ||
+                                gx === maxX - 1 ||
+                                gy === minY ||
+                                gy === maxY - 1;
+                            const isUnselected =
+                                selectedSet !== undefined &&
+                                selectedSet.size > 0 &&
+                                !selectedSet.has(`${gx},${gy}`);
 
-                                if (isBorder || isUnselected) {
-                                    const px = (gx - minX) * cellSize;
-                                    const py = (gy - minY) * cellSize;
-                                    (_this.render as any).clearArrow(
-                                        px,
-                                        py,
-                                        cellSize,
-                                    );
-                                }
+                            if (isBorder || isUnselected) {
+                                const px = (gx - minX) * cellSize;
+                                const py = (gy - minY) * cellSize;
+                                _this.render.clearArrow(px, py, cellSize);
                             }
                         }
                     }
