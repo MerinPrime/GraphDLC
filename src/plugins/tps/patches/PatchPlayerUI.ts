@@ -56,7 +56,8 @@ export const PatchPlayerUI: IPatcher = (
                     },
                 );
                 const _this = this as any as PrivatePlayerUI;
-                if (_this.game) _this.game.updateSpeedLevel = 1;
+                if (_this.game) _this.game.updateSpeedLevel = 2;
+                this.speedController.setValue(hasPause ? 3 : 2);
             }
         };
     });
