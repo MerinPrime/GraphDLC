@@ -260,7 +260,7 @@ export const PatchGame: IPatcher = (
 
                 if (this.highlightPathData !== null) {
                     this.drawArrowPath(render, gameMap, offsetX, offsetY);
-                } else {
+                } else if (!this.isSelectionMoving) {
                     const arrowAtCursor = this.getArrowAtCursor();
                     if (arrowAtCursor) {
                         this.drawArrowConnections(

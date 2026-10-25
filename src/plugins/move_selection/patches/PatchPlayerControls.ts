@@ -196,6 +196,7 @@ export const PatchPlayerControls: IPatcher = (
                     }
 
                     _this.game.renderMoveContext = this.renderMoveContext;
+                    _this.game.isSelectionMoving = this.isSelectionMoving;
                     _this.game.screenUpdated = true;
                     _this.game.draw();
                 }
@@ -251,6 +252,8 @@ export const PatchPlayerControls: IPatcher = (
 
                     this.renderMoveContext.initArrows = this.context.initArrows;
                     this.renderMoveContext.selection = selection;
+                    _this.game.renderMoveContext = this.renderMoveContext;
+                    _this.game.isSelectionMoving = this.isSelectionMoving;
                 }
 
                 public stopMoveSelection(): void {
@@ -340,6 +343,7 @@ export const PatchPlayerControls: IPatcher = (
                     _this.history.lastChangeTime = Number.NEGATIVE_INFINITY;
 
                     _this.game.renderMoveContext = null;
+                    _this.game.isSelectionMoving = false;
                     _this.game.screenUpdated = true;
                     _this.game.draw();
                     this.isSelectionMoving = false;

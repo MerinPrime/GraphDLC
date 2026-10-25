@@ -24,6 +24,7 @@ export const PatchGame: IPatcher = (
     patchLoader.addDefinitionPatch('Game', (_module: typeof Game) => {
         return class Game extends _module {
             public renderMoveContext: RenderMoveContext | null = null;
+            public isSelectionMoving: boolean = false;
 
             public draw() {
                 if (this.renderMoveContext) {

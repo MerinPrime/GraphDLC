@@ -91,6 +91,7 @@ declare module '@logic-arrows/player/game' {
         pathData: PathData | null;
         highlightPathData: HighlightPathData | null;
         renderMoveContext: RenderMoveContext | null;
+        isSelectionMoving?: boolean;
 
         getArrowAtCursor(): Arrow | undefined;
         getDrawOffsets(): { offsetX: number; offsetY: number };
