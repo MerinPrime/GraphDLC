@@ -142,7 +142,7 @@ export const PatchPlayerControls: IPatcher = (
                                 const [posX, posY] =
                                     _this.getPositionByMousePosition();
                                 _this.game.selectedMap.select(posX, posY);
-                                _this.isSingleArrowMoving = true;
+                                this.isSingleArrowMoving = true;
                             } else {
                                 super.update();
                                 return;

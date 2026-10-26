@@ -66,6 +66,7 @@ const ARROW_RELATIONS_MAP: Record<ArrowType, RelationCoords> = {
     [ArrowType.EMPTY]: [],
     [ArrowType.WALL]: [],
     [ArrowType.LEVEL_TARGET]: [],
+    [ArrowType.QUESTION]: [],
 };
 
 export function getArrowRelations(type: ArrowType): RelationCoords {

@@ -176,6 +176,7 @@ export class AsyncScheduler {
             isFinished = entry.task.step(1000);
         }
 
+        entry.task.isCanceled = true;
         const result = entry.task.getResult();
         entry.onComplete(result);
 
