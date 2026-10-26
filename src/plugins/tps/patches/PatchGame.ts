@@ -244,9 +244,9 @@ export const PatchGame: IPatcher = (
                             accumulator -= skip;
                         }
                     }
+                    const breakpointIdx =
+                        this.gameMap.graph.engine.getBreakpoint(true);
                     if (isBreakEnabled) {
-                        const breakpointIdx =
-                            this.gameMap.graph.engine.getBreakpoint(true);
                         if (breakpointIdx !== false) {
                             playerControls.val?.setPause(true);
                             if (breakMode === BreakpointMode.ON_ZOOM) {
