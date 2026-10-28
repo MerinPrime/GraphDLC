@@ -41,53 +41,6 @@ const LAYOUT_DECODERS: Record<number, LayoutDecoder> = {
     }),
 };
 
-const TURNLESS_TYPES = new Set([
-    ArrowType.SOURCE,
-    ArrowType.IMPULSE,
-    ArrowType.BUTTON,
-    ArrowType.LEVEL_TARGET,
-    ArrowType.WALL,
-]);
-
-const MIRRORLESS_TYPES = new Set([
-    ArrowType.ARROW,
-    ArrowType.BLOCKER,
-    ArrowType.DELAY,
-    ArrowType.DETECTOR,
-    ArrowType.SPLITTER_UP_RIGHT_LEFT,
-    ArrowType.BLUE_ARROW,
-    ArrowType.SPLITTER_UP_UP,
-    ArrowType.LOGIC_NOT,
-    ArrowType.LOGIC_AND,
-    ArrowType.LOGIC_XOR,
-    ArrowType.LATCH,
-    ArrowType.FLIP_FLOP,
-    ArrowType.RANDOM,
-    ArrowType.LEVEL_SOURCE,
-    ArrowType.DIRECTIONAL_BUTTON,
-]);
-
-const SIDEWAYS_TYPES = new Set([
-    ArrowType.SPLITTER_UP_RIGHT,
-    ArrowType.DIAGONAL_ARROW,
-]);
-
-function normalizeOrientation(
-    type: number,
-    rotation: number,
-    flipped: boolean,
-): [number, boolean] {
-    if (TURNLESS_TYPES.has(type)) return [0, false];
-    if (type === 6) return [rotation % 2, false];
-    if (MIRRORLESS_TYPES.has(type)) return [rotation, false];
-
-    if (SIDEWAYS_TYPES.has(type)) {
-        return [flipped ? (rotation + 3) % 4 : rotation, false];
-    }
-
-    return [rotation, flipped];
-}
-
 function normalizeCellForBrowser(
     type: number,
     rotation: number,
@@ -98,23 +51,17 @@ function normalizeCellForBrowser(
         version !== BROWSER_VERSION &&
         (type === BUTTON_TYPE || type > LAST_BROWSER_TYPE)
     ) {
-        return { type: PLACEHOLDER_TYPE, rotation: 0, flipped: false };
+        return { type: PLACEHOLDER_TYPE, rotation, flipped };
     }
 
     if (type > PLACEHOLDER_TYPE) {
-        return { type: PLACEHOLDER_TYPE, rotation: 0, flipped: false };
+        return { type: PLACEHOLDER_TYPE, rotation, flipped };
     }
-
-    const [normalizedRotation, normalizedFlipped] = normalizeOrientation(
-        type,
-        rotation,
-        flipped,
-    );
 
     return {
         type,
-        rotation: normalizedRotation,
-        flipped: normalizedFlipped,
+        rotation,
+        flipped,
     };
 }
 
