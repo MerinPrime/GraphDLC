@@ -5,15 +5,19 @@ export const RepoLatestApiRelease = `https://api.github.com/repos/${RepoOwner}/$
 export const RepoLatestRelease =
     'https://github.com/MerinPrime/GraphDLC/releases/latest';
 
-export async function fetchLatestVersion(): Promise<string> {
-    const response = await fetch(RepoLatestApiRelease);
+export async function fetchLatestVersion(): Promise<string | null> {
+    try {
+        const response = await fetch(RepoLatestApiRelease);
 
-    if (!response.ok) {
-        throw new Error(`GitHub API returned ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`GitHub API returned ${response.status}`);
+        }
+
+        const data: { tag_name: string } = await response.json();
+        return data.tag_name;
+    } catch {
+        return null;
     }
-
-    const data: { tag_name: string } = await response.json();
-    return data.tag_name;
 }
 
 export function compareVersions(a: string, b: string): number {

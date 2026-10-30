@@ -27,7 +27,7 @@ export async function checkVersion() {
     const currentVersion = __CURRENT_VERSION__;
 
     const cache = VersionStorage.get();
-    let latestVersion: string;
+    let latestVersion: string | null;
 
     const updatedFromCached =
         cache && compareVersions(currentVersion, cache.latestVersion) >= 0;
@@ -44,18 +44,22 @@ export async function checkVersion() {
     if (needRefresh) {
         latestVersion = await fetchLatestVersion();
 
-        VersionStorage.save({
-            latestVersion,
-            checkedAt: Date.now(),
-        });
+        if (latestVersion !== null) {
+            VersionStorage.save({
+                latestVersion,
+                checkedAt: Date.now(),
+            });
+        }
     } else {
         latestVersion = cache.latestVersion;
     }
 
-    VersionState.set(
-        compareVersions(currentVersion, latestVersion) >= 0
-            ? 'latest'
-            : 'outdated',
-        latestVersion,
-    );
+    if (latestVersion !== null) {
+        VersionState.set(
+            compareVersions(currentVersion, latestVersion) >= 0
+                ? 'latest'
+                : 'outdated',
+            latestVersion,
+        );
+    }
 }
