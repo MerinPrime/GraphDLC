@@ -2,6 +2,10 @@ export interface ObjectPtr<T> {
     val: T;
 }
 
+export interface PatchedClass<T> {
+    readonly __original: T;
+}
+
 export class PatchLoader {
     private definitions: Map<string, ObjectPtr<any>>;
     private instances: Map<string, ObjectPtr<any>>;
@@ -61,15 +65,21 @@ export class PatchLoader {
                             .call(definition)
                             .replace(/\s/g, ''),
                     );
+                const isFunction = typeof definition === 'function';
 
                 if (isClass) {
                     patchedTarget = class extends original {
+                        public static readonly __original = original;
+
                         public constructor(...ctorArgs: any[]) {
                             super(...ctorArgs);
                             modLoader.setInstance(key, this);
                         }
                     };
                     Object.assign(patchedTarget, original);
+                } else if (isFunction) {
+                    original.__original = original;
+                    patchedTarget = original;
                 } else {
                     patchedTarget = original;
                 }
@@ -154,12 +164,12 @@ export class PatchLoader {
 
     public addDefinitionPatch<T = any>(
         target: string,
-        patch: (definition: T) => any,
+        patch: (original: PatchedClass<T> & T) => any,
     ): void {
         this.addManualPatch((name, definition) => {
             if (name !== target) return false;
 
-            const patchResult = patch(definition as T);
+            const patchResult = patch(definition);
 
             if (typeof patchResult === 'function') {
                 return patchResult;
