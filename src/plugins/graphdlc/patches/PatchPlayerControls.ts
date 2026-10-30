@@ -13,9 +13,11 @@ import type { GraphDLC } from 'src/core/GraphDLC';
 import { NodeSignal } from 'src/core/graph/engines/core/NodeSignal';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import { ArrowType } from 'src/core/utils/ArrowType';
+import { KeyRepeater } from 'src/core/utils/KeyRepeater';
 import type { IPatcher } from '../../Patcher';
 
 interface PrivatePlayerControls {
+    readonly history: GameHistory | null;
     readonly playerUI: PlayerUI;
     readonly game: Game;
     readonly keyboardHandler: KeyboardHandler;
@@ -24,6 +26,8 @@ interface PrivatePlayerControls {
     readonly playerAccess: PlayerAccess;
 
     getArrowByMousePosition(): Arrow | undefined;
+    undo(): void;
+    redo(): void;
 }
 
 export const PatchPlayerControls: IPatcher = (
@@ -35,15 +39,12 @@ export const PatchPlayerControls: IPatcher = (
         (_module: typeof PlayerControls) => {
             // @ts-expect-error
             return class PlayerControls extends _module {
-                private _rewindActive = false;
-                private _rewindStartTime = 0;
-                private _lastRewindTime = 0;
+                private readonly _rewindRepeater = new KeyRepeater();
+                private readonly _stepForwardRepeater = new KeyRepeater();
+                private readonly _undoRepeater = new KeyRepeater();
+                private readonly _redoRepeater = new KeyRepeater();
 
-                private _stepForwardActive = false;
-                private _stepForwardStartTime = 0;
-                private _lastStepForwardTime = 0;
-
-                private _cleanupMouseNavigation?: () => void;
+                private readonly _cleanupMouseNavigation: () => void;
                 private _isDisposed = false;
 
                 public constructor(
@@ -54,6 +55,12 @@ export const PatchPlayerControls: IPatcher = (
                 ) {
                     super(cnv, game, playerUI, history);
 
+                    this._cleanupMouseNavigation = this.setupMouseNavigation();
+                    this.setupLeftClick();
+                    this.setupKeyInterception();
+                }
+
+                private setupMouseNavigation(): () => void {
                     const handleMouseUp = (e: MouseEvent) => {
                         if (this._isDisposed) return;
                         if (e.button === 3) {
@@ -79,7 +86,7 @@ export const PatchPlayerControls: IPatcher = (
                     window.addEventListener('mousedown', handlePrevent, true);
                     window.addEventListener('auxclick', handlePrevent, true);
 
-                    this._cleanupMouseNavigation = () => {
+                    return () => {
                         window.removeEventListener(
                             'mouseup',
                             handleMouseUp,
@@ -96,64 +103,60 @@ export const PatchPlayerControls: IPatcher = (
                             true,
                         );
                     };
+                }
 
+                private setupLeftClick(): void {
                     const _this = this as any as PrivatePlayerControls;
-
-                    const oldLeftClickCallback =
-                        _this.mouseHandler.leftClickCallback;
+                    const oldLeftClick = _this.mouseHandler.leftClickCallback;
 
                     _this.mouseHandler.leftClickCallback = () => {
-                        oldLeftClickCallback();
-                        const arrow: Arrow | undefined =
-                            _this.getArrowByMousePosition();
-                        const shiftPressed: boolean =
-                            _this.keyboardHandler.getShiftPressed();
-                        const freeCursor: boolean =
-                            _this.arrowActions.isFreeCursor();
+                        oldLeftClick();
+                        const arrow = _this.getArrowByMousePosition();
+                        const isFree = _this.arrowActions.isFreeCursor();
+                        const isShift = _this.keyboardHandler.getShiftPressed();
 
-                        if (
-                            arrow !== undefined &&
-                            freeCursor &&
-                            !shiftPressed
-                        ) {
-                            if (
-                                arrow.type === ArrowType.BUTTON ||
-                                arrow.type === ArrowType.DIRECTIONAL_BUTTON
-                            ) {
-                                if (arrow.astIndex != null) {
-                                    const engine =
-                                        _this.game.gameMap.graph.engine;
-                                    const state = arrow.signal !== 0;
-                                    const signal = state
-                                        ? NodeSignal.ACTIVE
-                                        : NodeSignal.NONE;
-                                    engine.setNodeSignal(
-                                        arrow.astIndex,
-                                        signal,
-                                    );
-                                }
-                            }
+                        if (!arrow || !isFree || isShift) return;
+
+                        const isButton =
+                            arrow.type === ArrowType.BUTTON ||
+                            arrow.type === ArrowType.DIRECTIONAL_BUTTON;
+
+                        if (isButton && arrow.astIndex != null) {
+                            const engine = _this.game.gameMap.graph.engine;
+                            const signal =
+                                arrow.signal !== 0
+                                    ? NodeSignal.ACTIVE
+                                    : NodeSignal.NONE;
+                            engine.setNodeSignal(arrow.astIndex, signal);
                         }
                     };
+                }
 
-                    const oldKeyDownCallback = _this.keyboardHandler.onKeyDown;
+                private setupKeyInterception(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    const oldKeyDown = _this.keyboardHandler.onKeyDown;
+
                     _this.keyboardHandler.onKeyDown = (
                         code: string,
                         key: string,
                     ) => {
-                        if (code === 'Enter' || code === 'NumpadEnter') {
+                        if (
+                            code === 'Enter' ||
+                            code === 'NumpadEnter' ||
+                            code === 'KeyZ' ||
+                            code === 'KeyY'
+                        ) {
                             return;
                         }
-                        if (oldKeyDownCallback) oldKeyDownCallback(code, key);
+                        oldKeyDown?.(code, key);
                     };
                 }
 
                 private stepRewind(): void {
                     const _this = this as any as PrivatePlayerControls;
-                    if (_this.game.playing) {
-                        this.setPause(true);
-                    }
+                    if (_this.game.playing) this.setPause(true);
                     if (!_this.playerAccess.canRunOneTick) return;
+
                     const engine = _this.game.gameMap.graph.engine;
                     const tick = engine.getTick();
                     if (tick > 0) {
@@ -164,100 +167,89 @@ export const PatchPlayerControls: IPatcher = (
 
                 private stepForward(): void {
                     const _this = this as any as PrivatePlayerControls;
-                    if (_this.game.playing) {
-                        this.setPause(true);
-                    }
+                    if (_this.game.playing) this.setPause(true);
                     if (!_this.playerAccess.canRunOneTick) return;
+
                     _this.game.updateTick();
                 }
 
-                public clearSignals() {
+                private pauseUndo(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    if (!_this.playerAccess.canUndo) return;
+                    if (_this.history === null) return;
+                    const currentState = _this.history.getCurrentState();
+                    _this.game.undoChanges(currentState);
+                    _this.game.screenUpdated = true;
+                    _this.history.undo();
+                    if (_this.game.playing) this.setPause(true);
+                }
+
+                private pauseRedo(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    if (!_this.playerAccess.canUndo) return;
+                    if (_this.history === null) return;
+                    if (_this.history.getIsLastState()) return;
+                    _this.history.redo();
+                    const currentState = _this.history.getCurrentState();
+                    _this.game.redoChanges(currentState);
+                    _this.game.screenUpdated = true;
+                    if (_this.game.playing) this.setPause(true);
+                }
+
+                private selectAll(): void {
+                    const _this = this as any as PrivatePlayerControls;
+                    for (const chunk of _this.game.gameMap.chunks.values()) {
+                        for (let x = 0; x < CHUNK_SIZE; x++) {
+                            for (let y = 0; y < CHUNK_SIZE; y++) {
+                                if (
+                                    chunk.getArrow(x, y).type ===
+                                    ArrowType.EMPTY
+                                )
+                                    continue;
+                                _this.game.selectedMap.select(
+                                    chunk.x * CHUNK_SIZE + x,
+                                    chunk.y * CHUNK_SIZE + y,
+                                );
+                            }
+                        }
+                    }
+                    _this.game.selectedMap.updateSelectionFromCurrentSelection();
+                }
+
+                public clearSignals(): void {
                     // @ts-expect-error
                     super.clearSignals();
-                    const _this = this as any as PrivatePlayerControls;
-                    _this.playerUI.startTickFrom = 0;
+                    (
+                        this as any as PrivatePlayerControls
+                    ).playerUI.startTickFrom = 0;
                 }
 
                 public update(): void {
                     const _this = this as any as PrivatePlayerControls;
-                    const keyboard = _this.keyboardHandler;
+                    const kb = _this.keyboardHandler;
 
                     const isEnter =
-                        keyboard.getKeyPressed('Enter') ||
-                        keyboard.getKeyPressed('NumpadEnter');
-                    const isShift = keyboard.getShiftPressed();
+                        kb.getKeyPressed('Enter') ||
+                        kb.getKeyPressed('NumpadEnter');
+                    const isShift = kb.getShiftPressed();
+                    const isZ = kb.getKeyPressed('KeyZ');
+                    const isY = kb.getKeyPressed('KeyY');
 
-                    if (isEnter) {
-                        const now = performance.now();
-                        const INITIAL_DELAY = 400;
-                        const REPEAT_INTERVAL = 50;
+                    const isRedo = isY || (isZ && isShift);
+                    const isUndo = isZ && !isShift;
 
-                        if (isShift) {
-                            this._stepForwardActive = false;
+                    this._undoRepeater.update(isUndo, () => this.pauseUndo());
+                    this._redoRepeater.update(isRedo, () => this.pauseRedo());
 
-                            if (!this._rewindActive) {
-                                this._rewindActive = true;
-                                this._rewindStartTime = now;
-                                this._lastRewindTime = now;
-                                this.stepRewind();
-                            } else if (
-                                now - this._rewindStartTime >=
-                                INITIAL_DELAY
-                            ) {
-                                if (
-                                    now - this._lastRewindTime >=
-                                    REPEAT_INTERVAL
-                                ) {
-                                    this._lastRewindTime = now;
-                                    this.stepRewind();
-                                }
-                            }
-                        } else {
-                            this._rewindActive = false;
+                    this._rewindRepeater.update(isEnter && isShift, () =>
+                        this.stepRewind(),
+                    );
+                    this._stepForwardRepeater.update(isEnter && !isShift, () =>
+                        this.stepForward(),
+                    );
 
-                            if (!this._stepForwardActive) {
-                                this._stepForwardActive = true;
-                                this._stepForwardStartTime = now;
-                                this._lastStepForwardTime = now;
-                                this.stepForward();
-                            } else if (
-                                now - this._stepForwardStartTime >=
-                                INITIAL_DELAY
-                            ) {
-                                if (
-                                    now - this._lastStepForwardTime >=
-                                    REPEAT_INTERVAL
-                                ) {
-                                    this._lastStepForwardTime = now;
-                                    this.stepForward();
-                                }
-                            }
-                        }
-                    } else {
-                        this._rewindActive = false;
-                        this._stepForwardActive = false;
-                    }
-
-                    if (
-                        keyboard.getCtrlPressed() &&
-                        keyboard.getKeyPressed('KeyA')
-                    ) {
-                        for (const chunk of _this.game.gameMap.chunks.values()) {
-                            for (let x: number = 0; x < CHUNK_SIZE; x++) {
-                                for (let y: number = 0; y < CHUNK_SIZE; y++) {
-                                    if (
-                                        chunk.getArrow(x, y).type ===
-                                        ArrowType.EMPTY
-                                    )
-                                        continue;
-                                    _this.game.selectedMap.select(
-                                        chunk.x * CHUNK_SIZE + x,
-                                        chunk.y * CHUNK_SIZE + y,
-                                    );
-                                }
-                            }
-                        }
-                        _this.game.selectedMap.updateSelectionFromCurrentSelection();
+                    if (kb.getCtrlPressed() && kb.getKeyPressed('KeyA')) {
+                        this.selectAll();
                         return;
                     }
 
@@ -268,13 +260,14 @@ export const PatchPlayerControls: IPatcher = (
                     const _this = this as any as PrivatePlayerControls;
                     _this.game.playing = !state;
                     _this.playerUI.pauseSign.setVisibility(state);
-                    if (PLATFORM === 'mobile' && state)
+                    if (PLATFORM === 'mobile' && state) {
                         _this.playerUI.speedController?.setValue(0);
+                    }
                 }
 
                 public override dispose(): void {
                     this._isDisposed = true;
-                    this._cleanupMouseNavigation?.();
+                    this._cleanupMouseNavigation();
                     super.dispose();
                 }
             };
