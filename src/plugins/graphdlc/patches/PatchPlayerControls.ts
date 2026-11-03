@@ -154,22 +154,19 @@ export const PatchPlayerControls: IPatcher = (
 
                 private stepRewind(): void {
                     const _this = this as any as PrivatePlayerControls;
-                    if (_this.game.playing) this.setPause(true);
                     if (!_this.playerAccess.canRunOneTick) return;
-
                     const engine = _this.game.gameMap.graph.engine;
                     const tick = engine.getTick();
-                    if (tick > 0) {
-                        engine.rewindToTick(tick - 1);
-                        _this.playerUI.updateFpsDisplay();
-                    }
+                    if (tick === 0) return;
+                    if (_this.game.playing) this.setPause(true);
+                    engine.rewindToTick(tick - 1);
+                    _this.playerUI.updateFpsDisplay();
                 }
 
                 private stepForward(): void {
                     const _this = this as any as PrivatePlayerControls;
                     if (_this.game.playing) this.setPause(true);
                     if (!_this.playerAccess.canRunOneTick) return;
-
                     _this.game.updateTick();
                 }
 
@@ -177,6 +174,7 @@ export const PatchPlayerControls: IPatcher = (
                     const _this = this as any as PrivatePlayerControls;
                     if (!_this.playerAccess.canUndo) return;
                     if (_this.history === null) return;
+                    if (!_this.history.canUndo()) return;
                     const currentState = _this.history.getCurrentState();
                     _this.game.undoChanges(currentState);
                     _this.game.screenUpdated = true;
@@ -188,7 +186,7 @@ export const PatchPlayerControls: IPatcher = (
                     const _this = this as any as PrivatePlayerControls;
                     if (!_this.playerAccess.canUndo) return;
                     if (_this.history === null) return;
-                    if (_this.history.getIsLastState()) return;
+                    if (!_this.history.canRedo()) return;
                     _this.history.redo();
                     const currentState = _this.history.getCurrentState();
                     _this.game.redoChanges(currentState);
