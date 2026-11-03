@@ -59,7 +59,7 @@ impl TimeWheel {
     }
 
     #[inline(always)]
-    pub fn schedule_active(&mut self, target_idx: u32, is_active: bool, at_tick: u32) {
+    pub fn schedule_active(&mut self, target_idx: u32, is_active: bool, at_tick: u64) {
         let slot = (at_tick as usize) & WHEEL_MASK;
         let delta = if is_active { 1u32 } else { 0xFFu32 };
         let value = (target_idx << 8) | delta;
@@ -67,11 +67,11 @@ impl TimeWheel {
     }
 
     #[inline(always)]
-    pub fn schedule(&mut self, target_idx: u32, delta: i32, at_tick: u32) {
+    pub fn schedule(&mut self, target_idx: u32, delta: i32, at_tick: u64) {
         self.schedule_active(target_idx, delta > 0, at_tick);
     }
 
-    pub fn cancel(&mut self, target_idx: u32, is_active: bool, at_tick: u32) -> bool {
+    pub fn cancel(&mut self, target_idx: u32, is_active: bool, at_tick: u64) -> bool {
         let slot = (at_tick as usize) & WHEEL_MASK;
         let delta = if is_active { 1u32 } else { 0xFFu32 };
         let target_value = (target_idx << 8) | delta;

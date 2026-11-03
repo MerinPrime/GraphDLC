@@ -20,11 +20,11 @@ pub struct PathState {
     pub targets_count: u32,
 
     pub input_active: bool,
-    pub last_on_tick: u32,
+    pub last_on_tick: u64,
 
     pub capacity: usize,
     pub mask: usize,
-    pub pulses: Vec<u64>,
+    pub pulses: Vec<(u64, u64)>,
     pub head: usize,
     pub tail: usize,
 }
@@ -46,10 +46,10 @@ impl PathState {
             targets_start,
             targets_count,
             input_active: false,
-            last_on_tick: u32::MAX,
+            last_on_tick: u64::MAX,
             capacity,
             mask,
-            pulses: vec![0; capacity],
+            pulses: vec![(0, 0); capacity],
             head: 0,
             tail: 0,
         }
@@ -63,7 +63,7 @@ impl PathState {
             targets_start: 0,
             targets_count: 0,
             input_active: false,
-            last_on_tick: u32::MAX,
+            last_on_tick: u64::MAX,
             capacity: 0,
             mask: 0,
             pulses: Vec::new(),
@@ -82,18 +82,17 @@ impl PathState {
         self.head = 0;
         self.tail = 0;
         self.input_active = false;
-        self.last_on_tick = u32::MAX;
+        self.last_on_tick = u64::MAX;
     }
 
     #[inline(always)]
-    pub fn push_pulse(&mut self, start: i32, end: i32) {
+    pub fn push_pulse(&mut self, start: u64, end: u64) {
         if self.capacity == 0 {
             return;
         }
         let idx = self.tail & self.mask;
         unsafe {
-            *self.pulses.get_unchecked_mut(idx) =
-                ((end as u32 as u64) << 32) | (start as u32 as u64);
+            *self.pulses.get_unchecked_mut(idx) = (start, end);
         }
         self.tail += 1;
         if self.tail - self.head > self.capacity {
@@ -102,19 +101,18 @@ impl PathState {
     }
 
     #[inline(always)]
-    pub fn record_edge(&mut self, tick: u32, is_active: bool) {
+    pub fn record_edge(&mut self, tick: u64, is_active: bool) {
         if is_active {
             self.input_active = true;
             self.last_on_tick = tick;
         } else {
             self.input_active = false;
-            if self.last_on_tick != u32::MAX {
-                let start = self.last_on_tick as i32;
-                let end = tick as i32;
+            if self.last_on_tick != u64::MAX {
+                let start = self.last_on_tick;
+                let end = tick;
                 let idx = self.tail & self.mask;
                 unsafe {
-                    *self.pulses.get_unchecked_mut(idx) =
-                        ((end as u32 as u64) << 32) | (start as u32 as u64);
+                    *self.pulses.get_unchecked_mut(idx) = (start, end);
                 }
                 self.tail += 1;
                 if self.tail - self.head > self.capacity {
@@ -125,11 +123,10 @@ impl PathState {
     }
 
     #[inline(always)]
-    pub fn prune(&mut self, tick: u32) {
-        let threshold = (tick as i32) - (self.max_delay as i32);
+    pub fn prune(&mut self, tick: u64) {
+        let threshold = tick.saturating_sub(self.max_delay as u64);
         while self.head < self.tail {
-            let pulse = unsafe { *self.pulses.get_unchecked(self.head & self.mask) };
-            let pulse_end = (pulse >> 32) as u32 as i32;
+            let (_, pulse_end) = unsafe { *self.pulses.get_unchecked(self.head & self.mask) };
             if pulse_end < threshold {
                 self.head += 1;
             } else {
@@ -143,22 +140,20 @@ impl PathState {
     }
 
     #[inline(always)]
-    pub fn remove_pulse_at(&mut self, input_tick: i32) -> bool {
-        if self.input_active && self.last_on_tick != u32::MAX && input_tick >= (self.last_on_tick as i32) {
-            let start = self.last_on_tick as i32;
+    pub fn remove_pulse_at(&mut self, input_tick: u64) -> bool {
+        if self.input_active && self.last_on_tick != u64::MAX && input_tick >= self.last_on_tick {
+            let start = self.last_on_tick;
             if input_tick > start {
                 self.push_pulse(start, input_tick);
             }
-            self.last_on_tick = (input_tick + 1) as u32;
+            self.last_on_tick = input_tick + 1;
             return true;
         }
 
         let mut i = self.head;
         while i < self.tail {
             let idx = i & self.mask;
-            let pulse = unsafe { *self.pulses.get_unchecked(idx) };
-            let start = pulse as u32 as i32;
-            let end = (pulse >> 32) as u32 as i32;
+            let (start, end) = unsafe { *self.pulses.get_unchecked(idx) };
             if input_tick >= start && input_tick < end {
                 if end - start <= 1 {
                     let mut j = i;
@@ -174,21 +169,18 @@ impl PathState {
                     self.tail -= 1;
                     return true;
                 } else if input_tick == start {
-                    let new_pulse = ((end as u32 as u64) << 32) | ((start + 1) as u32 as u64);
                     unsafe {
-                        *self.pulses.get_unchecked_mut(idx) = new_pulse;
+                        *self.pulses.get_unchecked_mut(idx) = (start + 1, end);
                     }
                     return true;
                 } else if input_tick == end - 1 {
-                    let new_pulse = (((end - 1) as u32 as u64) << 32) | (start as u32 as u64);
                     unsafe {
-                        *self.pulses.get_unchecked_mut(idx) = new_pulse;
+                        *self.pulses.get_unchecked_mut(idx) = (start, end - 1);
                     }
                     return true;
                 } else {
-                    let left = ((input_tick as u32 as u64) << 32) | (start as u32 as u64);
                     unsafe {
-                        *self.pulses.get_unchecked_mut(idx) = left;
+                        *self.pulses.get_unchecked_mut(idx) = (start, input_tick);
                     }
                     self.push_pulse(input_tick + 1, end);
                     return true;
@@ -200,10 +192,10 @@ impl PathState {
     }
 
     #[inline(always)]
-    pub fn is_signal_active_at(&mut self, tick: u32, dist: u32) -> bool {
-        let input_tick = (tick as i32) - (dist as i32);
+    pub fn is_signal_active_at(&mut self, tick: u64, dist: u32) -> bool {
+        let input_tick = tick.saturating_sub(dist as u64);
 
-        if self.input_active && self.last_on_tick != u32::MAX && input_tick >= (self.last_on_tick as i32) {
+        if self.input_active && self.last_on_tick != u64::MAX && input_tick >= self.last_on_tick {
             return true;
         }
 
@@ -212,9 +204,7 @@ impl PathState {
         let mut i = self.head;
         while i < self.tail {
             let idx = i & self.mask;
-            let pulse = unsafe { *self.pulses.get_unchecked(idx) };
-            let start = pulse as u32 as i32;
-            let end = (pulse >> 32) as u32 as i32;
+            let (start, end) = unsafe { *self.pulses.get_unchecked(idx) };
             if input_tick >= start && input_tick < end {
                 return true;
             }

@@ -162,7 +162,7 @@ pub struct GraphState {
     pub all_path_targets: Vec<PathTarget>,
     pub time_wheel: TimeWheel,
     pub seed: u32,
-    pub tick: u32,
+    pub tick: u64,
     pub break_points: Vec<u32>,
     pub break_point: bool,
     pub break_point_node: u32,
@@ -691,7 +691,7 @@ impl GraphState {
                                 let end = start + path.targets_count as usize;
                                 for i in start..end {
                                     let pt = unsafe { *all_path_targets_ptr.add(i) };
-                                    let slot = ((tick + pt.delay) as usize) & WHEEL_MASK;
+                                    let slot = (((tick as usize).wrapping_add(pt.delay as usize))) & WHEEL_MASK;
                                     let value = (pt.target_node << 8) | delta;
                                     self.time_wheel.schedule_raw(slot, value);
                                 }
@@ -815,7 +815,7 @@ impl GraphState {
                         cycle_state.get_bit(tick, cold.cycle_offset) as u8
                     }
                 } else if (dword >> 8) as u8 == NODE_TYPE_RANDOM {
-                    if signals_count > 0 && random_bool(self.seed, self.cold_nodes[node_idx as usize].pos_hash, tick) {
+                    if signals_count > 0 && random_bool(self.seed, self.cold_nodes[node_idx as usize].pos_hash, tick as u32) {
                         NODE_SIGNAL_ACTIVE
                     } else {
                         NODE_SIGNAL_NONE
@@ -867,7 +867,7 @@ impl GraphState {
     }
 
     #[inline(always)]
-    fn update_node_signal(&self, node_idx: u32, node_ptr: *const Node, tick: u32) -> u8 {
+    fn update_node_signal(&self, node_idx: u32, node_ptr: *const Node, tick: u64) -> u8 {
         let node = unsafe { &*node_ptr };
         let signals_count = node.signals_count;
         let flags = node.flags;
@@ -897,7 +897,7 @@ impl GraphState {
             }
 
             if node.node_type == NODE_TYPE_RANDOM {
-                return if signals_count > 0 && random_bool(self.seed, self.cold_nodes[node_idx as usize].pos_hash, tick) {
+                return if signals_count > 0 && random_bool(self.seed, self.cold_nodes[node_idx as usize].pos_hash, tick as u32) {
                     NODE_SIGNAL_ACTIVE
                 } else {
                     NODE_SIGNAL_NONE
@@ -1362,7 +1362,7 @@ impl GraphState {
             self.make_dirty_chunk(chunk_idx);
         }
 
-        let current_tick = self.tick as i32;
+        let current_tick = self.tick;
 
         if has_active {
             let mut d_cont = 0usize;
@@ -1371,12 +1371,12 @@ impl GraphState {
                     d_cont += 1;
                 }
                 path_state.record_edge(self.tick, true);
-                path_state.last_on_tick = self.tick.saturating_sub(d_cont as u32);
+                path_state.last_on_tick = self.tick.saturating_sub(d_cont as u64);
 
                 for (t_idx, &pt) in targets.iter().enumerate() {
-                    let delay = pt.delay as i32;
+                    let delay = pt.delay as u64;
                     let target_node = pt.target_node;
-                    let on_tick = (path_state.last_on_tick as i32) + delay;
+                    let on_tick = path_state.last_on_tick + delay;
 
                     let already_delivered = targets_delivered[t_idx];
 
@@ -1389,7 +1389,7 @@ impl GraphState {
                     };
 
                     if should_schedule_on {
-                        self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                        self.time_wheel.schedule(target_node, 1, on_tick);
                     }
                 }
             }
@@ -1403,12 +1403,12 @@ impl GraphState {
                     }
                     let d_end = d - 1;
 
-                    let start = current_tick - (d_end as i32);
-                    let end = current_tick - (d_start as i32) + 1;
+                    let start = current_tick.saturating_sub(d_end as u64);
+                    let end = current_tick.saturating_sub(d_start as u64) + 1;
                     path_state.push_pulse(start, end);
 
                     for (t_idx, &pt) in targets.iter().enumerate() {
-                        let delay = pt.delay as i32;
+                        let delay = pt.delay as u64;
                         let target_node = pt.target_node;
                         let on_tick = start + delay;
                         let off_tick = end + delay;
@@ -1424,11 +1424,11 @@ impl GraphState {
                         };
 
                         if should_schedule_on {
-                            self.time_wheel.schedule(target_node, 1, on_tick as u32);
+                            self.time_wheel.schedule(target_node, 1, on_tick);
                         }
 
                         if off_tick > current_tick {
-                            self.time_wheel.schedule(target_node, -1, off_tick as u32);
+                            self.time_wheel.schedule(target_node, -1, off_tick);
                         }
                     }
                 } else {
@@ -1473,25 +1473,23 @@ impl GraphState {
                 let delay = pt.delay;
 
                 for p_idx in path.head..path.tail {
-                    let pulse = path.pulses[p_idx & path.mask];
-                    let start = pulse as u32 as i32;
-                    let end = (pulse >> 32) as u32 as i32;
+                    let (start, end) = path.pulses[p_idx & path.mask];
 
-                    let on_tick = start + (delay as i32);
-                    let off_tick = end + (delay as i32);
+                    let on_tick = start + delay as u64;
+                    let off_tick = end + delay as u64;
 
-                    if on_tick >= (self.tick as i32) {
-                        cancel_events.push((target_node, true, on_tick as u32));
+                    if on_tick >= self.tick {
+                        cancel_events.push((target_node, true, on_tick));
                     }
-                    if off_tick >= (self.tick as i32) {
-                        cancel_events.push((target_node, false, off_tick as u32));
+                    if off_tick >= self.tick {
+                        cancel_events.push((target_node, false, off_tick));
                     }
                 }
 
-                if path.input_active && path.last_on_tick != u32::MAX {
-                    let on_tick = (path.last_on_tick as i32) + (delay as i32);
-                    if on_tick >= (self.tick as i32) {
-                        cancel_events.push((target_node, true, on_tick as u32));
+                if path.input_active && path.last_on_tick != u64::MAX {
+                    let on_tick = path.last_on_tick + delay as u64;
+                    if on_tick >= self.tick {
+                        cancel_events.push((target_node, true, on_tick));
                     }
                 }
             }

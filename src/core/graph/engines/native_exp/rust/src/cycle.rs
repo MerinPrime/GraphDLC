@@ -26,33 +26,33 @@ impl CycleState {
     }
 
     #[inline(always)]
-    pub fn get_bit(&self, tick: u32, offset: u32) -> bool {
-        let pos = (tick + offset) % self.length;
-        let word = (pos >> 5) as usize;
+    pub fn get_bit(&self, tick: u64, offset: u32) -> bool {
+        let pos = ((tick + offset as u64) % (self.length as u64)) as usize;
+        let word = pos >> 5;
         let mask = 1 << (pos & 31);
         unsafe { (*self.words_ptr.add(word) & mask) != 0 }
     }
 
     #[inline(always)]
-    pub fn write_bit(&mut self, tick: u32, offset: u32) {
-        let pos = (tick + offset) % self.length;
-        let word = (pos >> 5) as usize;
+    pub fn write_bit(&mut self, tick: u64, offset: u32) {
+        let pos = ((tick + offset as u64) % (self.length as u64)) as usize;
+        let word = pos >> 5;
         let mask = 1 << (pos & 31);
         unsafe { *self.words_ptr.add(word) |= mask; }
     }
 
     #[inline(always)]
-    pub fn clear_bit(&mut self, tick: u32, offset: u32) {
-        let pos = (tick + offset) % self.length;
-        let word = (pos >> 5) as usize;
+    pub fn clear_bit(&mut self, tick: u64, offset: u32) {
+        let pos = ((tick + offset as u64) % (self.length as u64)) as usize;
+        let word = pos >> 5;
         let mask = 1 << (pos & 31);
         unsafe { *self.words_ptr.add(word) &= !mask; }
     }
 
     #[inline(always)]
-    pub fn xor_bit(&mut self, tick: u32, offset: u32) {
-        let pos = (tick + offset) % self.length;
-        let word = (pos >> 5) as usize;
+    pub fn xor_bit(&mut self, tick: u64, offset: u32) {
+        let pos = ((tick + offset as u64) % (self.length as u64)) as usize;
+        let word = pos >> 5;
         let mask = 1 << (pos & 31);
         unsafe { *self.words_ptr.add(word) ^= mask; }
     }

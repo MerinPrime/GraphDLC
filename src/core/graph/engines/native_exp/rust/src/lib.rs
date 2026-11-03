@@ -309,8 +309,8 @@ pub extern "C" fn run_many_ticks(count: u32) -> bool {
 }
 
 #[no_mangle]
-pub extern "C" fn get_tick() -> u32 {
-    get_state().tick
+pub extern "C" fn get_tick() -> f64 {
+    get_state().tick as f64
 }
 
 #[no_mangle]
@@ -606,7 +606,7 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
             let targets_count = path.targets_count as usize;
 
             if signal == NODE_SIGNAL_ACTIVE {
-                let start = (tick as i32) - (path_dist as i32);
+                let start = tick.saturating_sub(path_dist as u64);
                 let end = start + 1;
                 path.push_pulse(start, end);
 
@@ -615,9 +615,8 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
                     let target_node = pt.target_node;
                     let target_delay = pt.delay;
 
-                    let diff = target_delay as i32 - path_dist as i32;
-                    if diff >= 0 {
-                        let rem_delay = diff as u32;
+                    if target_delay >= path_dist {
+                        let rem_delay = (target_delay - path_dist) as u64;
                         let on_tick = tick + rem_delay;
                         let off_tick = on_tick + 1;
 
@@ -626,7 +625,7 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
                     }
                 }
             } else {
-                let input_tick = (tick as i32) - (path_dist as i32);
+                let input_tick = tick.saturating_sub(path_dist as u64);
                 let was_removed = path.remove_pulse_at(input_tick);
                 if was_removed {
                     for i in targets_start..(targets_start + targets_count) {
@@ -634,9 +633,8 @@ pub extern "C" fn set_node_signal_export(node_idx: u32, signal: u8) {
                         let target_node = pt.target_node;
                         let target_delay = pt.delay;
 
-                        let diff = target_delay as i32 - path_dist as i32;
-                        if diff >= 0 {
-                            let rem_delay = diff as u32;
+                        if target_delay >= path_dist {
+                            let rem_delay = (target_delay - path_dist) as u64;
                             let on_tick = tick + rem_delay;
                             let off_tick = on_tick + 1;
 
@@ -791,5 +789,46 @@ pub extern "C" fn deserialize_state_export(len: u32) {
         let ptr = STAGING_BUFFER.as_ptr() as *const u8;
         let data = std::slice::from_raw_parts(ptr, len as usize);
         deserialize_state(state, data);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tick_past_u32_max() {
+        let state = get_state();
+        state.tick = 5_000_000_000u64; // > 2^32 (4_294_967_296)
+        assert_eq!(get_tick(), 5_000_000_000.0);
+    }
+
+    #[test]
+    fn test_cycle_past_u32_max() {
+        let mut cycle = cycle::CycleState::new(0, 5);
+        let tick = 10_000_000_000u64;
+        cycle.write_bit(tick, 0);
+        assert!(cycle.get_bit(tick, 0));
+        assert!(!cycle.get_bit(tick + 1, 0));
+        assert!(cycle.get_bit(tick + 5, 0));
+    }
+
+    #[test]
+    fn test_path_past_u32_max() {
+        let mut path = path::PathState::new(0, 0, 10, 0, 1);
+        let tick = 10_000_000_000u64;
+        path.push_pulse(tick, tick + 2);
+        assert!(path.is_signal_active_at(tick + 1, 0));
+        assert!(!path.is_signal_active_at(tick + 3, 0));
+    }
+
+    #[test]
+    fn test_serialization_roundtrip_large_tick() {
+        let state = get_state();
+        state.tick = 8_000_000_000u64;
+        let bytes = serialization::serialize_state(state);
+        let mut restored = state::GraphState::new();
+        serialization::deserialize_state(&mut restored, &bytes);
+        assert_eq!(restored.tick, 8_000_000_000u64);
     }
 }
