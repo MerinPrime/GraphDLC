@@ -108,6 +108,7 @@ export class SettingsUIBuilder {
     public addGroup(
         group: SortedSettingGroup,
         hideDescriptionOnMobile = false,
+        collapsible = true,
     ): void {
         this.addSpace(2);
 
@@ -115,30 +116,69 @@ export class SettingsUIBuilder {
         const label = DeveloperModeSetting.value
             ? `${group.group.order}. ${name}`
             : name;
-        this.addText(label, group.group.color);
+
+        const isCollapsible = collapsible && group.group.collapsible === true;
+
+        let isCollapsed =
+            isCollapsible && Boolean(group.group.collapsedByDefault);
+
+        const header = document.createElement('div');
+        header.className = `${isCollapsible ? 'setting-group-header ' : ''}${group.group.color ?? TextColor.PRIMARY}`;
+        header.innerHTML = isCollapsible
+            ? `
+            <svg class="setting-group-arrow" viewBox="0 0 10 10" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.5 3.75 L5 6.25 L7.5 3.75"/>
+            </svg>
+            <span>${label}</span>
+        `
+            : label;
+        this.insert(header);
+
+        const content: HTMLElement[] = [];
         group.settings.forEach((setting) => {
-            const name = setting.meta.name.get();
-            const label = DeveloperModeSetting.value
-                ? `${setting.meta.order}. ${name}`
-                : name;
-            this.addSpace(0.5);
-            this.addSetting({
-                label,
-                controlFactory: () => setting.buildUIComponent(),
-                description: setting.meta.description?.get(),
-                labelColor: setting.meta.nameColor,
-                descriptionColor: setting.meta.descriptionColor,
-                hideDescriptionOnMobile,
-            });
+            const settingName = setting.meta.name.get();
+            const settingLabel = DeveloperModeSetting.value
+                ? `${setting.meta.order}. ${settingName}`
+                : settingName;
+            content.push(
+                this.addSpace(0.5),
+                this.addSetting({
+                    label: settingLabel,
+                    controlFactory: () => setting.buildUIComponent(),
+                    description: setting.meta.description?.get(),
+                    labelColor: setting.meta.nameColor,
+                    descriptionColor: setting.meta.descriptionColor,
+                    hideDescriptionOnMobile,
+                }),
+            );
         });
+
+        if (isCollapsible) {
+            const updateState = () => {
+                header.classList.toggle('collapsed', isCollapsed);
+                for (const el of content) {
+                    el.style.display = isCollapsed ? 'none' : '';
+                }
+            };
+
+            header.onclick = () => {
+                isCollapsed = !isCollapsed;
+                updateState();
+            };
+
+            if (isCollapsed) {
+                updateState();
+            }
+        }
     }
 
     public addGroups(
         groups: SortedSettingGroup[],
         hideDescriptionOnMobile = false,
+        collapsible = true,
     ): void {
         groups.forEach((group) => {
-            this.addGroup(group, hideDescriptionOnMobile);
+            this.addGroup(group, hideDescriptionOnMobile, collapsible);
         });
     }
 }

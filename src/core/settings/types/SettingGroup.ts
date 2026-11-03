@@ -5,4 +5,6 @@ export interface SettingGroup {
     readonly text: I18nText;
     readonly color?: TextColor;
     readonly order?: number;
+    readonly collapsible?: boolean;
+    readonly collapsedByDefault?: boolean;
 }

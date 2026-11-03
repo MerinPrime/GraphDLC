@@ -36,7 +36,7 @@ export const PatchUIMenu: IPatcher = (
                 const settingGroups =
                     settingsManager.getSortedSettings('map-settings');
 
-                builder.addGroups(settingGroups, true);
+                builder.addGroups(settingGroups, true, false);
             }
         };
     });

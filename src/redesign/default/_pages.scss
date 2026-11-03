@@ -21,6 +21,28 @@
   color: var(--text-primary);
 }
 
+.setting-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  width: fit-content;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  .setting-group-arrow {
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  &.collapsed .setting-group-arrow {
+    transform: rotate(-90deg);
+  }
+}
+
 .setting-divider {
   border: none !important;
   hr {
