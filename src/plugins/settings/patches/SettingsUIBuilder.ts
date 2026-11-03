@@ -1,4 +1,3 @@
-import { PLATFORM } from '@logic-arrows/utils/platform';
 import { DeveloperModeSetting } from 'src/core/settings/instances/developer/DeveloperModeSetting';
 import type { SortedSettingGroup } from 'src/core/settings/Manager';
 import { TextColor } from 'src/core/utils/TextColor';
@@ -14,7 +13,7 @@ export interface SettingOptions {
     description?: string | null;
     labelColor?: TextColor;
     descriptionColor?: TextColor;
-    hideDescriptionOnMobile?: boolean;
+    hideDescription?: boolean;
 }
 
 export class SettingsUIBuilder {
@@ -70,7 +69,7 @@ export class SettingsUIBuilder {
             description = null,
             labelColor = TextColor.PRIMARY,
             descriptionColor = TextColor.MUTED,
-            hideDescriptionOnMobile = false,
+            hideDescription = false,
         } = options;
 
         const row = document.createElement('tr');
@@ -83,8 +82,7 @@ export class SettingsUIBuilder {
         labelText.classList.add(labelColor);
         nameCell.appendChild(labelText);
 
-        const shouldShowDescription =
-            description && (!hideDescriptionOnMobile || PLATFORM !== 'mobile');
+        const shouldShowDescription = description && !hideDescription;
 
         if (shouldShowDescription) {
             const descText = document.createElement('div');
@@ -107,7 +105,7 @@ export class SettingsUIBuilder {
 
     public addGroup(
         group: SortedSettingGroup,
-        hideDescriptionOnMobile = false,
+        hideDescription = false,
         collapsible = true,
     ): void {
         this.addSpace(2);
@@ -148,7 +146,7 @@ export class SettingsUIBuilder {
                     description: setting.meta.description?.get(),
                     labelColor: setting.meta.nameColor,
                     descriptionColor: setting.meta.descriptionColor,
-                    hideDescriptionOnMobile,
+                    hideDescription,
                 }),
             );
         });
@@ -174,11 +172,11 @@ export class SettingsUIBuilder {
 
     public addGroups(
         groups: SortedSettingGroup[],
-        hideDescriptionOnMobile = false,
+        hideDescription = false,
         collapsible = true,
     ): void {
         groups.forEach((group) => {
-            this.addGroup(group, hideDescriptionOnMobile, collapsible);
+            this.addGroup(group, hideDescription, collapsible);
         });
     }
 }
