@@ -138,7 +138,7 @@ export const PatchPlayerControls: IPatcher = (
                             selectedMap.currentSelectedArrows.size === 0
                         ) {
                             const arrow = _this.getArrowByMousePosition();
-                            if (arrow) {
+                            if (arrow && arrow.type !== ArrowType.EMPTY) {
                                 const [posX, posY] =
                                     _this.getPositionByMousePosition();
                                 _this.game.selectedMap.select(posX, posY);
