@@ -4,6 +4,8 @@ import type { PlayerMapAction } from '@logic-arrows/player/player-map-action';
 import type { GraphDLC } from 'src/core/GraphDLC';
 import type { PatchLoader } from 'src/core/PatchLoader';
 import type { IPatcher } from '../../Patcher';
+import { VisualSelectionPlugin } from '../../visual_selection';
+import { VisualSelectionSetting } from '../../visual_selection/settings/VisualSelectionSetting';
 import {
     UndoRedoHighlightMode,
     UndoRedoHighlightSetting,
@@ -83,6 +85,49 @@ function handleHistoryAction(
     }
 }
 
+function renderCellGroup(
+    render: any,
+    game: Game,
+    cells: HighlightCell[],
+    r: number,
+    g: number,
+    b: number,
+    alpha: number,
+    offsetX: number,
+    offsetY: number,
+    cellSize: number,
+    isVisualSelection: boolean,
+): void {
+    if (cells.length === 0) return;
+
+    render.setSolidColor(r, g, b, alpha);
+
+    if (isVisualSelection) {
+        const set = new Set<string>();
+        for (const cell of cells) {
+            set.add(`${cell.x},${cell.y}`);
+        }
+
+        for (const cell of cells) {
+            const left_side = !set.has(`${cell.x - 1},${cell.y}`);
+            const top_side = !set.has(`${cell.x},${cell.y - 1}`);
+            const right_side = !set.has(`${cell.x + 1},${cell.y}`);
+            const bottom_side = !set.has(`${cell.x},${cell.y + 1}`);
+
+            render.setSides([left_side, top_side, right_side, bottom_side]);
+            const cx = cell.x * game.scale + offsetX;
+            const cy = cell.y * game.scale + offsetY;
+            render.drawSolidColorRect(cx, cy, cellSize, cellSize);
+        }
+    } else {
+        for (const cell of cells) {
+            const cx = cell.x * game.scale + offsetX;
+            const cy = cell.y * game.scale + offsetY;
+            render.drawSolidColorRect(cx, cy, cellSize, cellSize);
+        }
+    }
+}
+
 function drawHighlight(game: Game): void {
     if (!activeHighlight) return;
 
@@ -101,9 +146,16 @@ function drawHighlight(game: Game): void {
     const render = (game as any).render;
     if (!render?.isReady()) return;
 
+    const isVisualSelection =
+        VisualSelectionPlugin.isEnabled &&
+        VisualSelectionSetting.value &&
+        typeof render.setSides === 'function' &&
+        typeof render.setFixedBorder === 'function';
+
     const offsetX = (game.offset[0] * game.scale) / CELL_SIZE;
     const offsetY = (game.offset[1] * game.scale) / CELL_SIZE;
-    const cellSize = game.scale + 0.05 * game.scale;
+    const alignCorrection = isVisualSelection ? 0.05 * game.scale : 0;
+    const cellSize = game.scale + alignCorrection;
 
     const deletedCells: HighlightCell[] = [];
     const modifiedCells: HighlightCell[] = [];
@@ -119,29 +171,58 @@ function drawHighlight(game: Game): void {
         }
     }
 
-    if (deletedCells.length > 0) {
-        render.setSolidColor(0.95, 0.25, 0.25, alpha);
-        for (const cell of deletedCells) {
-            const cx = cell.x * game.scale + offsetX;
-            const cy = cell.y * game.scale + offsetY;
-            render.drawSolidColorRect(cx, cy, cellSize, cellSize);
-        }
+    if (isVisualSelection) {
+        render.setShowBorder(true);
+        render.setFixedBorder(false);
+    } else {
+        render.setShowBorder(true);
     }
-    if (newCells.length > 0) {
-        render.setSolidColor(0.25, 0.85, 0.3, alpha);
-        for (const cell of newCells) {
-            const cx = cell.x * game.scale + offsetX;
-            const cy = cell.y * game.scale + offsetY;
-            render.drawSolidColorRect(cx, cy, cellSize, cellSize);
-        }
-    }
-    if (modifiedCells.length > 0) {
-        render.setSolidColor(0.25, 0.55, 1.0, alpha);
-        for (const cell of modifiedCells) {
-            const cx = cell.x * game.scale + offsetX;
-            const cy = cell.y * game.scale + offsetY;
-            render.drawSolidColorRect(cx, cy, cellSize, cellSize);
-        }
+
+    renderCellGroup(
+        render,
+        game,
+        deletedCells,
+        0.95,
+        0.25,
+        0.25,
+        alpha,
+        offsetX,
+        offsetY,
+        cellSize,
+        isVisualSelection,
+    );
+    renderCellGroup(
+        render,
+        game,
+        newCells,
+        0.25,
+        0.85,
+        0.3,
+        alpha,
+        offsetX,
+        offsetY,
+        cellSize,
+        isVisualSelection,
+    );
+    renderCellGroup(
+        render,
+        game,
+        modifiedCells,
+        0.25,
+        0.55,
+        1.0,
+        alpha,
+        offsetX,
+        offsetY,
+        cellSize,
+        isVisualSelection,
+    );
+
+    if (isVisualSelection) {
+        render.setFixedBorder(true);
+        render.setSides([true, true, true, true]);
+    } else {
+        render.setShowBorder(true);
     }
 }
 
