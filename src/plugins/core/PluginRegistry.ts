@@ -13,6 +13,7 @@ import { ScreenshotPlugin } from '../screenshot_region';
 import { SelectionTipPlugin } from '../selection_tip';
 import { SettingsPlugin } from '../settings';
 import { TPSPlugin } from '../tps';
+import { UndoRedoHighlightPlugin } from '../undo_redo_highlight';
 import { VisualSelectionPlugin } from '../visual_selection';
 import { ZoomPreventPlugin } from '../zoom_prevent';
 import type { Plugin } from './Plugin';
@@ -36,4 +37,5 @@ export const PluginRegistry: Plugin[] = [
     VisualSelectionPlugin,
     ScreenshotPlugin,
     ZoomPreventPlugin,
+    UndoRedoHighlightPlugin,
 ];
